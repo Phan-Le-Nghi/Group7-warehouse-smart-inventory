@@ -182,3 +182,14 @@ Không đưa secret, dữ liệu cá nhân, Context Pack tạm thời hoặc bư
 - **Authority guard:** Không thay đổi product behavior, canonical Acceptance Criteria, Figma hoặc application code.
 - **Artifact references:** [`05-design/design-system.md`](05-design/design-system.md), [`05-design/screen-inventory.md`](05-design/screen-inventory.md), [`03-product/functional-prototype.md`](03-product/functional-prototype.md), [`TRACEABILITY.md`](TRACEABILITY.md), [`00-project-index.md`](00-project-index.md), [`../vault/04-product/external-tools.md`](../vault/04-product/external-tools.md), [`report-round1/group-round1-report.md`](report-round1/group-round1-report.md).
 - **Human review:** Chờ human review documentation diff; không commit hoặc push.
+
+### AI-USE-015 — Final Delivery readiness and scope freeze
+
+- **Task:** Audit Final Delivery readiness và reconcile planning/report-facing documentation sau human review; không sửa application code hoặc canonical Acceptance Criteria.
+- **AI support:** AI audit implementation/release gaps, phát hiện Putaway Story Spec index drift, Taiga status drift và stale Transfer requirement/Technical Foundation references; đề xuất implementation ordering để con người review.
+- **Human decisions:** Human giữ cả 9 canonical stories là `MUST`, thay đổi implementation order để đặt `US-PICK-001` trước Transfer, giữ `US-TRF-001` trước `US-TRF-002` và Audit trước Adjust, đồng thời approve reconciliation work.
+- **Approved order:** `US-PUT-001` completed baseline → `US-REC-001` → `US-PICK-001` → `US-TRF-001` → `US-TRF-002` → `US-AUD-001` → `US-AUD-002` → `US-ADJ-001` → `US-ADJ-002`.
+- **Authority guard:** Không thay đổi canonical product scope, canonical FR priority, Business Rule hoặc Acceptance Criteria; không resolve Open Question. Production authentication mechanism và deployment target vẫn `TBD`.
+- **Verification boundary:** Putaway CI/PR/Taiga statuses là repository-recorded evidence; task này không live-verify GitHub Actions hoặc Taiga và không thao tác external system.
+- **Artifact references:** [`06-technical/story-specs-index.md`](06-technical/story-specs-index.md), [`04-backlog/taiga-backlog.md`](04-backlog/taiga-backlog.md), [`04-backlog/user-stories.md`](04-backlog/user-stories.md), [`03-product/mvp-scope.md`](03-product/mvp-scope.md), [`06-technical/story-specs/transfer.md`](06-technical/story-specs/transfer.md), [`TRACEABILITY.md`](TRACEABILITY.md), [`../vault/04-product/transfer-draft.md`](../vault/04-product/transfer-draft.md), [`../vault/08-decisions/decision-log.md`](../vault/08-decisions/decision-log.md).
+- **Human review:** Human approved the scope/order inputs and reconciliation task; resulting documentation diff still requires review before commit or integration.

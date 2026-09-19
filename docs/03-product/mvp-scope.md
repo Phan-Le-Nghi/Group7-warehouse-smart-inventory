@@ -20,8 +20,8 @@ Mỗi item dưới đây trace về Requirement, Business Rule, Decision hoặc 
 | Initial Putaway allocation | `CAND-REQ-007`, `CAND-BR-004`, `DEC-011`, `US-PUT-001` |
 | Full, multi-location và `PARTIAL / INSUFFICIENT` Pick | `CAND-REQ-006`, `CAND-BR-005/006`, `DEC-012`, `US-PICK-001` |
 | Pick validation không cho confirm vượt total selected-source quantity | `CAND-REQ-011`, `CAND-BR-015`, `DEC-019`, `US-PICK-001` |
-| Internal Transfer execution/confirmation và minimum record | `CAND-REQ-004`, `CAND-BR-007/008`, `DEC-013`, `US-TRF-001` |
-| Transfer history | `CAND-REQ-004`, `DEC-013`, `US-TRF-002` |
+| Internal Transfer execution/confirmation và minimum record | `FR-012`, `CAND-BR-007/008`, `DEC-013/024`, `US-TRF-001` |
+| Transfer history | `FR-013`, `DEC-013/024`, `US-TRF-002` |
 | Transfer validation không cho confirm vượt source quantity | `CAND-REQ-011`, `CAND-BR-015`, `DEC-019`, `US-TRF-001` |
 | Selected-scope Audit với match/mismatch result | `CAND-REQ-005`, `CAND-BR-009`, `DEC-014`, `US-AUD-001` |
 | Audit discrepancy context, mandatory re-check và no-auto-Adjust | `CAND-BR-002/010`, `DEC-014`, `US-AUD-002` |

@@ -10,7 +10,9 @@ This historical artifact reflects approved HUMAN PRODUCT DECISIONS / MVP ASSUMPT
 
 - `REQ-002`, `REQ-004`: Transfer is a required workflow area and a core domain concept.
 - `CAND-REQ-003`: `system stock quantity` is maintained by tracked internal location.
-- `CAND-REQ-004`: functional Transfer recording and history/query are approved HUMAN PRODUCT DECISIONS.
+- `FR-012`: active canonical requirement cho Warehouse Staff confirm Internal Transfer và tạo minimum Transfer record.
+- `FR-013`: active canonical requirement cho Manager xem confirmed Transfer history.
+- Historical `CAND-REQ-004`: `SUPERSEDED / DECOMPOSED` by `FR-012` and `FR-013`; không phải active canonical requirement.
 - `CAND-BR-007`: confirmed Transfer reduces source quantity, increases the same quantity at destination and does not change Warehouse total.
 - `CAND-BR-008`: confirmed Transfer has a minimum system record.
 - `DEC-005`, `DEC-007`, `DEC-009`, `DEC-010`, `DEC-013`, `DEC-017`: one-Warehouse boundary, Transfer modeling, quantity behavior, recording/history and permissions.

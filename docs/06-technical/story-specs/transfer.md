@@ -10,7 +10,7 @@ This spec records approved functional outcomes only. It does not choose architec
 
 ## 1. Traceability
 
-- Requirements: `REQ-002`, `REQ-004`, `CAND-REQ-003`, `CAND-REQ-004`, `CAND-REQ-011`.
+- Requirements: `REQ-002`, `REQ-003`, `REQ-004`, `CAND-REQ-003`, `CAND-REQ-010`, `CAND-REQ-011`, `FR-012` for `US-TRF-001` and `FR-013` for `US-TRF-002`. Historical `CAND-REQ-004` is `SUPERSEDED / DECOMPOSED` and is not an active trace target.
 - Business Rules: `CAND-BR-003`, `CAND-BR-007`, `CAND-BR-008`, `CAND-BR-015`.
 - Human decisions: `DEC-005`, `DEC-007`, `DEC-009`, `DEC-010`, `DEC-013`, `DEC-017`, `DEC-019`.
 - Current-state evidence only: `EVD-010`, `EVD-011`, `EVD-019`.
@@ -130,10 +130,11 @@ No unresolved behavior above may be inferred during implementation.
 
 ## 8. Technical boundary
 
-- Architecture: TBD pending human approval.
-- Data model: TBD pending human approval.
-- API: TBD pending human approval.
+- Architecture foundation: approved at `DEC-020` — modular monolith with React + TypeScript + Vite, Python 3.13 + FastAPI, PostgreSQL 18, SQLAlchemy 2 + Alembic and Playwright.
+- Stock/data foundation: approved at `DEC-021` and `DEC-022` — per-location stock is authoritative and stock-changing operations use transactional consistency guards. Transfer-specific schema still requires story-specific technical review.
+- API foundation: HTTP/JSON through the approved FastAPI boundary; exact Transfer route/payload/error contract still requires story-specific technical review.
 - Authentication/authorization implementation: TBD; only the product permission outcome is approved.
+- Deployment target: TBD.
 - Implementation and tests: not started.
 
 This spec is not implementation-ready until the technical contract receives its required review.

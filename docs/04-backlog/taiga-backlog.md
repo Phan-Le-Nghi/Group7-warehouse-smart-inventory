@@ -14,9 +14,9 @@ Taiga theo dõi việc thực thi; Taiga không phải nguồn sự thật cho y
 
 ## US-PUT-001 post-merge evidence
 
-Taiga status was updated manually by a human after the implementation and verification evidence passed; this documentation sync did not perform a Taiga API update:
+Các status dưới đây là **repository-recorded evidence** từ lần human cập nhật Taiga sau khi implementation và verification evidence đã pass. Task reconciliation này không gọi Taiga API và không claim live verification:
 
-| Item | Documented work status | Remote Taiga status |
+| Item | Documented work status | Repository-recorded Taiga status |
 |---|---|---|
 | `US-PUT-001` / [#8](https://tree.taiga.io/project/lenghi-group-07-project/us/8) | Completed — implementation merged and GitHub Actions passed | Done |
 | `T-PUT-01` / [#19](https://tree.taiga.io/project/lenghi-group-07-project/task/19) | Completed — Technical Story Spec exists | Done |

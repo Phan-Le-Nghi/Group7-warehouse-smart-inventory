@@ -2,6 +2,16 @@
 
 Final backlog gồm 9 canonical stories đã được human approve. Active canonical inventory gồm 12 FR và 5 NFR; priority coverage là 100% cho active requirements theo `DEC-024` đến `DEC-026`. `CAND-REQ-004` được giữ làm lịch sử `SUPERSEDED / DECOMPOSED` và không được double-count. Human Product Decisions / MVP Assumptions không được ghi như verified evidence và không tạo `EVD-*` mới.
 
+## Final Delivery release planning baseline
+
+Theo human-approved `DEC-030`, cả 9 canonical stories được giữ trong Final Delivery release scope với priority planning `MUST`; quyết định này không thay đổi priority canonical của FR, không sửa canonical Acceptance Criteria và không resolve Open Question.
+
+Implementation order được duyệt:
+
+`US-PUT-001` completed baseline → `US-REC-001` → `US-PICK-001` → `US-TRF-001` → `US-TRF-002` → `US-AUD-001` → `US-AUD-002` → `US-ADJ-001` → `US-ADJ-002`.
+
+Thứ tự này giữ Transfer execution trước Transfer history và Audit trước Adjust. Production authentication mechanism và deployment target vẫn `TBD`.
+
 ## Product foundation
 
 | Source | Requirement/rule | Story impact | Classification |
