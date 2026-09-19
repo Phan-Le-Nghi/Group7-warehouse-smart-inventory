@@ -133,8 +133,8 @@ No unresolved behavior above may be inferred during implementation.
 - Architecture foundation: approved at `DEC-020` — modular monolith with React + TypeScript + Vite, Python 3.13 + FastAPI, PostgreSQL 18, SQLAlchemy 2 + Alembic and Playwright.
 - Stock/data foundation: approved at `DEC-021` and `DEC-022` — per-location stock is authoritative and stock-changing operations use transactional consistency guards. Transfer-specific schema still requires story-specific technical review.
 - API foundation: HTTP/JSON through the approved FastAPI boundary; exact Transfer route/payload/error contract still requires story-specific technical review.
-- Authentication/authorization implementation: TBD; only the product permission outcome is approved.
-- Deployment target: TBD.
+- Authentication/authorization design: PostgreSQL-backed server-side session and database-role resolution approved at `DEC-031`; implementation remains pending.
+- Deployment: Render approved only for staging/demo at `DEC-032`; long-term production target remains TBD and no deployment is implemented.
 - Implementation and tests: not started.
 
 This spec is not implementation-ready until the technical contract receives its required review.

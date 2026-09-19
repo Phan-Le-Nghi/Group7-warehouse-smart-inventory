@@ -6,6 +6,16 @@
 
 Canonical technical proposal: [`../../vault/06-technical/api-contract.md`](../../vault/06-technical/api-contract.md). Exact route và JSON shape là technical contract, không phải product requirement.
 
+## Auth API baseline đã duyệt
+
+| Route | Purpose | Trạng thái |
+|---|---|---|
+| `POST /api/v1/auth/login` | Verify login identifier/Argon2id password hash, tạo PostgreSQL session và set secure cookie | APPROVED DESIGN — chưa implement |
+| `POST /api/v1/auth/logout` | Revoke server-side session và expire cookie | APPROVED DESIGN — chưa implement |
+| `GET /api/v1/auth/me` | Resolve actor từ session, active user và current database role | APPROVED DESIGN — chưa implement |
+
+Session cookie là `HttpOnly`, dùng `Path=/`, `Secure` tại staging/production và `SameSite` theo topology. Missing/invalid/expired/revoked session hoặc inactive user trả `401`; authenticated actor thiếu quyền trả `403`. Frontend không được truyền role làm source-of-truth; test actor injection chỉ dùng trong automated tests. Current MVP không thêm JWT, refresh token, self-registration, password reset, social login, OAuth, Keycloak hoặc external identity provider. Exact request/response shape, cookie name và session lifetime thuộc implementation spec.
+
 ## MVP route map đề xuất
 
 | Route | Purpose | Story/boundary |
@@ -48,6 +58,6 @@ Quantity thấp hơn remaining không bị contract này reject chỉ vì có th
 
 ## Contract boundaries
 
-- Actor/auth dependency phải giữ canonical permission; production authentication TBD.
-- Adjust target-vs-delta, attachment storage, advanced pagination/filtering, deployment và NFR còn TBD.
+- Actor/auth dependency phải giữ canonical permission theo `DEC-017/031`; approved session design chưa được implement.
+- Adjust target-vs-delta, attachment storage, advanced pagination/filtering, long-term production deployment và unresolved NFR còn TBD. Render chỉ được approve cho staging/demo tại `DEC-032`.
 - `OQ-012`, `OQ-013` và `OQ-014` vẫn OPEN.

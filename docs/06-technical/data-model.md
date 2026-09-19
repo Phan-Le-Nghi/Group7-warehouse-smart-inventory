@@ -27,8 +27,12 @@ Canonical detail: [`../../vault/06-technical/data-model.md`](../../vault/06-tech
 | Transfer | minimum confirmed Transfer record | Conceptual; canonical fields đã duyệt |
 | Audit | session + comparison lines + discrepancy/re-check persistence khi cần | Conceptual; lifecycle còn OPEN |
 | Adjust | request/decision context | Conceptual; quantity representation và attachment storage TBD |
+| User | `users`: login identity, Argon2id password hash, current role, active state | APPROVED DESIGN tại `DEC-031`; chưa implement |
+| Auth Session | `auth_sessions`: hashed random session token, user link, created/expiry/revocation timestamps | APPROVED DESIGN tại `DEC-031`; chưa implement |
 
 Không tạo table chỉ vì business-object name tồn tại. Table chỉ được đưa vào implementation khi story cần durable state hoặc relational integrity.
+
+Auth baseline approve các field conceptual: `users(id, login identifier, password_hash, role, is_active, created_at/updated_at nếu cần)` và `auth_sessions(id, session_token_hash, user_id, created_at, expires_at, revoked_at)`. Plaintext password và raw session token không được persist. Exact SQL types/indexes/constraints và session lifetime thuộc implementation spec; chưa có auth migration hoặc implementation.
 
 ## US-PUT-001 vertical-slice model
 
