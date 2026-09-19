@@ -8,7 +8,7 @@ Canonical behavior comes from requirements, Business Rules, decisions and canoni
 
 Base path proposal: `/api/v1`.
 
-Production authentication remains `TBD`. API routes depend on an actor/auth boundary that can enforce the canonical roles in `DEC-017`; the `US-PUT-001` test may inject a Warehouse Staff actor.
+`DEC-031` approves PostgreSQL-backed server-side sessions as the production authentication baseline. API routes depend on an actor/auth boundary that resolves the session cookie to an active user and current database role, then enforces the canonical permissions in `DEC-017`. This is approved design only; the current application still uses test actor injection for automated tests and has no production auth implementation.
 
 ## Common error shape
 
@@ -22,7 +22,17 @@ Production authentication remains `TBD`. API routes depend on an actor/auth boun
 }
 ```
 
-Proposed mapping: `403` for a known actor without the canonical permission, `404` for a missing reference, `409` for a state/idempotency/concurrency conflict and `422` for malformed request data. Authentication-specific `401` behavior remains `TBD` with the production mechanism.
+Approved mapping: `401` for a missing, invalid, expired or revoked session or an inactive user; `403` for an authenticated actor without the canonical permission. The existing `404`, `409` and `422` mappings remain proposed technical contract behavior for their respective reference, state/idempotency/concurrency and malformed-data cases.
+
+## Approved authentication API baseline
+
+| Method and route | Purpose | Boundary |
+|---|---|---|
+| `POST /api/v1/auth/login` | Verify login identifier and Argon2id password hash, create a PostgreSQL session and set the secure session cookie | No self-registration, social login, JWT or refresh token |
+| `POST /api/v1/auth/logout` | Revoke the current server-side session and expire the browser cookie | Logout is server-side revocation, not token denylisting |
+| `GET /api/v1/auth/me` | Return the authenticated actor resolved from the current session and database role | Frontend-supplied role is never authoritative |
+
+The browser cookie is `HttpOnly`, uses `Path=/`, is `Secure` in staging/production and uses `SameSite` according to the deployment topology. Exact request/response JSON, cookie name, session duration and SQL/index details belong to the implementation spec. Demo account passwords must enter through environment/platform secrets or be generated outside source control and must not appear in the repository, Vault or CI logs.
 
 ## Proposed MVP route map
 
@@ -116,7 +126,7 @@ The transaction does not modify Receive actual quantity and does not create a Tr
 ## Open contract decisions
 
 - `OQ-012`, `OQ-013` and `OQ-014` remain open.
-- Production authentication mechanism is `TBD`.
+- Authentication mechanism is approved by `DEC-031` but not implemented; exact auth payloads, session lifetime, cookie name and topology-specific `SameSite` setting remain implementation-spec details.
 - Idempotency key retention and storage detail are technical follow-up decisions.
-- Adjust representation, attachment storage, advanced pagination/filtering, deployment and NFR targets remain `TBD`.
+- Adjust representation, attachment storage, advanced pagination/filtering, long-term production deployment and unresolved NFR targets remain `TBD`. Render is approved only for staging/demo by `DEC-032`.
 

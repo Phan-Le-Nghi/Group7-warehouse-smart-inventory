@@ -4,7 +4,7 @@
 
 `HUMAN APPROVED TECHNICAL FOUNDATION — DOCUMENTATION ONLY`
 
-Canonical technical source: [`../../vault/06-technical/architecture.md`](../../vault/06-technical/architecture.md). Quyết định được ghi append-only tại `DEC-020` đến `DEC-023`; `DEC-020` supersede phần stack/architecture/persistence còn TBD của `DEC-004` mà không xóa lịch sử.
+Canonical technical source: [`../../vault/06-technical/architecture.md`](../../vault/06-technical/architecture.md). Technical Foundation được ghi tại `DEC-020` đến `DEC-023`; authentication/authorization design được approve tại `DEC-031` và Render staging/demo design tại `DEC-032`. Các quyết định mới là approved design, không phải implementation claim.
 
 ## Kiến trúc được duyệt
 
@@ -25,7 +25,29 @@ React frontend
   -> PostgreSQL 18
 ```
 
-Frontend không sở hữu authoritative stock. Application service giữ use-case và transaction boundary; persistence thực hiện query/lock/write; PostgreSQL giữ constraints. Production authentication chưa được chọn, nhưng architecture có actor/auth dependency boundary để giữ canonical role outcomes. Test `US-PUT-001` có thể inject Warehouse Staff actor qua boundary này.
+Frontend không sở hữu authoritative stock. Application service giữ use-case và transaction boundary; persistence thực hiện query/lock/write; PostgreSQL giữ constraints. Production authentication baseline dùng server-side session trong PostgreSQL: cookie → session record → active user → current database role. Frontend không phải role source-of-truth. Protected routes dùng reusable authorization dependency/policy; test actor injection chỉ dành cho automated tests. Thiết kế này đã được approve nhưng chưa implement.
+
+## Authentication/authorization design đã duyệt
+
+- Random session ID; database chỉ lưu session-token hash.
+- Cookie `HttpOnly`, `Path=/`, `Secure` tại staging/production và `SameSite` phù hợp topology.
+- Password chỉ lưu Argon2id hash; không lưu plaintext hoặc demo password trong repository, Vault hay CI log.
+- Bốn database roles: `WAREHOUSE_STAFF`, `MANAGER`, `PURCHASING`, `ADMIN`; permission boundary giữ nguyên `DEC-017`.
+- Missing/invalid/expired/revoked session hoặc inactive user → `401`; authenticated actor thiếu quyền → `403`.
+- Không JWT, refresh token, self-registration, password reset, social login, OAuth, Keycloak hoặc external identity provider trong current MVP baseline.
+- Staging/demo có tối thiểu một account cho mỗi role; seed idempotent và password đến từ environment/platform secrets hoặc được tạo ngoài source control.
+
+Conceptual `users` và `auth_sessions` entities đã được approve; exact SQL types/indexes/constraints, session lifetime và topology-specific `SameSite` thuộc implementation spec.
+
+## Render staging/demo design đã duyệt
+
+```text
+React -> public HTTPS Render Static Site
+FastAPI -> public HTTPS Render Web Service
+PostgreSQL -> Render managed PostgreSQL
+```
+
+Staging phải có public frontend/backend URLs, secrets ngoài repository, Alembic migration, `/health`, DB readiness check trước release-ready claim, deterministic idempotent demo seed và smoke test. Backend production command không dùng `--reload`; CORS chỉ allow approved staging frontend origin và phải tương thích credentials khi session cookie yêu cầu. Render chỉ là staging/demo target; chưa được triển khai hoặc verify. Long-term production target vẫn `TBD`.
 
 ## ADR
 
@@ -37,7 +59,8 @@ Frontend không sở hữu authoritative stock. Application service giữ use-ca
 
 ## Vẫn TBD / OPEN
 
-- Production authentication mechanism và deployment target.
+- Exact auth implementation details: SQL/index/constraint choices, session lifetime, cookie name và topology-specific `SameSite`.
+- Long-term production deployment target; Render chỉ được approve cho staging/demo.
 - Adjust dùng target quantity hay signed delta; attachment storage.
 - Advanced pagination/filtering và quantitative NFR tại `OQ-033`.
 - `OQ-012`, `OQ-013` và `OQ-014` không bị đóng bởi Technical Foundation.

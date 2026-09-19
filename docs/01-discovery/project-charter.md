@@ -125,8 +125,8 @@ Các mục `OPEN / TBD` không được trình bày như permanently out of scop
 
 Theo `DEC-020`, stack đã được phê duyệt: React + TypeScript + Vite/npm; Python 3.13 + FastAPI/uv/pytest; PostgreSQL 18/Docker; SQLAlchemy 2 + Alembic; Playwright; modular monolith.
 
-- Production authentication mechanism: `TBD`.
-- Deployment target và operating context: `TBD`.
+- Production authentication mechanism: PostgreSQL-backed server-side session design approved at `DEC-031`; implementation chưa hoàn thành.
+- Staging/demo deployment target: Render approved at `DEC-032`; deployment chưa được implement/verify. Long-term production target và phần operating context còn lại vẫn `TBD`.
 - Integer quantity chỉ là technical simplification cho `US-PUT-001` Round 1 vertical slice. UOM, decimal quantity, conversion behavior và precision/scale vẫn mở tại `OQ-012`; simplification này không phải product assumption.
 
 ## Assumptions

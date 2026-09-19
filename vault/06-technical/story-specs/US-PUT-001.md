@@ -57,7 +57,7 @@ REQ-002/003/004 + CAND-REQ-003/007/010
 }
 ```
 
-The backend injects a Warehouse Staff actor through the actor/auth dependency boundary for this test. Production authentication remains `TBD`.
+The backend injects a Warehouse Staff actor through the actor/auth dependency boundary for this automated test. `DEC-031` now approves PostgreSQL-backed server-side sessions for production design, but that mechanism is not implemented in this slice; test actor injection is not a production mechanism.
 
 The operation must reject malformed/non-positive quantity, missing/mismatched references, invalid destination and allocation exceeding eligible remaining quantity. A failed request has no allocation or balance effect.
 
@@ -111,5 +111,5 @@ GitHub Actions `backend-checks`, `frontend-checks`, and `putaway-e2e` passed for
 - `OQ-012`: integer quantity is a Round 1 slice simplification only.
 - `OQ-013`: Receive completion/handoff and Putaway exception/downstream lifecycle.
 - `OQ-014`: partial Putaway.
-- Production authentication, deployment, advanced pagination/filtering and NFR targets.
+- Production authentication implementation, long-term production deployment, advanced pagination/filtering and unresolved NFR targets. Render is approved only for staging/demo by `DEC-032`.
 

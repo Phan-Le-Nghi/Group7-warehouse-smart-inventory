@@ -146,7 +146,7 @@ Canonical NFR count là **5**. Approval và priority được ghi tại `DEC-025
 | `NFR-001` | Stock-changing operation commit toàn bộ hoặc rollback toàn bộ khi thất bại | Không tồn tại partial write trên tested failure path | MUST |
 | `NFR-002` | Conflicting concurrent stock commands giữ per-location consistency và negative-stock invariant | Concurrency test chứng minh invariant; không có load target | MUST |
 | `NFR-003` | Same-key/same-payload Putaway replay không tạo allocation hoặc stock increment lần hai | `TEST-PUT-003`/equivalent; Putaway Round 1 only; retention window TBD | SHOULD |
-| `NFR-004` | Protected operations enforce approved permission outcome qua actor/auth boundary | Authorization behavior testable; production authentication mechanism TBD | MUST |
+| `NFR-004` | Protected operations enforce approved permission outcome qua actor/auth boundary | Authorization behavior and approved `401`/`403` outcomes testable; PostgreSQL-backed session design approved at `DEC-031`, implementation pending | MUST |
 | `NFR-005` | UI phân biệt rõ Pick `PARTIAL / INSUFFICIENT` với completed | UI/state/copy review và P2 usability evidence; không có numeric threshold | SHOULD |
 
 ## 11. Business rules

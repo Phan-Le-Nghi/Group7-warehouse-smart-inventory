@@ -29,8 +29,12 @@ This document distinguishes the conceptual MVP model from the first vertical-sli
 | Transfer | `transfers` | Minimum confirmed record: SKU, quantity, source, destination, confirmation time | Conceptual; required by canonical stories |
 | Audit | `audit_sessions`, `audit_lines`; discrepancy/re-check persistence as needed | Selected scope, physical/system comparison and match/mismatch context | Conceptual; lifecycle details remain open |
 | Adjust | `adjust_requests` | Reason, re-check link, optional attachment reference, Manager decision and approved apply context | Conceptual; target-vs-delta and attachment storage are `TBD` |
+| User | `users` | Login identity, Argon2id `password_hash`, one current role and active/inactive state | Approved conceptual auth baseline at `DEC-031`; exact SQL types/indexes/constraints deferred to implementation spec |
+| Auth Session | `auth_sessions` | Store only the hash of a random session token, link to user, and track creation, expiry and revocation | Approved conceptual auth baseline at `DEC-031`; session lifetime and cleanup policy deferred to implementation spec |
 
 Table names above are technical proposals. A business-object name alone is not sufficient reason to create a table; a table should be introduced only when its story is implemented and needs durable state or relational integrity.
+
+For `users` and `auth_sessions`, the entity baseline and minimum fields are human-approved design rather than implemented schema. `users` contains `id`, a login identifier, `password_hash`, `role`, `is_active` and `created_at`/`updated_at` when needed. `auth_sessions` contains `id`, `session_token_hash`, `user_id`, `created_at`, `expires_at` and `revoked_at`. Plaintext passwords and raw session tokens must not be persisted. No auth migration or implementation is claimed by this document update.
 
 ## First vertical-slice model — US-PUT-001
 

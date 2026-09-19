@@ -10,7 +10,7 @@ Implementation order được duyệt:
 
 `US-PUT-001` completed baseline → `US-REC-001` → `US-PICK-001` → `US-TRF-001` → `US-TRF-002` → `US-AUD-001` → `US-AUD-002` → `US-ADJ-001` → `US-ADJ-002`.
 
-Thứ tự này giữ Transfer execution trước Transfer history và Audit trước Adjust. Production authentication mechanism và deployment target vẫn `TBD`.
+Thứ tự này giữ Transfer execution trước Transfer history và Audit trước Adjust. `DEC-031` đã approve production authentication design; `DEC-032` đã approve Render chỉ cho staging/demo. Auth/deployment chưa implemented và long-term production deployment target vẫn `TBD`.
 
 ## Product foundation
 
@@ -34,10 +34,12 @@ Thứ tự này giữ Transfer execution trước Transfer history và Audit tr�
 
 | Decision / ADR | Technical contract | Story impact | Boundary |
 |---|---|---|---|
-| `DEC-020` | React + TypeScript + Vite/npm; Python 3.13 + FastAPI/uv/pytest; PostgreSQL 18/Docker; SQLAlchemy 2/Alembic; Playwright; modular monolith | Foundation for all future implementation; first slice `US-PUT-001` | Supersedes technical TBD in `DEC-004`; production authentication/deployment remain TBD |
+| `DEC-020` | React + TypeScript + Vite/npm; Python 3.13 + FastAPI/uv/pytest; PostgreSQL 18/Docker; SQLAlchemy 2/Alembic; Playwright; modular monolith | Foundation for all future implementation; first slice `US-PUT-001` | Technical stack foundation; historical auth/deployment TBD later partially superseded by `DEC-031/032` |
 | `DEC-021` / `ADR-001` | Per-location stock is authoritative; Warehouse total is derived; no `warehouse_totals` | `US-PUT-001`, Pick, Transfer, Audit, Adjust | Does not add stock buckets |
 | `DEC-022` / `ADR-002` | PostgreSQL transaction boundary, row locking when needed, application + DB non-negative guard | `NFR-001/002`; all stock-changing operations | Does not define retry/cancel, reservation semantics or load target |
 | `DEC-023` / `ADR-003` | Receive records actual quantity; Putaway performs initial posting; Putaway idempotency | `US-REC-001`, `US-PUT-001`, `NFR-003` | Does not resolve `OQ-013` or `OQ-014`; idempotency retention window TBD |
+| `DEC-031` | PostgreSQL-backed server-side sessions; hashed random session token; secure cookie; Argon2id password hash; database-role actor resolution; approved 401/403 semantics | `NFR-004`; protected operations across all stories; auth API baseline | APPROVED DESIGN only; `users`/`auth_sessions`, auth routes and production resolver are not implemented; exact SQL/index/session-lifetime/SameSite details deferred |
+| `DEC-032` | Render Static Site + Web Service + managed PostgreSQL for staging/demo; migration, health/readiness, deterministic seed and smoke requirements | Release/staging environment for the MVP | APPROVED DESIGN only; no deploy implementation/evidence; long-term production target remains TBD |
 
 ## Canonical NFR trace
 
@@ -46,7 +48,7 @@ Thứ tự này giữ Transfer execution trước Transfer history và Audit tr�
 | `NFR-001` — atomic stock mutation | MUST | `US-PUT-001`, `US-PICK-001`, `US-TRF-001`, `US-ADJ-002`; `ADR-002` | No partial write on tested failure paths; no broader implementation claim |
 | `NFR-002` — consistency under concurrency | MUST | Same stock-changing stories; `ADR-002` | Concurrency tests required when conflicting/multi-row commands are implemented; no load/user target |
 | `NFR-003` — Putaway idempotency | SHOULD | `US-PUT-001` → Technical Story Spec → `TEST-PUT-003` | Existing test verifies same key/payload produces no second allocation/increment; Putaway Round 1 only; retention TBD |
-| `NFR-004` — authorization enforcement | MUST | Approved role outcomes across protected stories; actor/auth boundary in Technical Architecture | Behavior must be testable; production authentication mechanism remains TBD; no implementation claim beyond existing boundary |
+| `NFR-004` — authorization enforcement | MUST | Approved role outcomes across protected stories; `DEC-031` session/auth boundary | Production design approved; implementation and role-matrix tests remain pending. Existing test actor injection is automated-test-only evidence, not production auth |
 | `NFR-005` — Pick status clarity | SHOULD | `US-PICK-001` → `PF-02` → human-reviewed P2 usability finding | UI/state/copy review and existing usability evidence; no numeric threshold |
 
 ## Repo scaffold / CI baseline
@@ -120,8 +122,8 @@ Taiga references dưới đây theo dõi thực thi và không thay thế nguồ
 | `OQ-020` | RESOLVED — HUMAN PRODUCT DECISION | `DEC-017` |
 | `OQ-015` | RESOLVED — HUMAN PRODUCT DECISION | `DEC-019`; location quantity cannot be negative; no retry/cancel semantics inferred |
 | `OQ-014`, `OQ-021`, `OQ-022` | OPEN QUESTION | Partial workflow, Alert and device/integration behavior remain undecided |
-| `OQ-032` | PARTIALLY DECIDED / OPEN | Stack/architecture approved, but production authentication mechanism and deployment target remain TBD |
-| `OQ-033` | PARTIALLY DECIDED / OPEN | `NFR-001` đến `NFR-005` và priorities approved; response-time, uptime, concurrent-user/load target, numeric usability threshold, idempotency retention and operating/deployment context remain open |
+| `OQ-032` | PARTIALLY RESOLVED / OPEN | `DEC-031` approves production session-auth design; `DEC-032` approves Render for staging/demo only; long-term production deployment remains TBD |
+| `OQ-033` | PARTIALLY DECIDED / OPEN | `NFR-001` đến `NFR-005`, priorities and minimum Render staging/demo release environment approved; response-time, uptime, concurrent-user/load target, numeric usability threshold, idempotency retention and long-term production operating context remain open |
 
 AI-related OQs remain unchanged and are future/open directions, not canonical MVP requirements.
 

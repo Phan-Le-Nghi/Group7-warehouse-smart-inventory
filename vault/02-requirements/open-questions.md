@@ -47,8 +47,8 @@ Ownership của Audit đã được xác nhận và không phải câu hỏi m�
 | OQ-029 | Reorder recommendation chỉ mang tính tư vấn hay có thể khởi tạo hành động Purchasing? | Phạm vi và độ an toàn của reorder |
 | OQ-030 | Có dữ liệu mẫu hoặc dữ liệu lịch sử nào cho các hướng AI? | Tính khả thi/đánh giá AI |
 | OQ-031 | Tiêu chí groundedness, accuracy, explainability và safe fallback nào áp dụng cho output AI? | Acceptance Criteria cho AI |
-| OQ-032 | Con người sẽ phê duyệt hướng frontend, backend, database, authentication, architecture và deployment nào? | `PARTIALLY DECIDED / OPEN`: stack, database và modular-monolith architecture đã được approve tại `DEC-020`; production authentication mechanism và deployment target vẫn `TBD`. |
-| OQ-033 | Non-functional requirement nào bắt buộc cho Report Round 1 hoặc sản phẩm cuối? | `PARTIALLY DECIDED / OPEN`: `DEC-025` approve `NFR-001` đến `NFR-005` và `DEC-026` approve priority. Response-time, uptime, concurrent-user/load target, quantitative usability threshold, Putaway idempotency retention window và operating/deployment context vẫn chưa được quyết định. |
+| OQ-032 | Con người sẽ phê duyệt hướng frontend, backend, database, authentication, architecture và deployment nào? | `PARTIALLY RESOLVED / OPEN`: stack, database và modular-monolith architecture được approve tại `DEC-020`; production authentication baseline được approve tại `DEC-031` là PostgreSQL-backed server-side session; Render được approve tại `DEC-032` chỉ cho staging/demo. Long-term production deployment target vẫn `TBD`. |
+| OQ-033 | Non-functional requirement nào bắt buộc cho Report Round 1 hoặc sản phẩm cuối? | `PARTIALLY DECIDED / OPEN`: `DEC-025` approve `NFR-001` đến `NFR-005`, `DEC-026` approve priority và `DEC-032` xác định minimum staging/demo release environment trên Render. Response-time, uptime, concurrent-user/load target, quantitative usability threshold, Putaway idempotency retention window và long-term production operating/deployment context vẫn chưa được quyết định. |
 
 Khi câu trả lời được phê duyệt, phải dẫn nguồn, cập nhật artifact canonical bị ảnh hưởng và ghi quyết định khi phù hợp. Không âm thầm xóa câu hỏi lịch sử.
 
