@@ -20,7 +20,7 @@
 | Requirements + Business Rules | [`02-requirements/requirements-and-business-rules.md`](02-requirements/requirements-and-business-rules.md) | `vault/02-requirements/` | Product/BA — Thanh Ngân | Requirements + NFR Round 1 human approved: 12 active FR, 5 NFR, 15 BR; active priority coverage 100%; `OQ-012/014` và phần unresolved của `OQ-013/032/033` vẫn mở |
 | Project Vault | [`../vault/00-index.md`](../vault/00-index.md) | `vault/` | AI/Vault — Ly Na | Đã scaffold |
 | Vault Q&A Benchmark | [`02-requirements/vault-qa-benchmark.md`](02-requirements/vault-qa-benchmark.md) | `vault/09-ai/qa-benchmark.md` | AI/Vault — Ly Na | Completed — 20 questions — Human reviewed — Accuracy: 100% |
-| AI Usage Log v1 | [`AI_USAGE_LOG.md`](AI_USAGE_LOG.md) | Việc dùng AI cá nhân đã kiểm chứng | Tất cả thành viên; Ly Na điều phối | 13 mục; có Figma evidence reconciliation và human-verification boundary; Q&A Benchmark và `US-PUT-001` evidence được bảo tồn |
+| AI Usage Log v1 | [`AI_USAGE_LOG.md`](AI_USAGE_LOG.md) | Việc dùng AI cá nhân đã kiểm chứng | Tất cả thành viên; Ly Na điều phối | 15 mục; có Final Delivery readiness/scope-freeze reconciliation, Figma evidence reconciliation và human-verification boundary; Q&A Benchmark và `US-PUT-001` evidence được bảo tồn |
 
 ## Bài 2
 

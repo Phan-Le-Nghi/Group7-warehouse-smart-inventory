@@ -18,7 +18,7 @@ Product Definition baseline: [PRD](../03-product/PRD.md), [MVP Scope](../03-prod
 | Story ID | Title | Actor | Owner | Taiga ref | Taiga status | Source classification |
 |---|---|---|---|---|---|---|
 | `US-REC-001` | Ghi nhận Receive theo số lượng thực nhận | Warehouse Staff | Nguyễn Thị Nghĩa | [#7](https://tree.taiga.io/project/lenghi-group-07-project/us/7) / ID `9523822` | Ready | Verified evidence + HUMAN PRODUCT DECISION |
-| `US-PUT-001` | Phân bổ Putaway vào initial location | Warehouse Staff | Phan Lê Nghi | [#8](https://tree.taiga.io/project/lenghi-group-07-project/us/8) / ID `9523823` | Ready | HUMAN PRODUCT DECISION |
+| `US-PUT-001` | Phân bổ Putaway vào initial location | Warehouse Staff | Phan Lê Nghi | [#8](https://tree.taiga.io/project/lenghi-group-07-project/us/8) / ID `9523823` | Done — repository-recorded, not live-verified in this reconciliation | HUMAN PRODUCT DECISION |
 | `US-PICK-001` | Thực hiện Pick từ tracked locations | Warehouse Staff | Trương Huỳnh Thảo Ngân | [#9](https://tree.taiga.io/project/lenghi-group-07-project/us/9) / ID `9523824` | Ready | HUMAN PRODUCT DECISION |
 | `US-TRF-001` | Xác nhận Internal Transfer | Warehouse Staff | Nguyễn Thị Ly Na | [#10](https://tree.taiga.io/project/lenghi-group-07-project/us/10) / ID `9523825` | New | HUMAN PRODUCT DECISION |
 | `US-TRF-002` | Xem Transfer history | Manager | Nguyễn Thị Ly Na | [#11](https://tree.taiga.io/project/lenghi-group-07-project/us/11) / ID `9523826` | New | HUMAN PRODUCT DECISION |
@@ -68,7 +68,7 @@ Trace: `CAND-REQ-003/006/010/011`, `CAND-BR-003/005/006/015`, `DEC-010/012/017/0
 - Given Transfer được confirm, when system record được tạo, then record chứa SKU, quantity, source, destination và confirmation timestamp.
 - Given Transfer quantity lớn hơn `system stock quantity` tại source location, when Warehouse Staff cố confirm Transfer, then Transfer không được confirm, quantity change không được apply và operation được báo không hợp lệ/không thể confirm.
 
-Trace: `CAND-REQ-003/004/010/011`, `CAND-BR-003/007/008/015`, `DEC-005/007/009/010/013/017/019`, `OQ-013/014/022`.
+Trace: `CAND-REQ-003/010/011`, `FR-012`, `CAND-BR-003/007/008/015`, `DEC-005/007/009/010/013/017/019/024`, `OQ-013/014/022`. Historical `CAND-REQ-004` was `SUPERSEDED / DECOMPOSED` by `FR-012` and `FR-013` and is not an active trace target.
 
 ## US-TRF-002 — Xem Transfer history
 
@@ -78,7 +78,7 @@ Trace: `CAND-REQ-003/004/010/011`, `CAND-BR-003/007/008/015`, `DEC-005/007/009/0
 - Given một confirmed Transfer xuất hiện trong history, when Manager xem record, then source, destination, quantity và time được hiển thị.
 - Given một Transfer có confirmation timestamp, when record được xem trong history, then displayed time phản ánh confirmation time của record.
 
-Trace: `CAND-REQ-004/010`, `CAND-BR-008`, `DEC-013/017`, `OQ-013/022`.
+Trace: `FR-013`, `CAND-REQ-010`, `CAND-BR-008`, `DEC-013/017/024`, `OQ-013/022`. Historical `CAND-REQ-004` was `SUPERSEDED / DECOMPOSED` by `FR-012` and `FR-013` and is not an active trace target.
 
 ## US-AUD-001 — Thực hiện selected-scope Audit
 
