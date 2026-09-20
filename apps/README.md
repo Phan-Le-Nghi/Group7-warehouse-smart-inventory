@@ -97,20 +97,23 @@ npm run test:e2e
 
 ## Scope boundary
 
-Authentication foundation is an implementation candidate, while `US-PUT-001`
-is the reviewed baseline. Test actor injection exists only through FastAPI
-dependency overrides in automated tests; there is no runtime actor environment
-switch. PostgreSQL migration and Playwright E2E evidence for auth remain pending
-until CI or an equivalent PostgreSQL runtime verifies them. Deployment, other
-stories, and real secrets remain out of scope. `OQ-012`, `OQ-013`, and `OQ-014`
-remain open.
+Authentication and `US-PUT-001` are merged implementation baselines. Test actor
+injection exists only through FastAPI dependency overrides in automated tests;
+there is no runtime actor environment switch. Human-confirmed merged-PR evidence
+records backend, frontend, and browser E2E CI checks as `PASS` on PostgreSQL 18.
+No local Docker pass is claimed.
 
-Auth evidence status for this candidate:
+`DEC-034/035` approve a staging/demo design with a Vercel React/Vite frontend,
+a same-origin `/api/*` rewrite to the Render FastAPI backend, and Supabase
+PostgreSQL 17. That deployment has not been implemented or verified. Staging
+HTTPS cookie behavior and PostgreSQL 17 release evidence remain pending;
+long-term production deployment remains `TBD`. `OQ-012`, `OQ-013`, and
+`OQ-014` remain open.
+
+Auth evidence status:
 
 - `APPROVED DESIGN`: `DEC-031` and exact implementation spec `DEC-033`.
-- `IMPLEMENTATION CANDIDATE`: current uncommitted auth diff after approved review fixes.
-- `LOCALLY VERIFIED`: Ruff, pytest with SQLite component baseline, ESLint,
-  TypeScript, Vitest, production build, Playwright discovery, and an SQLite
-  Alembic upgrade/downgrade/re-upgrade cycle.
-- `CI / POSTGRESQL / BROWSER E2E NOT YET VERIFIED`: no local PostgreSQL or Docker
-  runtime was available; GitHub CI PostgreSQL 18 remains required evidence.
+- `MERGED / CI VERIFIED`: backend, frontend, and browser E2E checks passed on
+  the merged PR according to human-confirmed evidence.
+- `NOT YET VERIFIED`: public staging HTTPS cookie behavior and Supabase
+  PostgreSQL 17 compatibility in the release environment.

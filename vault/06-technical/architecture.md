@@ -4,7 +4,7 @@
 
 `HUMAN APPROVED TECHNICAL FOUNDATION — DOCUMENTATION ONLY`
 
-Architecture and tooling are approved by `DEC-020`. Authentication/authorization design is approved by `DEC-031`, exact auth implementation details by `DEC-033`, and Render staging/demo topology by `DEC-032`. The `US-PUT-001` vertical slice exists as a reviewed implementation artifact. A post-review auth implementation candidate exists in `apps/`; PostgreSQL/E2E verification remains pending and deployment remains design-only.
+Architecture and tooling are approved by `DEC-020`. Authentication/authorization design is approved by `DEC-031`, exact auth implementation details by `DEC-033`, and the revised Vercel → Render → Supabase staging/demo topology by `DEC-034/035`. The `US-PUT-001` vertical slice and auth implementation are merged implementation artifacts; human-confirmed merged-PR evidence records backend, frontend and browser E2E CI checks as `PASS`. Staging HTTPS cookie behavior and the Vercel/Render/Supabase deployment remain unverified because deployment has not been performed.
 
 ## System shape
 
@@ -15,7 +15,7 @@ Browser
   -> FastAPI backend API
   -> application service / transaction boundary
   -> SQLAlchemy 2 persistence
-  -> PostgreSQL 18
+  -> PostgreSQL 17+
 ```
 
 The system is a modular monolith with:
@@ -35,11 +35,11 @@ The foundation explicitly excludes microservices, CQRS, an event bus and a gener
 |---|---|---|
 | Frontend | Present canonical UI states, collect input and call HTTP endpoints | Does not own or calculate authoritative stock |
 | FastAPI route/schema | Parse HTTP, validate request shape, call actor/auth dependency and map application results to HTTP | Does not contain stock mutation logic |
-| Actor/auth dependency | Resolve session cookie → PostgreSQL session → active user → current database role, then enforce canonical role outcomes | Implementation candidate exists; PostgreSQL/E2E evidence remains pending and test actor injection is restricted to automated tests |
+| Actor/auth dependency | Resolve session cookie → PostgreSQL session → active user → current database role, then enforce canonical role outcomes | Implementation is merged and CI-verified; staging HTTPS cookie behavior remains unverified and test actor injection is restricted to automated tests |
 | Application service | Orchestrate the use case, enforce approved rules and own the transaction boundary | Does not invent unresolved workflow lifecycle |
 | Persistence | Use SQLAlchemy 2 for queries, row locks and writes | Does not contain UI/navigation behavior |
 | PostgreSQL | Persist authoritative state and enforce FK, uniqueness and `quantity >= 0` constraints | Warehouse total is not persisted |
-| Alembic | Version database schema changes | Migration implementation is not created in this documentation phase |
+| Alembic | Version database schema changes | Remains migration source-of-truth; each release has exactly one migration runner |
 
 ## Request flow for a stock-changing command
 
@@ -75,22 +75,37 @@ The approved baseline does not add JWT, refresh tokens, self-registration, passw
 
 ## Approved staging/demo deployment design
 
-`DEC-032` approves Render only for staging/demo:
+`DEC-034` supersedes only the frontend and database provider clauses of `DEC-032`. The approved staging/demo topology is:
 
 ```text
-React frontend -> public HTTPS Render Static Site
-FastAPI backend -> public HTTPS Render Web Service
-PostgreSQL -> Render managed PostgreSQL
+Browser
+  -> public HTTPS Vercel React/Vite frontend
+  -> same-origin /api/* rewrite
+  -> public HTTPS Render FastAPI backend
+  -> TLS connection
+  -> Supabase PostgreSQL 17
 ```
 
-The environment must expose public frontend/backend URLs, keep secrets outside the repository, apply Alembic migrations, expose `/health`, pass a database readiness check before any release-ready claim, create deterministic idempotent demo accounts from external secrets and pass a smoke test. The backend production command must not use `--reload`. CORS allows only the approved staging frontend origin and must enable credential-compatible configuration when required by session cookies. This topology is not implemented or verified yet; the long-term production target remains `TBD`.
+The frontend calls relative `/api/...` paths and does not expose the Render backend URL in the browser bundle when the rewrite is used. Staging auth uses the existing host-only `warehouse_session` cookie with `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, `COOKIE_SECURE=true` and `COOKIE_SAMESITE=lax`. Direct Vercel → Render cross-site calls and hardcoded `SameSite=None` are not the baseline.
+
+Supabase is only hosted PostgreSQL. FastAPI remains the application/backend authority and SQLAlchemy + Alembic remain the persistence/migration authority. Supabase Auth, browser SDK as a business-data path, Data API, JWT and external identity providers are excluded from this topology.
+
+The retained `DEC-032` requirements are staging/demo-only scope, public HTTPS, secrets outside the repository, explicit Alembic migration, `/health`, database readiness before any release-ready claim, deterministic idempotent demo seed, smoke test and a backend production command without `--reload`. Render Free is permitted; its cold start must be handled by warm-up/rehearsal before a demo and is not production-grade availability evidence.
+
+`DEC-035` approves Supabase PostgreSQL 17 for staging/demo and PostgreSQL 17+ application/migration compatibility. PostgreSQL 18 CI evidence remains useful compatibility evidence, but release requires PostgreSQL 17 verification matching staging and must not claim versions 17 and 18 are identical. `DATABASE_URL` comes from the real Supabase Dashboard/Connect value and requires TLS through `sslmode=require`; its exact host/mode and credentials are not documented or committed.
+
+Alembic remains the migration source-of-truth. A release has exactly one migration runner: future preferred automation is GitHub Actions `workflow_dispatch` with a protected environment/secrets, while a named human operator may run the migration until that workflow exists. `alembic upgrade head` must not run on every application startup.
+
+`/health` remains liveness. A future `/ready` endpoint must perform at least `SELECT 1`; it is not implemented. The future production-safe idempotent demo seed may create missing records and safely reconcile deterministic demo references, but must not reset operational state, arbitrarily delete staging records or reuse destructive test-seed behavior. Exact demo IDs/data remain an implementation-task decision.
+
+Release smoke must verify frontend HTTPS, backend health, database readiness, login, cookie flags, `/auth/me`, `401`, `403`, Putaway, idempotency, logout and absence of leaked secrets. The topology remains `DESIGN / NOT DEPLOYED`; long-term production remains `TBD`.
 
 ## Configuration and delivery boundaries
 
 - Runtime configuration must come from environment variables; repository examples must contain placeholders only.
 - Exact lint/format packages and version pins remain implementation-tooling choices to review when scaffolding is authorized.
-- Existing CI runs frontend/backend checks and the Putaway Playwright slice; no staging deployment job is implemented.
-- Authentication design/spec are approved by `DEC-031/033` and an implementation candidate exists; PostgreSQL/E2E verification remains pending. Render staging/demo is approved design only and long-term production deployment remains `TBD`.
+- Existing CI runs frontend/backend checks and the Putaway/auth Playwright slice; human-confirmed merged-PR evidence records backend, frontend and E2E checks as `PASS`. It does not provide staging PostgreSQL 17 or deployed HTTPS-cookie evidence.
+- Authentication design/spec are approved by `DEC-031/033` and implementation is merged. The Vercel/Render/Supabase staging/demo topology is approved design only and long-term production deployment remains `TBD`.
 - Quantitative NFR targets remain open at `OQ-033`.
 
 ## Decision trace
@@ -100,5 +115,8 @@ The environment must expose public frontend/backend URLs, keep secrets outside t
 - `DEC-022` / `ADR-002`: transactions and non-negative stock.
 - `DEC-023` / `ADR-003`: Receive records actual quantity; Putaway performs initial stock posting.
 - `DEC-031`: PostgreSQL-backed server-side session authentication and database-role authorization baseline.
-- `DEC-032`: Render staging/demo topology and minimum release-environment requirements; long-term production target remains `TBD`.
+- `DEC-032`: retained minimum staging/demo release requirements; its Render frontend/database provider clauses are superseded by `DEC-034`.
+- `DEC-033`: exact session-auth implementation contract; implementation is merged and CI-verified, while staging HTTPS-cookie behavior remains unverified.
+- `DEC-034`: Vercel same-origin frontend rewrite → Render FastAPI → Supabase PostgreSQL staging/demo topology.
+- `DEC-035`: Supabase PostgreSQL 17 staging target, PostgreSQL 17+ compatibility and single-runner Alembic policy.
 

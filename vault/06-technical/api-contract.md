@@ -8,7 +8,7 @@ Canonical behavior comes from requirements, Business Rules, decisions and canoni
 
 Base path proposal: `/api/v1`.
 
-`DEC-031` approves PostgreSQL-backed server-side sessions as the production authentication baseline and `DEC-033` approves the exact implementation contract. API routes depend on an actor/auth boundary that resolves the session cookie to an active user and current database role, then enforces the canonical permissions in `DEC-017`. A post-review implementation candidate now exists; dependency override remains automated-test-only and no production runtime actor switch exists. PostgreSQL/E2E verification remains pending.
+`DEC-031` approves PostgreSQL-backed server-side sessions as the production authentication baseline and `DEC-033` approves the exact implementation contract. API routes depend on an actor/auth boundary that resolves the session cookie to an active user and current database role, then enforces the canonical permissions in `DEC-017`. The implementation is merged and human-confirmed merged-PR evidence records backend/frontend/browser E2E CI checks as `PASS`; dependency override remains automated-test-only and no production runtime actor switch exists. Staging HTTPS cookie behavior and PostgreSQL 17/Supabase verification remain pending.
 
 ## Common error shape
 
@@ -126,7 +126,7 @@ The transaction does not modify Receive actual quantity and does not create a Tr
 ## Open contract decisions
 
 - `OQ-012`, `OQ-013` and `OQ-014` remain open.
-- Authentication design and exact contract are approved by `DEC-031/033`; an implementation candidate exists, while PostgreSQL migration and browser E2E acceptance evidence remain pending. The topology-specific `SameSite` value remains deployment configuration.
+- Authentication design and exact contract are approved by `DEC-031/033`; implementation is merged and CI verified. Staging HTTPS cookie behavior remains unverified. `DEC-034` fixes the staging baseline at Vercel same-origin rewrite with `Secure` and `SameSite=Lax`.
 - Idempotency key retention and storage detail are technical follow-up decisions.
-- Adjust representation, attachment storage, advanced pagination/filtering, long-term production deployment and unresolved NFR targets remain `TBD`. Render is approved only for staging/demo by `DEC-032`.
+- Adjust representation, attachment storage, advanced pagination/filtering, long-term production deployment and unresolved NFR targets remain `TBD`. `DEC-034/035` approve Vercel → Render → Supabase PostgreSQL 17 only for staging/demo; deployment has not been performed.
 

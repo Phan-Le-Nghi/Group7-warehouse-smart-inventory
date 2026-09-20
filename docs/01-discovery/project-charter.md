@@ -123,10 +123,10 @@ Các mục `OPEN / TBD` không được trình bày như permanently out of scop
 
 ### Approved technical constraints
 
-Theo `DEC-020`, stack đã được phê duyệt: React + TypeScript + Vite/npm; Python 3.13 + FastAPI/uv/pytest; PostgreSQL 18/Docker; SQLAlchemy 2 + Alembic; Playwright; modular monolith.
+Theo `DEC-020/035`, stack đã được phê duyệt: React + TypeScript + Vite/npm; Python 3.13 + FastAPI/uv/pytest; PostgreSQL 17+ compatibility với PostgreSQL 18 local/CI baseline và Supabase PostgreSQL 17 staging target; Docker; SQLAlchemy 2 + Alembic; Playwright; modular monolith.
 
-- Production authentication mechanism: PostgreSQL-backed server-side session design approved at `DEC-031`; implementation chưa hoàn thành.
-- Staging/demo deployment target: Render approved at `DEC-032`; deployment chưa được implement/verify. Long-term production target và phần operating context còn lại vẫn `TBD`.
+- Production authentication mechanism: PostgreSQL-backed server-side session design/spec approved at `DEC-031/033`; implementation đã merge và CI pass, còn staging HTTPS cookie behavior chưa verify.
+- Staging/demo deployment target: Vercel frontend → Render FastAPI → Supabase PostgreSQL 17 approved at `DEC-032/034/035`; deployment chưa được implement/verify. Long-term production target và phần operating context còn lại vẫn `TBD`.
 - Integer quantity chỉ là technical simplification cho `US-PUT-001` Round 1 vertical slice. UOM, decimal quantity, conversion behavior và precision/scale vẫn mở tại `OQ-012`; simplification này không phải product assumption.
 
 ## Assumptions
