@@ -1,4 +1,5 @@
 import { spawn, execFileSync } from 'node:child_process'
+import { randomBytes } from 'node:crypto'
 import { createServer } from 'vite'
 
 const receiveLineId = '00000000-0000-0000-0000-000000000004'
@@ -25,11 +26,13 @@ async function globalSetup() {
   }
 
   const uv = process.platform === 'win32' ? 'uv.exe' : 'uv'
+  const testUserPassword = randomBytes(32).toString('base64url')
   const backendEnvironment = {
     ...process.env,
     DATABASE_URL: databaseUrl,
-    WAREHOUSE_TEST_ACTOR_ROLE: 'WAREHOUSE_STAFF',
+    DEMO_USER_PASSWORD: testUserPassword,
   }
+  process.env.E2E_USER_PASSWORD = testUserPassword
 
   execFileSync(
     uv,
@@ -39,6 +42,11 @@ async function globalSetup() {
   execFileSync(
     uv,
     ['--directory', '../backend', 'run', 'python', '-m', 'warehouse_api.test_seed'],
+    { env: backendEnvironment, stdio: 'inherit' },
+  )
+  execFileSync(
+    uv,
+    ['--directory', '../backend', 'run', 'python', '-m', 'warehouse_api.demo_seed'],
     { env: backendEnvironment, stdio: 'inherit' },
   )
 
@@ -68,7 +76,24 @@ async function globalSetup() {
 
   return async () => {
     await frontend.close()
-    backend.kill()
+    if (backend.exitCode !== null || backend.signalCode !== null) return
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Backend did not exit after termination.'))
+      }, 5_000)
+      backend.once('exit', () => {
+        clearTimeout(timeout)
+        resolve()
+      })
+      backend.once('error', (error) => {
+        clearTimeout(timeout)
+        reject(error)
+      })
+      if (!backend.kill()) {
+        clearTimeout(timeout)
+        reject(new Error('Backend process could not be terminated.'))
+      }
+    })
   }
 }
 

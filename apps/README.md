@@ -23,17 +23,34 @@ only. Do not reuse them in a shared or production environment.
 
 ## PostgreSQL and backend
 
-Start PostgreSQL from `apps/docker`, then apply the explicit migration and load
-the documented test-only fixture:
+Start PostgreSQL from `apps/docker`, then apply the explicit migrations. Demo
+accounts are created only by the explicit seed command and require one password
+from the environment; never store that password in `.env.example` or source
+control:
 
 ```powershell
 docker compose --env-file ../.env up -d
 Set-Location ../backend
 uv sync --locked
 uv run --env-file ../.env alembic upgrade head
-uv run --env-file ../.env python -m warehouse_api.test_seed
+$env:DEMO_USER_PASSWORD = Read-Host -AsSecureString | ConvertFrom-SecureString -AsPlainText
+uv run --env-file ../.env python -m warehouse_api.demo_seed
 uv run --env-file ../.env uvicorn warehouse_api.main:app --reload
 ```
+
+The demo seed is idempotent and creates `demo.warehouse_staff`, `demo.manager`,
+`demo.purchasing`, and `demo.admin`. Clear `DEMO_USER_PASSWORD` from the shell
+after seeding. Expired or revoked sessions older than seven days can be removed
+explicitly with `uv run --env-file ../.env python -m warehouse_api.auth_service`;
+the application does not schedule cleanup automatically.
+
+Local HTTP uses `COOKIE_SECURE=false` and `COOKIE_SAMESITE=lax`. Staging and
+production must set `COOKIE_SECURE=true`; `COOKIE_SAMESITE` and `CORS_ORIGINS`
+must match the approved deployment topology. `COOKIE_SAMESITE=none` is rejected
+unless Secure is enabled and activates strict Origin plus JSON mutation checks.
+The staging smoke/release checklist must inspect the issued session cookie and
+verify the `Secure` attribute; the application does not infer the environment
+or automatically promote `COOKIE_SECURE` for staging.
 
 The API is available at `http://localhost:8000`. Importing the application does
 not create tables or run migrations.
@@ -69,8 +86,9 @@ npm run test
 npm run build
 ```
 
-The Playwright test refuses to run without a real PostgreSQL URL. It migrates
-that database, resets the test-only fixture, and starts FastAPI and Vite:
+The Playwright tests refuse to run without a real PostgreSQL URL. They generate
+a test password at runtime, migrate the database, reset the test-only fixture,
+sign in through the real session API, and start FastAPI and Vite:
 
 ```powershell
 $env:TEST_DATABASE_URL = "postgresql+psycopg://warehouse_dev:warehouse_dev_only@localhost:5432/warehouse"
@@ -79,7 +97,20 @@ npm run test:e2e
 
 ## Scope boundary
 
-Only the `US-PUT-001` vertical slice is implemented. Production authentication,
-deployment, other stories, and real secrets remain out of scope. The
-`WAREHOUSE_TEST_ACTOR_ROLE` switch exists only for controlled tests; production
-authentication remains TBD. `OQ-012`, `OQ-013`, and `OQ-014` remain open.
+Authentication foundation is an implementation candidate, while `US-PUT-001`
+is the reviewed baseline. Test actor injection exists only through FastAPI
+dependency overrides in automated tests; there is no runtime actor environment
+switch. PostgreSQL migration and Playwright E2E evidence for auth remain pending
+until CI or an equivalent PostgreSQL runtime verifies them. Deployment, other
+stories, and real secrets remain out of scope. `OQ-012`, `OQ-013`, and `OQ-014`
+remain open.
+
+Auth evidence status for this candidate:
+
+- `APPROVED DESIGN`: `DEC-031` and exact implementation spec `DEC-033`.
+- `IMPLEMENTATION CANDIDATE`: current uncommitted auth diff after approved review fixes.
+- `LOCALLY VERIFIED`: Ruff, pytest with SQLite component baseline, ESLint,
+  TypeScript, Vitest, production build, Playwright discovery, and an SQLite
+  Alembic upgrade/downgrade/re-upgrade cycle.
+- `CI / POSTGRESQL / BROWSER E2E NOT YET VERIFIED`: no local PostgreSQL or Docker
+  runtime was available; GitHub CI PostgreSQL 18 remains required evidence.

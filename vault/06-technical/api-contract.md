@@ -8,7 +8,7 @@ Canonical behavior comes from requirements, Business Rules, decisions and canoni
 
 Base path proposal: `/api/v1`.
 
-`DEC-031` approves PostgreSQL-backed server-side sessions as the production authentication baseline. API routes depend on an actor/auth boundary that resolves the session cookie to an active user and current database role, then enforces the canonical permissions in `DEC-017`. This is approved design only; the current application still uses test actor injection for automated tests and has no production auth implementation.
+`DEC-031` approves PostgreSQL-backed server-side sessions as the production authentication baseline and `DEC-033` approves the exact implementation contract. API routes depend on an actor/auth boundary that resolves the session cookie to an active user and current database role, then enforces the canonical permissions in `DEC-017`. A post-review implementation candidate now exists; dependency override remains automated-test-only and no production runtime actor switch exists. PostgreSQL/E2E verification remains pending.
 
 ## Common error shape
 
@@ -32,7 +32,7 @@ Approved mapping: `401` for a missing, invalid, expired or revoked session or an
 | `POST /api/v1/auth/logout` | Revoke the current server-side session and expire the browser cookie | Logout is server-side revocation, not token denylisting |
 | `GET /api/v1/auth/me` | Return the authenticated actor resolved from the current session and database role | Frontend-supplied role is never authoritative |
 
-The browser cookie is `HttpOnly`, uses `Path=/`, is `Secure` in staging/production and uses `SameSite` according to the deployment topology. Exact request/response JSON, cookie name, session duration and SQL/index details belong to the implementation spec. Demo account passwords must enter through environment/platform secrets or be generated outside source control and must not appear in the repository, Vault or CI logs.
+The browser cookie is `warehouse_session`, `HttpOnly`, host-only, uses `Path=/`, has an absolute eight-hour lifetime, is `Secure` in staging/production and uses configurable `SameSite` according to deployment topology. Login accepts `login_identifier` and `password`; login and `/me` return only actor `id`, normalized identifier and current role; logout returns `204`. Session tokens never appear in JSON. Demo account passwords enter through the single `DEMO_USER_PASSWORD` environment/platform secret and must not appear in the repository, Vault or CI logs.
 
 ## Proposed MVP route map
 
@@ -126,7 +126,7 @@ The transaction does not modify Receive actual quantity and does not create a Tr
 ## Open contract decisions
 
 - `OQ-012`, `OQ-013` and `OQ-014` remain open.
-- Authentication mechanism is approved by `DEC-031` but not implemented; exact auth payloads, session lifetime, cookie name and topology-specific `SameSite` setting remain implementation-spec details.
+- Authentication design and exact contract are approved by `DEC-031/033`; an implementation candidate exists, while PostgreSQL migration and browser E2E acceptance evidence remain pending. The topology-specific `SameSite` value remains deployment configuration.
 - Idempotency key retention and storage detail are technical follow-up decisions.
 - Adjust representation, attachment storage, advanced pagination/filtering, long-term production deployment and unresolved NFR targets remain `TBD`. Render is approved only for staging/demo by `DEC-032`.
 

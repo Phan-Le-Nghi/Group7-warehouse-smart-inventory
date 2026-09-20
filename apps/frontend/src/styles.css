@@ -76,6 +76,54 @@ input {
   font-weight: 750;
 }
 
+.logout-button {
+  width: auto;
+  margin: 0;
+  padding: 0.55rem 0.8rem;
+  background: #334b3d;
+  font-size: 0.78rem;
+}
+
+.auth-shell {
+  display: grid;
+  min-height: 100vh;
+  padding: 1rem;
+  place-items: center;
+}
+
+.login-card {
+  width: min(28rem, 100%);
+  padding: clamp(1.5rem, 6vw, 3rem);
+  border: 1px solid #d4dfd7;
+  border-radius: 1.5rem;
+  background: #fff;
+  box-shadow: 0 1.5rem 4rem rgb(36 75 51 / 10%);
+}
+
+.login-card .brand-mark {
+  margin-bottom: 1.5rem;
+}
+
+.login-field {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 1.25rem;
+  color: #344c3e;
+  font-weight: 700;
+}
+
+.login-field input {
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid #b9cbbf;
+  border-radius: 0.65rem;
+  background: #fff;
+}
+
+.forbidden-panel {
+  padding: 1rem 0;
+}
+
 .putaway-card {
   width: min(47rem, 100%);
   margin: 0 auto;

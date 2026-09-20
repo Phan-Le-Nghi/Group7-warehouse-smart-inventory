@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 
@@ -15,6 +21,22 @@ const context = {
     { id: 'sales-shelf-id', code: 'SALES_SHELF' },
   ],
 }
+const actor = {
+  id: 'actor-id',
+  login_identifier: 'demo.warehouse_staff',
+  role: 'WAREHOUSE_STAFF' as const,
+}
+
+function renderApp() {
+  return render(
+    <App
+      actor={actor}
+      onLogout={() => undefined}
+      onUnauthorized={() => undefined}
+      receiveLineId={receiveLineId}
+    />,
+  )
+}
 
 function jsonResponse(body: object, status = 200) {
   return Promise.resolve(
@@ -26,13 +48,14 @@ function jsonResponse(body: object, status = 200) {
 }
 
 afterEach(() => {
+  cleanup()
   vi.restoreAllMocks()
 })
 
 describe('US-PUT-001 Putaway', () => {
   it('allows destination selection', async () => {
     vi.spyOn(globalThis, 'fetch').mockReturnValue(jsonResponse(context))
-    render(<App receiveLineId={receiveLineId} />)
+    renderApp()
 
     const salesShelf = await screen.findByRole('radio', { name: /Sales Shelf/i })
     fireEvent.click(salesShelf)
@@ -60,7 +83,7 @@ describe('US-PUT-001 Putaway', () => {
           201,
         ),
       )
-    render(<App receiveLineId={receiveLineId} />)
+    renderApp()
 
     fireEvent.click(
       await screen.findByRole('button', { name: 'Confirm Putaway' }),
@@ -90,7 +113,7 @@ describe('US-PUT-001 Putaway', () => {
           409,
         ),
       )
-    render(<App receiveLineId={receiveLineId} />)
+    renderApp()
 
     fireEvent.click(
       await screen.findByRole('button', { name: 'Confirm Putaway' }),

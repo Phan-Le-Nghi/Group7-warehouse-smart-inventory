@@ -100,7 +100,11 @@ def api() -> Iterator[tuple[TestClient, sessionmaker[Session], PutawayFixture]]:
             session.close()
 
     app.dependency_overrides[get_db_session] = override_session
-    app.dependency_overrides[get_actor] = lambda: Actor(role=WAREHOUSE_STAFF)
+    app.dependency_overrides[get_actor] = lambda: Actor(
+        user_id=uuid4(),
+        login_identifier="test.warehouse_staff",
+        role=WAREHOUSE_STAFF,
+    )
     with TestClient(app) as client:
         yield client, factory, fixture
     app.dependency_overrides.clear()

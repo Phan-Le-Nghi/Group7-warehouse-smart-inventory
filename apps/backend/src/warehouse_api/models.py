@@ -2,19 +2,86 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
+    LargeBinary,
     String,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
     pass
+
+
+class User(Base):
+    __tablename__ = "users"
+    __table_args__ = (
+        CheckConstraint(
+            "length(trim(login_identifier)) > 0",
+            name="ck_users_login_identifier_nonempty",
+        ),
+        CheckConstraint(
+            "login_identifier = lower(trim(login_identifier))",
+            name="ck_users_login_identifier_normalized",
+        ),
+        CheckConstraint(
+            "role IN ('WAREHOUSE_STAFF', 'MANAGER', 'PURCHASING', 'ADMIN')",
+            name="ck_users_role",
+        ),
+        UniqueConstraint("login_identifier", name="uq_users_login_identifier"),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    login_identifier: Mapped[str] = mapped_column(String(255))
+    password_hash: Mapped[str] = mapped_column(String(512))
+    role: Mapped[str] = mapped_column(String(32))
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default=text("true")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class AuthSession(Base):
+    __tablename__ = "auth_sessions"
+    __table_args__ = (
+        CheckConstraint(
+            "length(session_token_hash) = 32",
+            name="ck_auth_sessions_token_hash_length",
+        ),
+        CheckConstraint(
+            "expires_at > created_at", name="ck_auth_sessions_expiry_after_creation"
+        ),
+        UniqueConstraint("session_token_hash", name="uq_auth_sessions_token_hash"),
+        Index(
+            "ix_auth_sessions_active_expiry",
+            "expires_at",
+            postgresql_where=text("revoked_at IS NULL"),
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    session_token_hash: Mapped[bytes] = mapped_column(LargeBinary(32))
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Warehouse(Base):

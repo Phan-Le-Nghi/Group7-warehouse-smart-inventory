@@ -29,12 +29,14 @@ This document distinguishes the conceptual MVP model from the first vertical-sli
 | Transfer | `transfers` | Minimum confirmed record: SKU, quantity, source, destination, confirmation time | Conceptual; required by canonical stories |
 | Audit | `audit_sessions`, `audit_lines`; discrepancy/re-check persistence as needed | Selected scope, physical/system comparison and match/mismatch context | Conceptual; lifecycle details remain open |
 | Adjust | `adjust_requests` | Reason, re-check link, optional attachment reference, Manager decision and approved apply context | Conceptual; target-vs-delta and attachment storage are `TBD` |
-| User | `users` | Login identity, Argon2id `password_hash`, one current role and active/inactive state | Approved conceptual auth baseline at `DEC-031`; exact SQL types/indexes/constraints deferred to implementation spec |
-| Auth Session | `auth_sessions` | Store only the hash of a random session token, link to user, and track creation, expiry and revocation | Approved conceptual auth baseline at `DEC-031`; session lifetime and cleanup policy deferred to implementation spec |
+| User | `users` | Normalized unique login identity, Argon2id `password_hash`, one current role and active/inactive state | Exact schema approved at `DEC-033`; implementation candidate pending PostgreSQL evidence |
+| Auth Session | `auth_sessions` | Store only the SHA-256 digest of a random session token, link to user, and track creation, expiry and revocation | Exact schema and cleanup policy approved at `DEC-033`; implementation candidate pending PostgreSQL evidence |
 
 Table names above are technical proposals. A business-object name alone is not sufficient reason to create a table; a table should be introduced only when its story is implemented and needs durable state or relational integrity.
 
-For `users` and `auth_sessions`, the entity baseline and minimum fields are human-approved design rather than implemented schema. `users` contains `id`, a login identifier, `password_hash`, `role`, `is_active` and `created_at`/`updated_at` when needed. `auth_sessions` contains `id`, `session_token_hash`, `user_id`, `created_at`, `expires_at` and `revoked_at`. Plaintext passwords and raw session tokens must not be persisted. No auth migration or implementation is claimed by this document update.
+For `users` and `auth_sessions`, `DEC-033` approves the exact implementation schema. `users` contains UUID `id`, normalized unique `login_identifier`, Argon2id `password_hash`, constrained `role`, `is_active` and timezone-aware timestamps. `auth_sessions` contains UUID `id`, unique 32-byte SHA-256 `session_token_hash`, cascading `user_id`, `created_at`, `expires_at`, nullable `revoked_at`, expiry ordering check, user index and active-expiry partial index. Plaintext passwords and raw session tokens must not be persisted. Migration `20260919_0002` is a post-review implementation candidate pending PostgreSQL verification.
+
+The normalized identifier invariant is enforced by `login_identifier = lower(trim(login_identifier))`. `updated_at` is application-managed through SQLAlchemy in the current baseline; no database trigger is required. SQLAlchemy `create_all` component tests are not Alembic migration evidence.
 
 ## First vertical-slice model — US-PUT-001
 
