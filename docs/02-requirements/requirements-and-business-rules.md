@@ -32,10 +32,10 @@ Canonical NFR count: **5**.
 | `NFR-001` | Atomic stock mutation: commit toàn bộ hoặc rollback toàn bộ | MUST | `DEC-022`, `ADR-002`; no partial write trên tested failure path |
 | `NFR-002` | Consistency under conflicting concurrent stock commands | MUST | `DEC-022`, `ADR-002`; concurrency test giữ invariant, không có load target |
 | `NFR-003` | Putaway Round 1 idempotency cho cùng key/payload | SHOULD | `ADR-003`, Putaway spec, `TEST-PUT-003`; retention window TBD |
-| `NFR-004` | Enforce approved role outcome qua actor/auth boundary | MUST | `DEC-017/031`, architecture; PostgreSQL-backed session design approved, implementation pending |
+| `NFR-004` | Enforce approved role outcome qua actor/auth boundary | MUST | `DEC-017/031/033`, architecture; PostgreSQL-backed session implementation merged và CI verified; staging HTTPS behavior chưa verify |
 | `NFR-005` | Phân biệt rõ Pick `PARTIAL / INSUFFICIENT` với completed | SHOULD | Human-reviewed P2 usability finding; không có numeric threshold |
 
-`OQ-033` chỉ được partially addressed. Render staging/demo environment được approve tại `DEC-032`; response-time, uptime, concurrent-user/load target, numeric usability threshold và long-term production operating/deployment context vẫn OPEN/TBD. `CNFR-06` không được approve.
+`OQ-033` chỉ được partially addressed. `DEC-032/034/035` approve Vercel → Render → Supabase PostgreSQL 17 staging/demo environment và release boundaries; response-time, uptime, concurrent-user/load target, numeric usability threshold và long-term production operating/deployment context vẫn OPEN/TBD. `CNFR-06` không được approve.
 
 ## Quy tắc nghiệp vụ
 

@@ -1,4 +1,4 @@
-# Traceability v6 — Requirements + NFR Round 1 Baseline
+# Traceability v7 — Requirements + NFR + Deployment Decision Baseline
 
 Final backlog gồm 9 canonical stories đã được human approve. Active canonical inventory gồm 12 FR và 5 NFR; priority coverage là 100% cho active requirements theo `DEC-024` đến `DEC-026`. `CAND-REQ-004` được giữ làm lịch sử `SUPERSEDED / DECOMPOSED` và không được double-count. Human Product Decisions / MVP Assumptions không được ghi như verified evidence và không tạo `EVD-*` mới.
 
@@ -10,7 +10,7 @@ Implementation order được duyệt:
 
 `US-PUT-001` completed baseline → `US-REC-001` → `US-PICK-001` → `US-TRF-001` → `US-TRF-002` → `US-AUD-001` → `US-AUD-002` → `US-ADJ-001` → `US-ADJ-002`.
 
-Thứ tự này giữ Transfer execution trước Transfer history và Audit trước Adjust. `DEC-031/033` đã approve authentication design/spec và implementation candidate hiện tồn tại; PostgreSQL/E2E acceptance evidence vẫn pending. `DEC-032` chỉ approve Render cho staging/demo; deployment chưa implemented và long-term production deployment target vẫn `TBD`.
+Thứ tự này giữ Transfer execution trước Transfer history và Audit trước Adjust. `DEC-031/033` đã approve authentication design/spec; auth implementation đã merge và human-confirmed merged-PR evidence ghi nhận backend, frontend và Playwright E2E CI checks `PASS`. `DEC-034/035` approve Vercel frontend → Render FastAPI → Supabase PostgreSQL 17 cho staging/demo; deployment, staging HTTPS cookie behavior và PostgreSQL 17 release verification chưa thực hiện. Long-term production deployment target vẫn `TBD`.
 
 ## Product foundation
 
@@ -34,12 +34,13 @@ Thứ tự này giữ Transfer execution trước Transfer history và Audit tr�
 
 | Decision / ADR | Technical contract | Story impact | Boundary |
 |---|---|---|---|
-| `DEC-020` | React + TypeScript + Vite/npm; Python 3.13 + FastAPI/uv/pytest; PostgreSQL 18/Docker; SQLAlchemy 2/Alembic; Playwright; modular monolith | Foundation for all future implementation; first slice `US-PUT-001` | Technical stack foundation; historical auth/deployment TBD later partially superseded by `DEC-031/032` |
+| `DEC-020` | React + TypeScript + Vite/npm; Python 3.13 + FastAPI/uv/pytest; PostgreSQL/Docker; SQLAlchemy 2/Alembic; Playwright; modular monolith | Foundation for all future implementation; first slice `US-PUT-001` | PostgreSQL 18 remains local/CI compatibility evidence; `DEC-035` supersedes only an all-environment exact-major interpretation and requires PostgreSQL 17+ compatibility |
 | `DEC-021` / `ADR-001` | Per-location stock is authoritative; Warehouse total is derived; no `warehouse_totals` | `US-PUT-001`, Pick, Transfer, Audit, Adjust | Does not add stock buckets |
 | `DEC-022` / `ADR-002` | PostgreSQL transaction boundary, row locking when needed, application + DB non-negative guard | `NFR-001/002`; all stock-changing operations | Does not define retry/cancel, reservation semantics or load target |
 | `DEC-023` / `ADR-003` | Receive records actual quantity; Putaway performs initial posting; Putaway idempotency | `US-REC-001`, `US-PUT-001`, `NFR-003` | Does not resolve `OQ-013` or `OQ-014`; idempotency retention window TBD |
-| `DEC-031` / `DEC-033` | PostgreSQL-backed server-side sessions; approved exact schema; 8-hour absolute session; hashed random token; configurable secure cookie/CORS; Argon2id; database-role actor resolution; approved 401/403 semantics | `NFR-004`; protected operations across all stories; auth API baseline | Post-review implementation candidate exists; fresh local component/frontend checks pass, while PostgreSQL migration/browser E2E evidence remains pending |
-| `DEC-032` | Render Static Site + Web Service + managed PostgreSQL for staging/demo; migration, health/readiness, deterministic seed and smoke requirements | Release/staging environment for the MVP | APPROVED DESIGN only; no deploy implementation/evidence; long-term production target remains TBD |
+| `DEC-031` / `DEC-033` | PostgreSQL-backed server-side sessions; approved exact schema; 8-hour absolute session; hashed random token; configurable secure cookie/CORS; Argon2id; database-role actor resolution; approved 401/403 semantics | `NFR-004`; protected operations across all stories; auth API baseline | Implementation merged; human-confirmed merged-PR backend/frontend/E2E CI checks PASS; staging HTTPS cookie behavior remains unverified |
+| `DEC-032` / `DEC-034` | Retain staging/demo-only public HTTPS, external secrets, migration/readiness/seed/smoke and no-`--reload`; replace Render Static Site/DB with Vercel same-origin `/api/*` rewrite and Supabase PostgreSQL while retaining Render FastAPI | Release/staging environment for the MVP | APPROVED DESIGN only; deployment not performed; Render Free requires demo warm-up/rehearsal; long-term production target remains TBD |
+| `DEC-035` | Supabase PostgreSQL 17 staging target; PostgreSQL 17+ compatibility; TLS `sslmode=require`; Alembic single-runner policy and staging-compatible release verification | Persistence/release evidence across implemented stories | PostgreSQL 18 CI evidence remains valid but does not replace PostgreSQL 17 staging verification or prove major versions identical |
 
 ## Canonical NFR trace
 
@@ -48,15 +49,15 @@ Thứ tự này giữ Transfer execution trước Transfer history và Audit tr�
 | `NFR-001` — atomic stock mutation | MUST | `US-PUT-001`, `US-PICK-001`, `US-TRF-001`, `US-ADJ-002`; `ADR-002` | No partial write on tested failure paths; no broader implementation claim |
 | `NFR-002` — consistency under concurrency | MUST | Same stock-changing stories; `ADR-002` | Concurrency tests required when conflicting/multi-row commands are implemented; no load/user target |
 | `NFR-003` — Putaway idempotency | SHOULD | `US-PUT-001` → Technical Story Spec → `TEST-PUT-003` | Existing test verifies same key/payload produces no second allocation/increment; Putaway Round 1 only; retention TBD |
-| `NFR-004` — authorization enforcement | MUST | Approved role outcomes across protected stories; `DEC-031/033` session/auth boundary | Post-review candidate includes DB actor resolution and role tests; dependency override is automated-test-only. PostgreSQL/E2E evidence remains pending |
+| `NFR-004` — authorization enforcement | MUST | Approved role outcomes across protected stories; `DEC-031/033` session/auth boundary | Merged implementation includes DB actor resolution and role tests; dependency override is automated-test-only. CI checks pass; staging HTTPS cookie behavior remains unverified |
 | `NFR-005` — Pick status clarity | SHOULD | `US-PICK-001` → `PF-02` → human-reviewed P2 usability finding | UI/state/copy review and existing usability evidence; no numeric threshold |
 
 ## Repo scaffold / CI baseline
 
 | Status | Artifact path | Verification evidence | Scope boundary |
 |---|---|---|---|
-| Completed; `US-PUT-001` merged and accepted after human review | `apps/frontend/`, `apps/backend/`, `apps/docker/`, `apps/.env.example`, `apps/README.md`, `.github/workflows/ci.yml` | Baseline verification is recorded in `AI-USE-006`; PostgreSQL 18 and E2E CI evidence for the slice is listed below | Scaffold baseline has been extended only by the `US-PUT-001` vertical slice; no deployment or production-auth completion is claimed |
-| Auth post-review implementation candidate; not committed or accepted | `apps/backend/src/warehouse_api/auth*`, `apps/backend/alembic/versions/20260919_0002_auth_session_foundation.py`, `apps/frontend/src/AuthGate.tsx`, supporting config/tests/docs | 2026-09-20 local: Ruff lint/format PASS; pytest `57 passed` on SQLite component baseline; ESLint/typecheck PASS; Vitest `15 passed`; production build PASS; Playwright discovery `2 tests`; SQLite Alembic upgrade/downgrade/re-upgrade PASS | `CI / POSTGRESQL / BROWSER E2E NOT YET VERIFIED`; SQLAlchemy metadata tests are not migration evidence; Render deployment is not implemented |
+| Completed; `US-PUT-001` merged and accepted after human review | `apps/frontend/`, `apps/backend/`, `apps/docker/`, `apps/.env.example`, `apps/README.md`, `.github/workflows/ci.yml` | Baseline verification is recorded in `AI-USE-006`; PostgreSQL 18 and E2E CI evidence for the slice is listed below | No Vercel/Render/Supabase deployment is claimed |
+| Auth implementation merged and CI verified | `apps/backend/src/warehouse_api/auth*`, `apps/backend/alembic/versions/20260919_0002_auth_session_foundation.py`, `apps/frontend/src/AuthGate.tsx`, supporting config/tests/docs | 2026-09-20 local checks PASS as previously recorded; human-confirmed merged-PR evidence records backend, frontend and browser E2E CI checks PASS on PostgreSQL 18 | Staging HTTPS cookie behavior and PostgreSQL 17/Supabase verification remain pending; deployment is not implemented |
 
 ## US-PUT-001 vertical-slice implementation
 
@@ -123,8 +124,8 @@ Taiga references dưới đây theo dõi thực thi và không thay thế nguồ
 | `OQ-020` | RESOLVED — HUMAN PRODUCT DECISION | `DEC-017` |
 | `OQ-015` | RESOLVED — HUMAN PRODUCT DECISION | `DEC-019`; location quantity cannot be negative; no retry/cancel semantics inferred |
 | `OQ-014`, `OQ-021`, `OQ-022` | OPEN QUESTION | Partial workflow, Alert and device/integration behavior remain undecided |
-| `OQ-032` | PARTIALLY RESOLVED / OPEN | `DEC-031` approves production session-auth design; `DEC-032` approves Render for staging/demo only; long-term production deployment remains TBD |
-| `OQ-033` | PARTIALLY DECIDED / OPEN | `NFR-001` đến `NFR-005`, priorities and minimum Render staging/demo release environment approved; response-time, uptime, concurrent-user/load target, numeric usability threshold, idempotency retention and long-term production operating context remain open |
+| `OQ-032` | PARTIALLY RESOLVED / OPEN | `DEC-031/033` approve session auth; `DEC-034/035` approve Vercel → Render → Supabase PostgreSQL 17 for staging/demo; long-term production deployment remains TBD |
+| `OQ-033` | PARTIALLY DECIDED / OPEN | `NFR-001` đến `NFR-005`, priorities and minimum staging/demo release environment are approved; response-time, uptime, concurrent-user/load target, numeric usability threshold, idempotency retention and long-term production operating context remain open |
 
 AI-related OQs remain unchanged and are future/open directions, not canonical MVP requirements.
 
@@ -172,5 +173,5 @@ Historical draft references are valid only when explicitly labeled as promoted, 
 | Design/Figma/Prototype | **PARTIAL overall**: browser access và 8 pages human verified; Design System foundations PASS; reusable components PASS/PARTIAL; 31 wireframe states, 31 prototype counterparts, 3 critical flows và 6 `FACILITATOR ONLY` items verified. High Fidelity và Dev Handoff trống; exact hotspot total/full wiring chưa verify. MCP page inventory là INCOMPLETE / NON-AUTHORITATIVE. |
 | Usability artifacts | Script và 3 human-reviewed findings đã được tổng hợp; không claim AI thực hiện participant test |
 | Taiga | Project metadata và 6 Epic / 9 User Story / 27 Task references đã đồng bộ; quyền truy cập/người phụ trách công cụ vẫn TBD |
-| Architecture/Data Model/API | Technical Foundation human reviewed; 3 accepted ADR; MVP route map proposed; Putaway contract documented |
-| Implementation/Test | Repo scaffold completed; `US-PUT-001` implementation COMPLETED and accepted after human diff review; PostgreSQL 18 backend, frontend and React → FastAPI → PostgreSQL 18 Playwright checks PASS in GitHub Actions; no local Docker pass is claimed |
+| Architecture/Data Model/API | Technical Foundation human reviewed; 3 accepted ADR; merged auth implementation; Vercel → Render → Supabase deployment remains approved design only |
+| Implementation/Test | Repo scaffold, `US-PUT-001` and auth implementation merged; human-confirmed PostgreSQL 18 backend, frontend and React → FastAPI → PostgreSQL 18 Playwright CI checks PASS; PostgreSQL 17 staging verification and deployment remain pending; no local Docker pass is claimed |

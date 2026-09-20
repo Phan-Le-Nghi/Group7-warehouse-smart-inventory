@@ -58,6 +58,6 @@ Quantity thấp hơn remaining không bị contract này reject chỉ vì có th
 
 ## Contract boundaries
 
-- Actor/auth dependency phải giữ canonical permission theo `DEC-017/031/033`; implementation candidate đã tồn tại nhưng chưa có PostgreSQL/E2E acceptance evidence.
+- Actor/auth dependency phải giữ canonical permission theo `DEC-017/031/033`; implementation đã merge và CI pass, nhưng staging HTTPS cookie behavior và PostgreSQL 17/Supabase evidence chưa được verify.
 - Adjust target-vs-delta, attachment storage, advanced pagination/filtering, long-term production deployment và unresolved NFR còn TBD. Render chỉ được approve cho staging/demo tại `DEC-032`.
 - `OQ-012`, `OQ-013` và `OQ-014` vẫn OPEN.

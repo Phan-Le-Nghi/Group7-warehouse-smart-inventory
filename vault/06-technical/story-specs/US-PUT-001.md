@@ -57,7 +57,7 @@ REQ-002/003/004 + CAND-REQ-003/007/010
 }
 ```
 
-The original slice injects a Warehouse Staff actor through the actor/auth dependency boundary for its isolated automated test. A separate authentication implementation candidate now follows `DEC-031/033`; dependency override remains test-only and is not a production mechanism.
+The original slice injects a Warehouse Staff actor through the actor/auth dependency boundary for its isolated automated test. The separate authentication implementation following `DEC-031/033` is merged and CI verified; dependency override remains test-only and is not a production mechanism.
 
 The operation must reject malformed/non-positive quantity, missing/mismatched references, invalid destination and allocation exceeding eligible remaining quantity. A failed request has no allocation or balance effect.
 
@@ -111,5 +111,5 @@ GitHub Actions `backend-checks`, `frontend-checks`, and `putaway-e2e` passed for
 - `OQ-012`: integer quantity is a Round 1 slice simplification only.
 - `OQ-013`: Receive completion/handoff and Putaway exception/downstream lifecycle.
 - `OQ-014`: partial Putaway.
-- Final acceptance evidence for the separate authentication implementation candidate, long-term production deployment, advanced pagination/filtering and unresolved NFR targets. Render is approved only for staging/demo by `DEC-032`.
+- Staging HTTPS cookie evidence, PostgreSQL 17/Supabase verification, long-term production deployment, advanced pagination/filtering and unresolved NFR targets. `DEC-034/035` approve Vercel → Render → Supabase only for staging/demo; deployment has not been performed.
 
