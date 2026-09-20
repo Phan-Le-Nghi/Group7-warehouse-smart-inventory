@@ -4,7 +4,7 @@
 
 `HUMAN APPROVED TECHNICAL FOUNDATION — DOCUMENTATION ONLY`
 
-Architecture and tooling are approved by `DEC-020`. Authentication/authorization design is approved by `DEC-031`, and Render staging/demo topology is approved by `DEC-032`. The `US-PUT-001` vertical slice exists as a downstream implementation artifact. Authentication and deployment described below remain design-only and are not implementation claims.
+Architecture and tooling are approved by `DEC-020`. Authentication/authorization design is approved by `DEC-031`, exact auth implementation details by `DEC-033`, and Render staging/demo topology by `DEC-032`. The `US-PUT-001` vertical slice exists as a reviewed implementation artifact. A post-review auth implementation candidate exists in `apps/`; PostgreSQL/E2E verification remains pending and deployment remains design-only.
 
 ## System shape
 
@@ -35,7 +35,7 @@ The foundation explicitly excludes microservices, CQRS, an event bus and a gener
 |---|---|---|
 | Frontend | Present canonical UI states, collect input and call HTTP endpoints | Does not own or calculate authoritative stock |
 | FastAPI route/schema | Parse HTTP, validate request shape, call actor/auth dependency and map application results to HTTP | Does not contain stock mutation logic |
-| Actor/auth dependency | Resolve session cookie → PostgreSQL session → active user → current database role, then enforce canonical role outcomes | Server-side session design is approved but not implemented; test actor injection is restricted to automated tests |
+| Actor/auth dependency | Resolve session cookie → PostgreSQL session → active user → current database role, then enforce canonical role outcomes | Implementation candidate exists; PostgreSQL/E2E evidence remains pending and test actor injection is restricted to automated tests |
 | Application service | Orchestrate the use case, enforce approved rules and own the transaction boundary | Does not invent unresolved workflow lifecycle |
 | Persistence | Use SQLAlchemy 2 for queries, row locks and writes | Does not contain UI/navigation behavior |
 | PostgreSQL | Persist authoritative state and enforce FK, uniqueness and `quantity >= 0` constraints | Warehouse total is not persisted |
@@ -71,7 +71,7 @@ The first implemented module is intended to be `US-PUT-001`. Other modules remai
 - test actor injection is permitted only in automated tests.
 - staging/demo has at least one account for each approved role; the seed is idempotent and passwords come from environment/platform secrets or are generated outside source control.
 
-The approved baseline does not add JWT, refresh tokens, self-registration, password reset, social login, OAuth, Keycloak or another external identity provider. Exact SQL types/indexes/constraints, session lifetime and the topology-specific `SameSite` value remain implementation-spec details.
+The approved baseline does not add JWT, refresh tokens, self-registration, password reset, social login, OAuth, Keycloak or another external identity provider. `DEC-033` fixes the schema, 8-hour absolute lifetime, `warehouse_session` cookie and configurable topology-specific cookie/CORS settings. It does not hardcode `SameSite=None`; cross-site mode requires strict Origin validation and JSON-only mutations.
 
 ## Approved staging/demo deployment design
 
@@ -90,7 +90,7 @@ The environment must expose public frontend/backend URLs, keep secrets outside t
 - Runtime configuration must come from environment variables; repository examples must contain placeholders only.
 - Exact lint/format packages and version pins remain implementation-tooling choices to review when scaffolding is authorized.
 - Existing CI runs frontend/backend checks and the Putaway Playwright slice; no staging deployment job is implemented.
-- Production authentication design and the Render staging/demo target are approved by `DEC-031/032`, but implementation and verification remain pending. Long-term production deployment remains `TBD`.
+- Authentication design/spec are approved by `DEC-031/033` and an implementation candidate exists; PostgreSQL/E2E verification remains pending. Render staging/demo is approved design only and long-term production deployment remains `TBD`.
 - Quantitative NFR targets remain open at `OQ-033`.
 
 ## Decision trace

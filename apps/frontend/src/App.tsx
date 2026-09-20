@@ -1,12 +1,17 @@
 import { FormEvent, useEffect, useState } from 'react'
 import {
+  ApiError,
   loadPutawayContext,
   PutawayContext,
   PutawayResult,
   submitPutaway,
 } from './api'
+import type { Actor } from './auth'
 
 type AppProps = {
+  actor: Actor
+  onLogout: () => void | Promise<void>
+  onUnauthorized: () => void
   receiveLineId?: string
 }
 
@@ -15,11 +20,23 @@ const locationLabels: Record<string, string> = {
   SALES_SHELF: 'Sales Shelf',
 }
 
+const roleLabels: Record<Actor['role'], string> = {
+  WAREHOUSE_STAFF: 'Warehouse Staff',
+  MANAGER: 'Manager',
+  PURCHASING: 'Purchasing',
+  ADMIN: 'Admin',
+}
+
 function createIdempotencyKey() {
   return globalThis.crypto?.randomUUID?.() ?? `putaway-${Date.now()}`
 }
 
-function App({ receiveLineId = import.meta.env.VITE_RECEIVE_LINE_ID }: AppProps) {
+function App({
+  actor,
+  onLogout,
+  onUnauthorized,
+  receiveLineId = import.meta.env.VITE_RECEIVE_LINE_ID,
+}: AppProps) {
   const [context, setContext] = useState<PutawayContext | null>(null)
   const [destinationId, setDestinationId] = useState('')
   const [result, setResult] = useState<PutawayResult | null>(null)
@@ -30,7 +47,7 @@ function App({ receiveLineId = import.meta.env.VITE_RECEIVE_LINE_ID }: AppProps)
   const [idempotencyKey] = useState(createIdempotencyKey)
 
   useEffect(() => {
-    if (!receiveLineId) return
+    if (!receiveLineId || actor.role !== 'WAREHOUSE_STAFF') return
 
     let active = true
     loadPutawayContext(receiveLineId)
@@ -42,6 +59,10 @@ function App({ receiveLineId = import.meta.env.VITE_RECEIVE_LINE_ID }: AppProps)
       })
       .catch((loadError: unknown) => {
         if (active) {
+          if (loadError instanceof ApiError && loadError.status === 401) {
+            onUnauthorized()
+            return
+          }
           setError(
             loadError instanceof Error
               ? loadError.message
@@ -53,7 +74,7 @@ function App({ receiveLineId = import.meta.env.VITE_RECEIVE_LINE_ID }: AppProps)
     return () => {
       active = false
     }
-  }, [receiveLineId])
+  }, [actor.role, onUnauthorized, receiveLineId])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -64,6 +85,10 @@ function App({ receiveLineId = import.meta.env.VITE_RECEIVE_LINE_ID }: AppProps)
     try {
       setResult(await submitPutaway(context, destinationId, idempotencyKey))
     } catch (submitError) {
+      if (submitError instanceof ApiError && submitError.status === 401) {
+        onUnauthorized()
+        return
+      }
       setError(
         submitError instanceof Error
           ? submitError.message
@@ -84,10 +109,24 @@ function App({ receiveLineId = import.meta.env.VITE_RECEIVE_LINE_ID }: AppProps)
           <p className="eyebrow">MAIN warehouse</p>
           <p className="brand-name">Smart Inventory</p>
         </div>
-        <span className="role-chip">Warehouse Staff</span>
+        <span className="role-chip">{roleLabels[actor.role]}</span>
+        <button className="logout-button" type="button" onClick={onLogout}>
+          Sign out
+        </button>
       </header>
 
       <section className="putaway-card" aria-labelledby="putaway-title">
+        {actor.role !== 'WAREHOUSE_STAFF' ? (
+          <div className="forbidden-panel">
+            <p className="eyebrow">Forbidden</p>
+            <h1 id="putaway-title">Warehouse Staff role required</h1>
+            <p className="supporting-copy">
+              Your session is valid, but this operation is not available for
+              your current role.
+            </p>
+          </div>
+        ) : (
+          <>
         <div className="title-row">
           <div>
             <p className="eyebrow">Initial placement</p>
@@ -184,6 +223,8 @@ function App({ receiveLineId = import.meta.env.VITE_RECEIVE_LINE_ID }: AppProps)
               </div>
             </dl>
           </section>
+        )}
+          </>
         )}
       </section>
     </main>

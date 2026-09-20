@@ -10,11 +10,11 @@ Canonical technical proposal: [`../../vault/06-technical/api-contract.md`](../..
 
 | Route | Purpose | Trạng thái |
 |---|---|---|
-| `POST /api/v1/auth/login` | Verify login identifier/Argon2id password hash, tạo PostgreSQL session và set secure cookie | APPROVED DESIGN — chưa implement |
-| `POST /api/v1/auth/logout` | Revoke server-side session và expire cookie | APPROVED DESIGN — chưa implement |
-| `GET /api/v1/auth/me` | Resolve actor từ session, active user và current database role | APPROVED DESIGN — chưa implement |
+| `POST /api/v1/auth/login` | `{login_identifier,password}`; verify Argon2id, tạo PostgreSQL session, set cookie; response chỉ có actor | POST-REVIEW IMPLEMENTATION CANDIDATE — chờ PostgreSQL/E2E evidence |
+| `POST /api/v1/auth/logout` | Revoke current server-side session, expire cookie, trả `204` | POST-REVIEW IMPLEMENTATION CANDIDATE — chờ PostgreSQL/E2E evidence |
+| `GET /api/v1/auth/me` | Trả actor từ session, active user và current database role | POST-REVIEW IMPLEMENTATION CANDIDATE — chờ PostgreSQL/E2E evidence |
 
-Session cookie là `HttpOnly`, dùng `Path=/`, `Secure` tại staging/production và `SameSite` theo topology. Missing/invalid/expired/revoked session hoặc inactive user trả `401`; authenticated actor thiếu quyền trả `403`. Frontend không được truyền role làm source-of-truth; test actor injection chỉ dùng trong automated tests. Current MVP không thêm JWT, refresh token, self-registration, password reset, social login, OAuth, Keycloak hoặc external identity provider. Exact request/response shape, cookie name và session lifetime thuộc implementation spec.
+Session cookie là host-only `warehouse_session`, `HttpOnly`, `Path=/`, absolute 8 giờ, `Secure` tại staging/production và configurable `SameSite` theo topology. Missing/invalid/expired/revoked session hoặc inactive user trả `401`; authenticated actor thiếu quyền trả `403`. Login và `/me` trả `id`, normalized `login_identifier`, current `role`; token không xuất hiện trong JSON. Frontend không được truyền role làm source-of-truth; test actor injection chỉ dùng dependency override trong automated tests. Current MVP không thêm JWT, refresh token, self-registration, password reset, social login, OAuth, Keycloak hoặc external identity provider.
 
 ## MVP route map đề xuất
 
@@ -58,6 +58,6 @@ Quantity thấp hơn remaining không bị contract này reject chỉ vì có th
 
 ## Contract boundaries
 
-- Actor/auth dependency phải giữ canonical permission theo `DEC-017/031`; approved session design chưa được implement.
+- Actor/auth dependency phải giữ canonical permission theo `DEC-017/031/033`; implementation candidate đã tồn tại nhưng chưa có PostgreSQL/E2E acceptance evidence.
 - Adjust target-vs-delta, attachment storage, advanced pagination/filtering, long-term production deployment và unresolved NFR còn TBD. Render chỉ được approve cho staging/demo tại `DEC-032`.
 - `OQ-012`, `OQ-013` và `OQ-014` vẫn OPEN.

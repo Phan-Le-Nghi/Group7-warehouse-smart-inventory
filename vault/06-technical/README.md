@@ -6,7 +6,9 @@
 
 Thư mục này là nguồn canonical cho các technical decisions đã được human review. Product requirements, Business Rules và Acceptance Criteria vẫn do các artifact product canonical quản lý; technical documentation không được thay đổi hoặc mở rộng chúng.
 
-Application scaffold và first vertical slice `US-PUT-001` tại `apps/` và `.github/workflows/ci.yml` đã completed, được human review và được GitHub Actions xác minh bằng PostgreSQL 18 backend checks, frontend checks và Playwright React → FastAPI → PostgreSQL 18 E2E. Không claim local Docker/PostgreSQL pass. `DEC-031` approve PostgreSQL-backed server-side session authentication và DB-based role resolution; `DEC-032` approve Render cho staging/demo. Cả hai là `APPROVED DESIGN`, chưa được implement hoặc verify; long-term production deployment vẫn `TBD`.
+Application scaffold và first vertical slice `US-PUT-001` tại `apps/` và `.github/workflows/ci.yml` đã completed, được human review và được GitHub Actions xác minh bằng PostgreSQL 18 backend checks, frontend checks và Playwright React → FastAPI → PostgreSQL 18 E2E. Không claim local Docker/PostgreSQL pass cho auth candidate. `DEC-031` approve PostgreSQL-backed server-side session authentication, `DEC-033` approve exact implementation spec và `DEC-032` approve Render cho staging/demo. Auth implementation candidate hiện tồn tại trong `apps/`, đã qua human review và các approved finding fixes đã được áp dụng; PostgreSQL/E2E verification vẫn pending, deployment chưa implement và long-term production deployment vẫn `TBD`.
+
+Auth evidence được phân loại rõ: `APPROVED DESIGN` tại `DEC-031/033`; current diff là `IMPLEMENTATION CANDIDATE`; Ruff/pytest SQLite component baseline và frontend lint/typecheck/Vitest/build/Playwright discovery cùng SQLite Alembic cycle là `LOCALLY VERIFIED`; `CI / POSTGRESQL / BROWSER E2E NOT YET VERIFIED` cho candidate này.
 
 ## Approved foundation
 
@@ -36,7 +38,7 @@ Decision trace: `DEC-020` đến `DEC-023`, `DEC-031` và `DEC-032` tại [`../0
 - `OQ-012`: UOM, decimal quantity, conversion behavior và precision/scale remain open. Round 1 uses integer units only as a vertical-slice technical simplification.
 - `OQ-013`: Receive completion/handoff, Putaway exceptions/downstream handoff và other lifecycle details remain open.
 - `OQ-014`: partial Putaway remains open. The full-quantity happy-path fixture is not a rule prohibiting partial Putaway.
-- Exact authentication SQL/index/cookie/session-lifetime details remain implementation-spec work; auth implementation is not claimed.
+- Exact authentication spec đã được approve tại `DEC-033`; implementation candidate đã qua human review/finding fixes và vẫn chờ PostgreSQL/E2E evidence.
 - Render is approved only for staging/demo; long-term production deployment remains `TBD`.
 - Adjust representation, attachment storage, advanced pagination/filtering and unresolved NFR targets remain `TBD`.
 

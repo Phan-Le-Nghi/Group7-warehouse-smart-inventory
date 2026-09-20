@@ -27,12 +27,12 @@ Canonical detail: [`../../vault/06-technical/data-model.md`](../../vault/06-tech
 | Transfer | minimum confirmed Transfer record | Conceptual; canonical fields đã duyệt |
 | Audit | session + comparison lines + discrepancy/re-check persistence khi cần | Conceptual; lifecycle còn OPEN |
 | Adjust | request/decision context | Conceptual; quantity representation và attachment storage TBD |
-| User | `users`: login identity, Argon2id password hash, current role, active state | APPROVED DESIGN tại `DEC-031`; chưa implement |
-| Auth Session | `auth_sessions`: hashed random session token, user link, created/expiry/revocation timestamps | APPROVED DESIGN tại `DEC-031`; chưa implement |
+| User | `users`: normalized unique login identity, Argon2id password hash, current role, active state | Exact schema approved tại `DEC-033`; implementation candidate chờ PostgreSQL evidence |
+| Auth Session | `auth_sessions`: SHA-256 session digest, user link, created/expiry/revocation timestamps | Exact schema approved tại `DEC-033`; implementation candidate chờ PostgreSQL evidence |
 
 Không tạo table chỉ vì business-object name tồn tại. Table chỉ được đưa vào implementation khi story cần durable state hoặc relational integrity.
 
-Auth baseline approve các field conceptual: `users(id, login identifier, password_hash, role, is_active, created_at/updated_at nếu cần)` và `auth_sessions(id, session_token_hash, user_id, created_at, expires_at, revoked_at)`. Plaintext password và raw session token không được persist. Exact SQL types/indexes/constraints và session lifetime thuộc implementation spec; chưa có auth migration hoặc implementation.
+`DEC-033` approve exact schema cho `users` và `auth_sessions`, gồm normalized `login_identifier`, role constraint, digest-only token storage, expiry ordering, FK/indexes và absolute lifetime 8 giờ. Migration `20260919_0002` là implementation candidate; component tests dùng SQLAlchemy metadata không được xem là Alembic/PostgreSQL migration evidence. `updated_at` được application quản lý qua SQLAlchemy trong baseline hiện tại; không có database trigger.
 
 ## US-PUT-001 vertical-slice model
 

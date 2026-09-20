@@ -10,7 +10,7 @@ Implementation order được duyệt:
 
 `US-PUT-001` completed baseline → `US-REC-001` → `US-PICK-001` → `US-TRF-001` → `US-TRF-002` → `US-AUD-001` → `US-AUD-002` → `US-ADJ-001` → `US-ADJ-002`.
 
-Thứ tự này giữ Transfer execution trước Transfer history và Audit trước Adjust. `DEC-031` đã approve production authentication design; `DEC-032` đã approve Render chỉ cho staging/demo. Auth/deployment chưa implemented và long-term production deployment target vẫn `TBD`.
+Thứ tự này giữ Transfer execution trước Transfer history và Audit trước Adjust. `DEC-031/033` đã approve authentication design/spec và implementation candidate hiện tồn tại; PostgreSQL/E2E acceptance evidence vẫn pending. `DEC-032` chỉ approve Render cho staging/demo; deployment chưa implemented và long-term production deployment target vẫn `TBD`.
 
 ## Product foundation
 
@@ -38,7 +38,7 @@ Thứ tự này giữ Transfer execution trước Transfer history và Audit tr�
 | `DEC-021` / `ADR-001` | Per-location stock is authoritative; Warehouse total is derived; no `warehouse_totals` | `US-PUT-001`, Pick, Transfer, Audit, Adjust | Does not add stock buckets |
 | `DEC-022` / `ADR-002` | PostgreSQL transaction boundary, row locking when needed, application + DB non-negative guard | `NFR-001/002`; all stock-changing operations | Does not define retry/cancel, reservation semantics or load target |
 | `DEC-023` / `ADR-003` | Receive records actual quantity; Putaway performs initial posting; Putaway idempotency | `US-REC-001`, `US-PUT-001`, `NFR-003` | Does not resolve `OQ-013` or `OQ-014`; idempotency retention window TBD |
-| `DEC-031` | PostgreSQL-backed server-side sessions; hashed random session token; secure cookie; Argon2id password hash; database-role actor resolution; approved 401/403 semantics | `NFR-004`; protected operations across all stories; auth API baseline | APPROVED DESIGN only; `users`/`auth_sessions`, auth routes and production resolver are not implemented; exact SQL/index/session-lifetime/SameSite details deferred |
+| `DEC-031` / `DEC-033` | PostgreSQL-backed server-side sessions; approved exact schema; 8-hour absolute session; hashed random token; configurable secure cookie/CORS; Argon2id; database-role actor resolution; approved 401/403 semantics | `NFR-004`; protected operations across all stories; auth API baseline | Post-review implementation candidate exists; fresh local component/frontend checks pass, while PostgreSQL migration/browser E2E evidence remains pending |
 | `DEC-032` | Render Static Site + Web Service + managed PostgreSQL for staging/demo; migration, health/readiness, deterministic seed and smoke requirements | Release/staging environment for the MVP | APPROVED DESIGN only; no deploy implementation/evidence; long-term production target remains TBD |
 
 ## Canonical NFR trace
@@ -48,7 +48,7 @@ Thứ tự này giữ Transfer execution trước Transfer history và Audit tr�
 | `NFR-001` — atomic stock mutation | MUST | `US-PUT-001`, `US-PICK-001`, `US-TRF-001`, `US-ADJ-002`; `ADR-002` | No partial write on tested failure paths; no broader implementation claim |
 | `NFR-002` — consistency under concurrency | MUST | Same stock-changing stories; `ADR-002` | Concurrency tests required when conflicting/multi-row commands are implemented; no load/user target |
 | `NFR-003` — Putaway idempotency | SHOULD | `US-PUT-001` → Technical Story Spec → `TEST-PUT-003` | Existing test verifies same key/payload produces no second allocation/increment; Putaway Round 1 only; retention TBD |
-| `NFR-004` — authorization enforcement | MUST | Approved role outcomes across protected stories; `DEC-031` session/auth boundary | Production design approved; implementation and role-matrix tests remain pending. Existing test actor injection is automated-test-only evidence, not production auth |
+| `NFR-004` — authorization enforcement | MUST | Approved role outcomes across protected stories; `DEC-031/033` session/auth boundary | Post-review candidate includes DB actor resolution and role tests; dependency override is automated-test-only. PostgreSQL/E2E evidence remains pending |
 | `NFR-005` — Pick status clarity | SHOULD | `US-PICK-001` → `PF-02` → human-reviewed P2 usability finding | UI/state/copy review and existing usability evidence; no numeric threshold |
 
 ## Repo scaffold / CI baseline
@@ -56,6 +56,7 @@ Thứ tự này giữ Transfer execution trước Transfer history và Audit tr�
 | Status | Artifact path | Verification evidence | Scope boundary |
 |---|---|---|---|
 | Completed; `US-PUT-001` merged and accepted after human review | `apps/frontend/`, `apps/backend/`, `apps/docker/`, `apps/.env.example`, `apps/README.md`, `.github/workflows/ci.yml` | Baseline verification is recorded in `AI-USE-006`; PostgreSQL 18 and E2E CI evidence for the slice is listed below | Scaffold baseline has been extended only by the `US-PUT-001` vertical slice; no deployment or production-auth completion is claimed |
+| Auth post-review implementation candidate; not committed or accepted | `apps/backend/src/warehouse_api/auth*`, `apps/backend/alembic/versions/20260919_0002_auth_session_foundation.py`, `apps/frontend/src/AuthGate.tsx`, supporting config/tests/docs | 2026-09-20 local: Ruff lint/format PASS; pytest `57 passed` on SQLite component baseline; ESLint/typecheck PASS; Vitest `15 passed`; production build PASS; Playwright discovery `2 tests`; SQLite Alembic upgrade/downgrade/re-upgrade PASS | `CI / POSTGRESQL / BROWSER E2E NOT YET VERIFIED`; SQLAlchemy metadata tests are not migration evidence; Render deployment is not implemented |
 
 ## US-PUT-001 vertical-slice implementation
 

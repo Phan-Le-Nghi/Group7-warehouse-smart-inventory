@@ -3,6 +3,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from warehouse_api.auth_routes import router as auth_router
 from warehouse_api.config import get_settings
 from warehouse_api.errors import ApiError
 from warehouse_api.routes import router
@@ -13,13 +14,55 @@ app = FastAPI(
 )
 
 settings = get_settings()
+
+
+def _is_json_content_type(content_type: str) -> bool:
+    media_type, _, _parameters = content_type.partition(";")
+    return media_type.strip().lower() == "application/json"
+
+
+@app.middleware("http")
+async def enforce_cross_site_request_policy(request: Request, call_next):
+    if settings.cookie_samesite == "none" and request.method in {
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+    }:
+        if request.headers.get("origin") not in settings.cors_origins:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": {
+                        "code": "INVALID_ORIGIN",
+                        "message": "The request origin is not allowed.",
+                        "details": {},
+                    }
+                },
+            )
+        content_type = request.headers.get("content-type", "")
+        if not _is_json_content_type(content_type):
+            return JSONResponse(
+                status_code=415,
+                content={
+                    "error": {
+                        "code": "UNSUPPORTED_MEDIA_TYPE",
+                        "message": "Mutation requests must use application/json.",
+                        "details": {},
+                    }
+                },
+            )
+    return await call_next(request)
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(settings.cors_origins),
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type", "Idempotency-Key"],
 )
+app.include_router(auth_router)
 app.include_router(router)
 
 
