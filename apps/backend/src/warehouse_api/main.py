@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from warehouse_api.auth_routes import router as auth_router
 from warehouse_api.config import get_settings
 from warehouse_api.errors import ApiError
+from warehouse_api.receive_routes import router as receive_router
 from warehouse_api.routes import router
 
 app = FastAPI(
@@ -64,6 +65,7 @@ app.add_middleware(
 )
 app.include_router(auth_router)
 app.include_router(router)
+app.include_router(receive_router)
 
 
 @app.exception_handler(ApiError)
@@ -84,7 +86,10 @@ def handle_api_error(_request: Request, error: ApiError) -> JSONResponse:
 def handle_validation_error(
     _request: Request, error: RequestValidationError
 ) -> JSONResponse:
-    quantity_error = any(item["loc"][-1] == "quantity" for item in error.errors())
+    quantity_error = any(
+        item["loc"][-1] in {"quantity", "actual_quantity"} and item["type"] != "missing"
+        for item in error.errors()
+    )
     code = "INVALID_QUANTITY" if quantity_error else "INVALID_REQUEST"
     message = (
         "Quantity must be an integer."

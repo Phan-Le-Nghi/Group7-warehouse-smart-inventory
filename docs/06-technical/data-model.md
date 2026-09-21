@@ -21,7 +21,7 @@ Canonical detail: [`../../vault/06-technical/data-model.md`](../../vault/06-tech
 |---|---|---|
 | SKU/Warehouse/Location | `skus`, `warehouses`, `internal_locations` | Conceptual foundation |
 | Stock | `stock_balances`, unique theo SKU/location | Approved foundation |
-| Receive | `receives`, `receive_lines` | Conceptual; actual quantity và context cần cho Putaway |
+| Receive | `receives`, `receive_lines` | US-REC-001 recording context implemented; final completion/handoff remains open |
 | Putaway | `putaway_allocations` | First vertical-slice model |
 | Pick | request + source allocations | Conceptual; schema chi tiết deferred |
 | Transfer | minimum confirmed Transfer record | Conceptual; canonical fields đã duyệt |
@@ -47,6 +47,24 @@ Receive ghi actual quantity nhưng không tăng tracked-location stock. Putaway 
 5. derive Warehouse total sau commit.
 
 Guard này ngăn double-count nhưng không cấm partial Putaway. Fixture 16 units được post toàn bộ chỉ là happy path của slice; `OQ-014` vẫn OPEN.
+
+## US-REC-001 recording model
+
+`receives` stores nullable legacy-safe expected/document references, reference
+match status, recording actor/time, and mismatch-review actor/time.
+`receive_lines` stores nullable expected quantity, nullable actual quantity before
+recording, and signed quantity discrepancy. New prepared contexts are validated
+by the application; the migration does not fabricate expected/reference/reviewer
+facts for legacy rows.
+
+Database checks protect non-negative present quantities, discrepancy consistency,
+allowed reference status, paired review metadata, and mismatch-only review.
+Recording/review actors reference `users`. No Receive status/completion, Purchase
+Order, correction history, Transfer, Movement, or Warehouse-total persistence is
+introduced.
+
+Downgrade to `20260919_0002` fails explicitly when any post-migration Receive line
+still has `actual_quantity IS NULL`; it neither backfills nor deletes that data.
 
 ## Không thuộc model này
 

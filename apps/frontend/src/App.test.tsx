@@ -33,6 +33,7 @@ function renderApp() {
       actor={actor}
       onLogout={() => undefined}
       onUnauthorized={() => undefined}
+      receiveId="00000000-0000-0000-0000-000000000103"
       receiveLineId={receiveLineId}
     />,
   )
@@ -50,6 +51,7 @@ function jsonResponse(body: object, status = 200) {
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
+  window.history.pushState({}, '', '/')
 })
 
 describe('US-PUT-001 Putaway', () => {
@@ -124,5 +126,37 @@ describe('US-PUT-001 Putaway', () => {
         'Quantity exceeds the eligible remaining quantity.',
       )
     })
+  })
+})
+
+describe('US-REC-001 addressing', () => {
+  it('renders Receive at /receive without loading Putaway context', async () => {
+    window.history.pushState({}, '', '/receive')
+    vi.spyOn(globalThis, 'fetch').mockReturnValue(
+      jsonResponse({
+        receive_id: 'receive-id',
+        warehouse_id: 'warehouse-id',
+        reference: {
+          expected: 'DELIVERY-001',
+          document: null,
+          match_status: null,
+          reviewed_by_user_id: null,
+          reviewed_at: null,
+        },
+        recorded_at: null,
+        putaway_eligible: false,
+        lines: [],
+      }),
+    )
+
+    renderApp()
+
+    expect(
+      await screen.findByRole('heading', { name: 'Record Receive' }),
+    ).toBeInTheDocument()
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(globalThis.fetch).mock.calls[0][0]).toContain(
+      '/api/v1/receives/context/',
+    )
   })
 })

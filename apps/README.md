@@ -69,7 +69,9 @@ Set that variable to a real PostgreSQL test database for PostgreSQL evidence.
 ## Frontend
 
 `VITE_API_BASE_URL` selects the FastAPI origin. `VITE_RECEIVE_LINE_ID` supplies
-the explicit Putaway context without inventing an automatic Receive handoff.
+the explicit Putaway context at `/`; `VITE_RECEIVE_ID` supplies the prepared
+Receive context at `/receive`. The two screens remain separate and neither
+creates an automatic Receive-to-Putaway handoff.
 
 ```powershell
 Set-Location frontend

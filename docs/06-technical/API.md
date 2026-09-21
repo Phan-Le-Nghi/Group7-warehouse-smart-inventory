@@ -22,7 +22,9 @@ Session cookie là host-only `warehouse_session`, `HttpOnly`, `Path=/`, absolute
 |---|---|---|
 | `GET /api/v1/locations` | Tracked-location selection | Supporting `CAND-REQ-003` |
 | `GET /api/v1/stock?sku_id={id}` | Location balances + derived Warehouse total | `CAND-REQ-003` |
-| `POST /api/v1/receives` | Actual quantity + discrepancy/reference context | `US-REC-001`; completion/handoff remains OPEN |
+| `GET /api/v1/receives/context/{receive_id}` | Prepared expected context and existing recording/review state | `US-REC-001`; Warehouse Staff only |
+| `POST /api/v1/receives` | Atomically record the full prepared line set, actual quantity and discrepancy/reference context | `US-REC-001`; `RECEIVE_RECORDED`, not completion |
+| `POST /api/v1/receives/{receive_id}/reference-review` | Warehouse Staff acknowledgement of a recorded reference mismatch | `US-REC-001`; no approve/reject or reference correction |
 | `POST /api/v1/putaways` | Initial destination allocation | `US-PUT-001`; detailed below |
 | `GET /api/v1/putaways/context/{receive_line_id}` | SKU, eligible quantity và tracked destination IDs cho Putaway screen | `US-PUT-001`; không tạo automatic Receive handoff |
 | `POST /api/v1/picks` | Multi-location/full/`PARTIAL / INSUFFICIENT` Pick | `US-PICK-001` |
@@ -33,7 +35,27 @@ Session cookie là host-only `warehouse_session`, `HttpOnly`, `Path=/`, absolute
 | `POST /api/v1/adjustments` | Re-checked request with reason; no pre-decision stock change | `US-ADJ-001` |
 | `POST /api/v1/adjustments/{id}/decision` | Manager approve/reject | `US-ADJ-002` |
 
-Routes ngoài Putaway vẫn conceptual và cần story-specific technical review.
+The three Receive routes and Putaway routes are implemented. Other listed routes
+remain conceptual and require story-specific technical review.
+
+## US-REC-001 Receive contract
+
+Receive stores prepared expected quantity/reference separately from observed
+actual quantity/document reference. Recording persists signed
+`actual_quantity - expected_quantity` and exact, case-sensitive reference match
+status after trimming surrounding whitespace. A second record command returns
+`409 RECEIVE_ALREADY_RECORDED`; no correction or reversal workflow is exposed.
+
+An unrecorded line returns `409 RECEIVE_NOT_RECORDED` at the Putaway boundary.
+An unreviewed `REFERENCE_MISMATCH` returns
+`409 REFERENCE_REVIEW_REQUIRED` from both Putaway context and confirmation before
+allocation or stock mutation. `REFERENCE_MATCH`, reviewed mismatch, and legacy
+rows with existing actual quantity remain compatible with Putaway.
+
+Receive routes require the backend `WAREHOUSE_STAFF` session role and preserve
+`401`/`403` semantics. They do not mutate `stock_balances`, create
+`putaway_allocations`, create Transfer/Movement records, complete Receive, or
+automatically navigate/call Putaway.
 
 ## POST /api/v1/putaways
 

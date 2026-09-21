@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto'
 import { createServer } from 'vite'
 
 const receiveLineId = '00000000-0000-0000-0000-000000000004'
+const receiveId = '00000000-0000-0000-0000-000000000103'
 
 async function waitForBackend(url: string) {
   for (let attempt = 0; attempt < 40; attempt += 1) {
@@ -69,6 +70,7 @@ async function globalSetup() {
 
   process.env.VITE_API_BASE_URL = 'http://127.0.0.1:8000'
   process.env.VITE_RECEIVE_LINE_ID = receiveLineId
+  process.env.VITE_RECEIVE_ID = receiveId
   const frontend = await createServer({
     server: { host: '127.0.0.1', port: 4173, strictPort: true },
   })
