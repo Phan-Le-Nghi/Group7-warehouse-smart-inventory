@@ -160,3 +160,31 @@ describe('US-REC-001 addressing', () => {
     )
   })
 })
+
+describe('US-PICK-001 addressing', () => {
+  it('reads the Pick ID from /pick/{pick_id}', async () => {
+    const pickId = '00000000-0000-0000-0000-000000000201'
+    window.history.pushState({}, '', `/pick/${pickId}`)
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockReturnValue(
+      jsonResponse({
+        pick_id: pickId,
+        warehouse_id: 'warehouse-id',
+        sku_id: 'sku-id',
+        sku: 'PICK-SKU',
+        requested_quantity: 10,
+        outcome: null,
+        locations: [],
+        warehouse_total: 0,
+      }),
+    )
+
+    renderApp()
+
+    expect(
+      await screen.findByRole('heading', { name: 'Confirm Pick' }),
+    ).toBeInTheDocument()
+    expect(fetchMock.mock.calls[0][0]).toContain(
+      `/api/v1/picks/context/${pickId}`,
+    )
+  })
+})

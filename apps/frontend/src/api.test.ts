@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { ApiError, apiRequest, recordReceive } from './api'
+import { ApiError, apiRequest, recordReceive, submitPick } from './api'
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -108,5 +108,36 @@ it('sends a typed Receive record command as JSON', async () => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(command),
+  })
+})
+
+it('sends Pick allocations without an idempotency or partial-confirmed field', async () => {
+  const responseBody = {
+    pick_id: 'pick-id',
+    sku_id: 'sku-id',
+    requested_quantity: 10,
+    picked_quantity: 6,
+    remaining_quantity: 4,
+    outcome: 'PARTIAL_INSUFFICIENT',
+    allocations: [],
+    confirmed_by_user_id: 'actor-id',
+    confirmed_at: '2026-09-22T00:00:00Z',
+    warehouse_total: 8,
+  }
+  const fetchMock = vi
+    .spyOn(globalThis, 'fetch')
+    .mockResolvedValue(
+      new Response(JSON.stringify(responseBody), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+  const allocations = [{ source_location_id: 'location-id', quantity: 6 }]
+
+  await expect(submitPick('pick-id', allocations)).resolves.toEqual(responseBody)
+  expect(fetchMock.mock.calls[0][1]).toMatchObject({
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pick_id: 'pick-id', allocations }),
   })
 })

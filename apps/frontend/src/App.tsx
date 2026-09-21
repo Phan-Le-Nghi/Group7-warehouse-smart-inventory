@@ -7,6 +7,7 @@ import {
   submitPutaway,
 } from './api'
 import type { Actor } from './auth'
+import PickPage from './PickPage'
 import ReceivePage from './ReceivePage'
 
 type AppProps = {
@@ -41,17 +42,21 @@ function App({
   receiveLineId = import.meta.env.VITE_RECEIVE_LINE_ID,
 }: AppProps) {
   const isReceivePage = window.location.pathname.replace(/\/+$/, '') === '/receive'
+  const pickPathMatch = window.location.pathname.match(/^\/pick\/([^/]+)\/?$/)
+  const pickId = pickPathMatch ? decodeURIComponent(pickPathMatch[1]) : null
   const [context, setContext] = useState<PutawayContext | null>(null)
   const [destinationId, setDestinationId] = useState('')
   const [result, setResult] = useState<PutawayResult | null>(null)
   const [error, setError] = useState(() =>
-    receiveLineId || isReceivePage ? '' : 'Putaway context is not configured.',
+    receiveLineId || isReceivePage || pickId
+      ? ''
+      : 'Putaway context is not configured.',
   )
   const [submitting, setSubmitting] = useState(false)
   const [idempotencyKey] = useState(createIdempotencyKey)
 
   useEffect(() => {
-    if (isReceivePage || !receiveLineId || actor.role !== 'WAREHOUSE_STAFF') return
+    if (isReceivePage || pickId || !receiveLineId || actor.role !== 'WAREHOUSE_STAFF') return
 
     let active = true
     loadPutawayContext(receiveLineId)
@@ -78,7 +83,7 @@ function App({
     return () => {
       active = false
     }
-  }, [actor.role, isReceivePage, onUnauthorized, receiveLineId])
+  }, [actor.role, isReceivePage, onUnauthorized, pickId, receiveLineId])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -119,7 +124,9 @@ function App({
         </button>
       </header>
 
-      {isReceivePage && actor.role === 'WAREHOUSE_STAFF' ? (
+      {pickId && actor.role === 'WAREHOUSE_STAFF' ? (
+        <PickPage pickId={pickId} onUnauthorized={onUnauthorized} />
+      ) : isReceivePage && actor.role === 'WAREHOUSE_STAFF' ? (
         <ReceivePage receiveId={receiveId} onUnauthorized={onUnauthorized} />
       ) : (
       <section className="putaway-card" aria-labelledby="putaway-title">

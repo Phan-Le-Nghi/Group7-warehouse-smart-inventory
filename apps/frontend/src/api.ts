@@ -27,6 +27,46 @@ export type PutawayResult = {
   }
 }
 
+export type PickLocation = {
+  id: string
+  code: 'BACKROOM' | 'SALES_SHELF'
+  available_quantity: number
+}
+
+export type PickContext = {
+  pick_id: string
+  warehouse_id: string
+  sku_id: string
+  sku: string
+  requested_quantity: number
+  outcome: 'FULLY_COMPLETED' | 'PARTIAL_INSUFFICIENT' | null
+  locations: PickLocation[]
+  warehouse_total: number
+}
+
+export type PickAllocationCommand = {
+  source_location_id: string
+  quantity: number
+}
+
+export type PickResult = {
+  pick_id: string
+  sku_id: string
+  requested_quantity: number
+  picked_quantity: number
+  remaining_quantity: number
+  outcome: 'FULLY_COMPLETED' | 'PARTIAL_INSUFFICIENT'
+  allocations: Array<{
+    source_location_id: string
+    source_location: string
+    quantity: number
+    remaining_source_quantity: number
+  }>
+  confirmed_by_user_id: string
+  confirmed_at: string
+  warehouse_total: number
+}
+
 export type ReceiveReference = {
   expected: string
   document: string | null
@@ -174,6 +214,25 @@ export async function submitPutaway(
       destination_location_id: destinationLocationId,
     }),
   })
+}
+
+export async function loadPickContext(pickId: string): Promise<PickContext> {
+  return apiRequest<PickContext>(`/api/v1/picks/context/${pickId}`)
+}
+
+export async function submitPick(
+  pickId: string,
+  allocations: PickAllocationCommand[],
+): Promise<PickResult> {
+  return apiRequest<PickResult>(
+    '/api/v1/picks',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pick_id: pickId, allocations }),
+    },
+    201,
+  )
 }
 
 export async function loadReceiveContext(
