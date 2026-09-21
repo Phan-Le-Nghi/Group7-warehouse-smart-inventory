@@ -116,10 +116,50 @@ class Sku(Base):
 
 class Receive(Base):
     __tablename__ = "receives"
+    __table_args__ = (
+        CheckConstraint(
+            "expected_reference IS NULL OR length(trim(expected_reference)) > 0",
+            name="ck_receives_expected_reference_nonempty",
+        ),
+        CheckConstraint(
+            "document_reference IS NULL OR length(trim(document_reference)) > 0",
+            name="ck_receives_document_reference_nonempty",
+        ),
+        CheckConstraint(
+            "reference_match_status IS NULL OR "
+            "reference_match_status IN ('REFERENCE_MATCH', 'REFERENCE_MISMATCH')",
+            name="ck_receives_reference_match_status",
+        ),
+        CheckConstraint(
+            "(reference_reviewed_by_user_id IS NULL AND "
+            "reference_reviewed_at IS NULL) OR "
+            "(reference_reviewed_by_user_id IS NOT NULL AND "
+            "reference_reviewed_at IS NOT NULL)",
+            name="ck_receives_reference_review_pair",
+        ),
+        CheckConstraint(
+            "reference_reviewed_by_user_id IS NULL OR "
+            "reference_match_status = 'REFERENCE_MISMATCH'",
+            name="ck_receives_reference_review_mismatch",
+        ),
+    )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     warehouse_id: Mapped[UUID] = mapped_column(
         ForeignKey("warehouses.id", ondelete="RESTRICT"), index=True
+    )
+    expected_reference: Mapped[str | None] = mapped_column(String(255))
+    document_reference: Mapped[str | None] = mapped_column(String(255))
+    reference_match_status: Mapped[str | None] = mapped_column(String(24))
+    recorded_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    recorded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reference_reviewed_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    reference_reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
     )
 
 
@@ -127,7 +167,18 @@ class ReceiveLine(Base):
     __tablename__ = "receive_lines"
     __table_args__ = (
         CheckConstraint(
-            "actual_quantity >= 0", name="ck_receive_line_actual_nonnegative"
+            "actual_quantity IS NULL OR actual_quantity >= 0",
+            name="ck_receive_line_actual_nonnegative",
+        ),
+        CheckConstraint(
+            "expected_quantity IS NULL OR expected_quantity >= 0",
+            name="ck_receive_line_expected_nonnegative",
+        ),
+        CheckConstraint(
+            "quantity_discrepancy IS NULL OR "
+            "(actual_quantity IS NOT NULL AND expected_quantity IS NOT NULL AND "
+            "quantity_discrepancy = actual_quantity - expected_quantity)",
+            name="ck_receive_line_discrepancy_consistent",
         ),
     )
 
@@ -138,7 +189,9 @@ class ReceiveLine(Base):
     sku_id: Mapped[UUID] = mapped_column(
         ForeignKey("skus.id", ondelete="RESTRICT"), index=True
     )
-    actual_quantity: Mapped[int] = mapped_column(Integer)
+    expected_quantity: Mapped[int | None] = mapped_column(Integer)
+    actual_quantity: Mapped[int | None] = mapped_column(Integer)
+    quantity_discrepancy: Mapped[int | None] = mapped_column(Integer)
 
 
 class StockBalance(Base):

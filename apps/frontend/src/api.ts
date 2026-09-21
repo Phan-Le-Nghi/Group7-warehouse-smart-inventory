@@ -27,6 +27,50 @@ export type PutawayResult = {
   }
 }
 
+export type ReceiveReference = {
+  expected: string
+  document: string | null
+  match_status: 'REFERENCE_MATCH' | 'REFERENCE_MISMATCH' | null
+  reviewed_by_user_id: string | null
+  reviewed_at: string | null
+}
+
+export type ReceiveLine = {
+  receive_line_id: string
+  sku_id: string
+  sku: string
+  expected_quantity: number
+  actual_quantity: number | null
+  quantity_discrepancy: number | null
+}
+
+export type ReceiveContext = {
+  receive_id: string
+  warehouse_id: string
+  reference: ReceiveReference
+  recorded_at: string | null
+  putaway_eligible: boolean
+  lines: ReceiveLine[]
+}
+
+export type ReceiveRecordRequest = {
+  receive_id: string
+  document_reference: string
+  lines: Array<{
+    receive_line_id: string
+    sku_id: string
+    actual_quantity: number
+  }>
+}
+
+export type ReferenceReviewResult = {
+  receive_id: string
+  match_status: 'REFERENCE_MISMATCH'
+  reviewed_by_user_id: string
+  reviewed_at: string
+  putaway_eligible: boolean
+}
+
 type ErrorEnvelope = {
   error?: {
     code?: string
@@ -130,4 +174,40 @@ export async function submitPutaway(
       destination_location_id: destinationLocationId,
     }),
   })
+}
+
+export async function loadReceiveContext(
+  receiveId: string,
+): Promise<ReceiveContext> {
+  return apiRequest<ReceiveContext>(
+    `/api/v1/receives/context/${receiveId}`,
+  )
+}
+
+export async function recordReceive(
+  command: ReceiveRecordRequest,
+): Promise<ReceiveContext> {
+  return apiRequest<ReceiveContext>(
+    '/api/v1/receives',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(command),
+    },
+    201,
+  )
+}
+
+export async function acknowledgeReferenceMismatch(
+  receiveId: string,
+): Promise<ReferenceReviewResult> {
+  return apiRequest<ReferenceReviewResult>(
+    `/api/v1/receives/${receiveId}/reference-review`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    },
+    200,
+  )
 }

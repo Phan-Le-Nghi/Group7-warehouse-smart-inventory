@@ -7,11 +7,13 @@ import {
   submitPutaway,
 } from './api'
 import type { Actor } from './auth'
+import ReceivePage from './ReceivePage'
 
 type AppProps = {
   actor: Actor
   onLogout: () => void | Promise<void>
   onUnauthorized: () => void
+  receiveId?: string
   receiveLineId?: string
 }
 
@@ -35,19 +37,21 @@ function App({
   actor,
   onLogout,
   onUnauthorized,
+  receiveId = import.meta.env.VITE_RECEIVE_ID,
   receiveLineId = import.meta.env.VITE_RECEIVE_LINE_ID,
 }: AppProps) {
+  const isReceivePage = window.location.pathname.replace(/\/+$/, '') === '/receive'
   const [context, setContext] = useState<PutawayContext | null>(null)
   const [destinationId, setDestinationId] = useState('')
   const [result, setResult] = useState<PutawayResult | null>(null)
   const [error, setError] = useState(() =>
-    receiveLineId ? '' : 'Putaway context is not configured.',
+    receiveLineId || isReceivePage ? '' : 'Putaway context is not configured.',
   )
   const [submitting, setSubmitting] = useState(false)
   const [idempotencyKey] = useState(createIdempotencyKey)
 
   useEffect(() => {
-    if (!receiveLineId || actor.role !== 'WAREHOUSE_STAFF') return
+    if (isReceivePage || !receiveLineId || actor.role !== 'WAREHOUSE_STAFF') return
 
     let active = true
     loadPutawayContext(receiveLineId)
@@ -74,7 +78,7 @@ function App({
     return () => {
       active = false
     }
-  }, [actor.role, onUnauthorized, receiveLineId])
+  }, [actor.role, isReceivePage, onUnauthorized, receiveLineId])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -115,6 +119,9 @@ function App({
         </button>
       </header>
 
+      {isReceivePage && actor.role === 'WAREHOUSE_STAFF' ? (
+        <ReceivePage receiveId={receiveId} onUnauthorized={onUnauthorized} />
+      ) : (
       <section className="putaway-card" aria-labelledby="putaway-title">
         {actor.role !== 'WAREHOUSE_STAFF' ? (
           <div className="forbidden-panel">
@@ -227,6 +234,7 @@ function App({
           </>
         )}
       </section>
+      )}
     </main>
   )
 }

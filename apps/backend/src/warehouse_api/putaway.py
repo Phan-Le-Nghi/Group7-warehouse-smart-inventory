@@ -17,6 +17,7 @@ from warehouse_api.models import (
     Sku,
     StockBalance,
 )
+from warehouse_api.receive import ensure_putaway_eligible
 from warehouse_api.schemas import (
     LocationOption,
     PutawayContextResponse,
@@ -107,6 +108,7 @@ def get_putaway_context(
     if row is None:
         raise ApiError(404, "RECEIVE_LINE_NOT_FOUND", "Receive line was not found.")
     receive_line, receive, sku = row
+    ensure_putaway_eligible(receive, receive_line)
     confirmed = int(session.scalar(_allocation_total_statement(receive_line.id)) or 0)
     locations = session.scalars(
         select(InternalLocation)
@@ -133,6 +135,18 @@ def confirm_putaway(
         raise ApiError(422, "INVALID_QUANTITY", "Quantity must be a positive integer.")
 
     fingerprint = _fingerprint(command)
+    receive_statement = (
+        select(ReceiveLine, Receive)
+        .join(Receive, Receive.id == ReceiveLine.receive_id)
+        .where(ReceiveLine.id == command.receive_line_id)
+        .with_for_update()
+    )
+    row = session.execute(receive_statement).one_or_none()
+    if row is None:
+        raise ApiError(404, "RECEIVE_LINE_NOT_FOUND", "Receive line was not found.")
+    receive_line, receive = row
+    ensure_putaway_eligible(receive, receive_line)
+
     existing = session.scalar(
         select(PutawayAllocation).where(
             PutawayAllocation.idempotency_key == idempotency_key
@@ -146,17 +160,6 @@ def confirm_putaway(
                 "The idempotency key was already used for a different request.",
             )
         return PutawayResult(_response_for_allocation(session, existing), replayed=True)
-
-    receive_statement = (
-        select(ReceiveLine, Receive)
-        .join(Receive, Receive.id == ReceiveLine.receive_id)
-        .where(ReceiveLine.id == command.receive_line_id)
-        .with_for_update()
-    )
-    row = session.execute(receive_statement).one_or_none()
-    if row is None:
-        raise ApiError(404, "RECEIVE_LINE_NOT_FOUND", "Receive line was not found.")
-    receive_line, receive = row
 
     if session.get(Sku, command.sku_id) is None:
         raise ApiError(404, "SKU_NOT_FOUND", "SKU was not found.")

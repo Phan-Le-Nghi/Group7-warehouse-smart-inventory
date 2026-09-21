@@ -24,22 +24,39 @@ Human review approved the implementation contract at `DEC-036`.
 `DEC-016/017/018/023/036` are HUMAN PRODUCT/TECHNICAL DECISIONS, not verified
 research evidence. They must not be relabelled as `EVD-*`.
 
+## Worktree implementation status — 2026-09-22
+
+The `DEC-036` contract has been implemented in the current worktree and remains
+uncommitted pending human diff review. The implementation includes the legacy-safe
+schema/migration, three Receive routes, Warehouse Staff enforcement, reference-review
+acknowledgement, Putaway eligibility guards, React `/receive` UI, component tests and
+Playwright scenarios. Fresh local verification: Ruff lint/format PASS, backend
+`86 passed`, frontend lint/typecheck/`23` Vitest/build PASS, and SQLite
+upgrade/downgrade/re-upgrade PASS. Playwright discovery lists both Receive scenarios,
+but browser execution is NOT VERIFIED because no local PostgreSQL/Docker runtime is
+available. Local evidence must not be reported as PostgreSQL 18/17 or browser E2E
+evidence. PostgreSQL 18/browser evidence remains assigned to current CI; PostgreSQL 17
+remains pending staging deployment.
+
+This implementation status does not change `OQ-012`, the open portions of `OQ-013`,
+`OQ-014`, or `OQ-022` and does not add completion, partial Receive, correction,
+Purchase Order, deployment, or automatic Putaway behavior.
+
 ## Executive conclusion
 
-The repository has a working Putaway/auth foundation but only a fixture-level
-Receive persistence scaffold. The current `receives` and `receive_lines` tables are
-not sufficient to implement the four canonical Receive ACs: expected quantity,
-expected/document reference, quantity discrepancy, reference mismatch and review
-context are absent. There is no Receive API, service, UI or Receive-specific test.
+The pre-implementation repository had a working Putaway/auth foundation but only a
+fixture-level Receive persistence scaffold. The current worktree now implements the
+approved Receive persistence, API, UI, review and Putaway-eligibility contract; it is
+uncommitted and awaiting human diff review and CI evidence as recorded above.
 
 Human review approved the data, API, authorization, lifecycle, no-effect and test
 contract below. The slice uses `RECEIVE_RECORDED`; it does not canonicalize final
 Receive completion. It deliberately does not define automatic Putaway handoff,
 partial Receive, correction/reversal workflow or an authoritative reference.
 
-## A. Current Receive code audit
+## A. Pre-implementation Receive code audit
 
-### Audit result
+### Baseline audit result
 
 | Area | Result | Current evidence | Gap / implication |
 |---|---|---|---|
@@ -613,6 +630,6 @@ Human review approved the following at `DEC-036`:
 
 `US-REC-001 READY FOR HUMAN SPEC REVIEW: COMPLETED`
 
-`US-REC-001 READY FOR IMPLEMENTATION: YES`
+`US-REC-001 IMPLEMENTED IN WORKTREE: AWAITING HUMAN DIFF REVIEW AND CI`
 
 `OQ-013 remains PARTIALLY DECIDED / OPEN for final completion/handoff. OQ-014 remains OPEN; partial Receive is NOT IMPLEMENTED in this slice.`

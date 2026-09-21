@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { ApiError, apiRequest } from './api'
+import { ApiError, apiRequest, recordReceive } from './api'
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -71,5 +71,42 @@ it('rejects an unexpected successful status', async () => {
   await expect(apiRequest('/logout', {}, 204)).rejects.toMatchObject({
     status: 200,
     code: 'UNEXPECTED_RESPONSE',
+  })
+})
+
+it('sends a typed Receive record command as JSON', async () => {
+  const responseBody = {
+    receive_id: 'receive-id',
+    warehouse_id: 'warehouse-id',
+    reference: {
+      expected: 'DELIVERY-001',
+      document: 'DELIVERY-001',
+      match_status: 'REFERENCE_MATCH',
+      reviewed_by_user_id: null,
+      reviewed_at: null,
+    },
+    recorded_at: '2026-09-22T00:00:00Z',
+    putaway_eligible: true,
+    lines: [],
+  }
+  const fetchMock = vi
+    .spyOn(globalThis, 'fetch')
+    .mockResolvedValue(
+      new Response(JSON.stringify(responseBody), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+  const command = {
+    receive_id: 'receive-id',
+    document_reference: 'DELIVERY-001',
+    lines: [],
+  }
+
+  await expect(recordReceive(command)).resolves.toEqual(responseBody)
+  expect(fetchMock.mock.calls[0][1]).toMatchObject({
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(command),
   })
 })

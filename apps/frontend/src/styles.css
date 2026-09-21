@@ -120,6 +120,32 @@ input {
   background: #fff;
 }
 
+.receive-field {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 1rem;
+  color: #344c3e;
+  font-weight: 700;
+}
+
+.receive-field input {
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid #b9cbbf;
+  border-radius: 0.65rem;
+  background: #fff;
+}
+
+.receive-field input[aria-invalid="true"] {
+  border-color: #a53b32;
+  outline: 2px solid rgb(165 59 50 / 12%);
+}
+
+.field-error {
+  color: #8c2d26;
+  font-weight: 650;
+}
+
 .forbidden-panel {
   padding: 1rem 0;
 }
@@ -321,6 +347,74 @@ button:disabled {
   background: #f3f7f4;
 }
 
+.receive-lines {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 1.25rem;
+}
+
+.receive-line {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1fr) minmax(10rem, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid #dce5de;
+  border-radius: 0.9rem;
+  background: #f8faf8;
+}
+
+.receive-line p {
+  margin: 0.35rem 0 0;
+}
+
+.receive-line .receive-field {
+  margin: 0;
+}
+
+.discrepancy-preview {
+  color: #52645a;
+  white-space: nowrap;
+}
+
+.recorded-panel {
+  margin-top: 2rem;
+}
+
+.recorded-panel h2 {
+  margin: 0.5rem 0 0;
+}
+
+.reference-comparison {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+}
+
+.reference-comparison div,
+.reviewed-panel,
+.review-required {
+  padding: 1rem;
+  border-radius: 0.8rem;
+  background: #f3f7f4;
+}
+
+.review-required {
+  margin-top: 1.25rem;
+  color: #704d0e;
+  background: #fff6df;
+}
+
+.review-required p {
+  line-height: 1.5;
+}
+
+.reviewed-panel {
+  margin-top: 1.25rem;
+  color: #28543b;
+}
+
 @media (max-width: 36rem) {
   .role-chip,
   .step-badge {
@@ -328,7 +422,12 @@ button:disabled {
   }
 
   .item-summary,
-  .location-grid {
+  .location-grid,
+  .reference-comparison {
+    grid-template-columns: 1fr;
+  }
+
+  .receive-line {
     grid-template-columns: 1fr;
   }
 }
