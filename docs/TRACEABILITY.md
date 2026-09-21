@@ -28,6 +28,7 @@ Thứ tự này giữ Transfer execution trước Transfer history và Audit tr�
 | `DEC-017` | `CAND-REQ-010` | Actors and permissions across all stories | HUMAN PRODUCT DECISION |
 | `DEC-018` | `REQ-002` interpretation | Receive may lead to Putaway; Pick/Transfer independent paths; Audit mismatch may lead to Adjust consideration after re-check | HUMAN PRODUCT DECISION |
 | `DEC-019` | `CAND-REQ-011`, `CAND-BR-015` | Negative-stock guards in `US-PICK-001`, `US-TRF-001`, `US-ADJ-002` | HUMAN PRODUCT DECISION; resolves `OQ-015` |
+| `DEC-036` | `US-REC-001` implementation contract | `RECEIVE_RECORDED`; minimum expected context; Warehouse Staff mismatch acknowledgement; Putaway eligibility gate; duplicate conflict; legacy-safe migration; no stock/auto-Putaway effect | HUMAN APPROVED TECHNICAL IMPLEMENTATION SPEC; does not close `OQ-013/014` |
 | `DEC-025`, `DEC-026` | `NFR-001` đến `NFR-005`; canonical priority schema | Supported stories/artifacts theo NFR trace bên dưới | HUMAN APPROVED NFR / PRIORITY DECISION; `OQ-033` partially addressed |
 
 ## Technical foundation decisions
@@ -41,6 +42,7 @@ Thứ tự này giữ Transfer execution trước Transfer history và Audit tr�
 | `DEC-031` / `DEC-033` | PostgreSQL-backed server-side sessions; approved exact schema; 8-hour absolute session; hashed random token; configurable secure cookie/CORS; Argon2id; database-role actor resolution; approved 401/403 semantics | `NFR-004`; protected operations across all stories; auth API baseline | Implementation merged; human-confirmed merged-PR backend/frontend/E2E CI checks PASS; staging HTTPS cookie behavior remains unverified |
 | `DEC-032` / `DEC-034` | Retain staging/demo-only public HTTPS, external secrets, migration/readiness/seed/smoke and no-`--reload`; replace Render Static Site/DB with Vercel same-origin `/api/*` rewrite and Supabase PostgreSQL while retaining Render FastAPI | Release/staging environment for the MVP | APPROVED DESIGN only; deployment not performed; Render Free requires demo warm-up/rehearsal; long-term production target remains TBD |
 | `DEC-035` | Supabase PostgreSQL 17 staging target; PostgreSQL 17+ compatibility; TLS `sslmode=require`; Alembic single-runner policy and staging-compatible release verification | Persistence/release evidence across implemented stories | PostgreSQL 18 CI evidence remains valid but does not replace PostgreSQL 17 staging verification or prove major versions identical |
+| `DEC-036` | Receive records a full prepared context atomically; mismatch acknowledgement controls Putaway eligibility; no fabricated legacy backfill | `US-REC-001` implementation and downstream `US-PUT-001` eligibility guard | No final completion/handoff, partial Receive, correction/reversal, PO lifecycle or Receive stock mutation |
 
 ## Canonical NFR trace
 
@@ -71,7 +73,7 @@ Local evidence on 2026-09-05 remains: Ruff lint and format-check pass; pytest `8
 
 | Story | Requirement | Business Rule | Decision | Evidence classification | OQ boundary |
 |---|---|---|---|---|---|
-| `US-REC-001` | `REQ-001/002/003`, `CAND-REQ-001/002/009/010` | `CAND-BR-001/014` | `DEC-016/017/018` | `EVD-002–005` verify actual-vs-expected behavior; later additions are HUMAN PRODUCT DECISIONS | `OQ-013` final completion/handoff; `OQ-014`, `OQ-022` open |
+| `US-REC-001` | `REQ-001/002/003`, `CAND-REQ-001/002/009/010` | `CAND-BR-001/014` | `DEC-016/017/018/023/036` | `EVD-002–005` verify actual-vs-expected behavior; later additions are HUMAN PRODUCT/TECHNICAL DECISIONS | `OQ-013` final completion/handoff; `OQ-014` partial not implemented/open; `OQ-022` open |
 | `US-PUT-001` | `REQ-002/003/004`, `CAND-REQ-003/007/010` | `CAND-BR-003/004` | `DEC-006/010/011/017` | HUMAN PRODUCT DECISION; `EVD-006/007` context only | `OQ-013` exception/handoff; `OQ-014`, `OQ-022` open |
 | `US-PICK-001` | `REQ-002/003`, `CAND-REQ-003/006/010/011` | `CAND-BR-003/005/006/015` | `DEC-010/012/017/018/019` | HUMAN PRODUCT DECISION; `EVD-006–009` context only | `OQ-013` cancellation/retry; `OQ-022` open; negative-stock guard approved |
 | `US-TRF-001` | `REQ-001/002/004`, `CAND-REQ-003/010/011`, `FR-012` | `CAND-BR-003/007/008/015` | `DEC-005/007/009/010/013/017/018/019/024` | HUMAN PRODUCT DECISION; `EVD-010/011` context only | `OQ-013` failure/cancel/reversal; `OQ-014/022` open; negative-stock guard approved |
@@ -85,7 +87,7 @@ Local evidence on 2026-09-05 remains: Ruff lint and format-check pass; pytest `8
 
 | Story | Canonical AC coverage | Downstream status |
 |---|---|---|
-| `US-REC-001` | actual entry/compare; match; quantity discrepancy; reference mismatch review | Design/spec/implementation/test not started |
+| `US-REC-001` | actual entry/compare; match; quantity discrepancy; Warehouse Staff reference-mismatch acknowledgement and Putaway eligibility guard | Human-reviewed Technical Story Spec READY FOR IMPLEMENTATION under `DEC-036`; implementation/test not started; `OQ-013/014` remain open |
 | `US-PUT-001` | destination allocation; tracked location; no automatic Movement record | Implementation COMPLETED; PostgreSQL 18 backend verification, frontend checks and Playwright E2E PASS in GitHub Actions; accepted after human diff review |
 | `US-PICK-001` | full Pick; multi-location; `PARTIAL / INSUFFICIENT`; negative-stock guard | Not started |
 | `US-TRF-001` | source/destination effects; Warehouse total; minimum record; negative-stock guard | Technical contract still TBD |
@@ -117,13 +119,13 @@ Taiga references dưới đây theo dõi thực thi và không thay thế nguồ
 |---|---|---|
 | `OQ-012` | OPEN QUESTION | Integer quantity remains a Round 1 slice simplification; UOM, decimal quantity, conversion behavior and precision/scale remain undecided |
 | `OQ-011` | RESOLVED — HUMAN PRODUCT DECISION | `DEC-010–015`; per-location `system stock quantity` |
-| `OQ-013` | PARTIALLY DECIDED / OPEN | Receive completion/handoff, Putaway exception/handoff, Transfer exception/reversal, Audit mismatch completion and Adjust rejected-case closure remain open |
+| `OQ-013` | PARTIALLY DECIDED / OPEN | `DEC-036` defines `RECEIVE_RECORDED` and reference-review eligibility only; final Receive completion/handoff, Putaway exception/handoff, Transfer exception/reversal, Audit mismatch completion and Adjust rejected-case closure remain open |
 | `OQ-017` | RESOLVED — HUMAN PRODUCT DECISION | `DEC-014/015` |
 | `OQ-018` | RESOLVED — HUMAN PRODUCT DECISION | `DEC-014` |
 | `OQ-019` | RESOLVED — HUMAN PRODUCT DECISION | `DEC-016/017` |
 | `OQ-020` | RESOLVED — HUMAN PRODUCT DECISION | `DEC-017` |
 | `OQ-015` | RESOLVED — HUMAN PRODUCT DECISION | `DEC-019`; location quantity cannot be negative; no retry/cancel semantics inferred |
-| `OQ-014`, `OQ-021`, `OQ-022` | OPEN QUESTION | Partial workflow, Alert and device/integration behavior remain undecided |
+| `OQ-014`, `OQ-021`, `OQ-022` | OPEN QUESTION | Partial Receive is not implemented in the current slice and not permanently excluded; other partial workflow, Alert and device/integration behavior remain undecided |
 | `OQ-032` | PARTIALLY RESOLVED / OPEN | `DEC-031/033` approve session auth; `DEC-034/035` approve Vercel → Render → Supabase PostgreSQL 17 for staging/demo; long-term production deployment remains TBD |
 | `OQ-033` | PARTIALLY DECIDED / OPEN | `NFR-001` đến `NFR-005`, priorities and minimum staging/demo release environment are approved; response-time, uptime, concurrent-user/load target, numeric usability threshold, idempotency retention and long-term production operating context remain open |
 
@@ -147,7 +149,7 @@ Các “Usability Decision” dưới đây là decision cục bộ của artifa
 
 | Prototype Flow | Story | Usability Finding | Usability Decision | Existing canonical decision |
 |---|---|---|---|---|
-| `PF-01 — Receive → Putaway` | `US-REC-001`, `US-PUT-001` | `P1`: expected/actual và discrepancy rõ; completion sau reference review và boundary sang Putaway chưa rõ | Giữ hai flow tách biệt; không production CTA tự động; prototype chỉ dùng facilitator transition | `DEC-016`, `DEC-018`; `OQ-013` vẫn mở |
+| `PF-01 — Receive → Putaway` | `US-REC-001`, `US-PUT-001` | `P1`: expected/actual và discrepancy rõ; `DEC-036` xác định mismatch acknowledgement/eligibility, còn final completion và exact handoff chưa rõ | Giữ hai flow tách biệt; không production CTA tự động; prototype chỉ dùng facilitator transition | `DEC-016`, `DEC-018`, `DEC-036`; `OQ-013` vẫn mở |
 | `PF-02 — Pick` | `US-PICK-001` | `P2`: multi-location/full/blocked rõ; partial có thể bị hiểu là fully completed | Giữ partial hợp lệ; thêm copy “Pick is not fully completed. 4 units remain unfulfilled.”; giữ blocked/no-change guard | `DEC-012`, `DEC-019` |
 | `PF-03 — Audit → Adjust` | `US-AUD-001`, `US-AUD-002`, `US-ADJ-001`, `US-ADJ-002` | `P3`: mismatch và re-check rõ; thời điểm quantity đổi qua actor handoff chưa rõ | Hiển thị no-change sau mismatch/re-check/waiting/reject; chỉ approved/applied mới cập nhật quantity | `DEC-014`, `DEC-015`, `DEC-018`, `DEC-019` |
 
