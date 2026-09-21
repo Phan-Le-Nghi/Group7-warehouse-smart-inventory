@@ -23,8 +23,8 @@ Ownership của Audit đã được xác nhận và không phải câu hỏi m�
 | OQ-010 | Phạm vi hệ thống gồm một Warehouse hay nhiều Warehouse? | `RESOLVED — HUMAN PRODUCT DECISION`: MVP quản lý một Warehouse duy nhất; multi-Warehouse ngoài MVP. Đây là product-scope choice, không phải research conclusion (`DEC-005`). |
 | OQ-011 | Stock on-hand, available, reserved, damaged và in-transit được định nghĩa như thế nào, nếu có áp dụng? | `RESOLVED — HUMAN PRODUCT DECISION`: MVP dùng `system stock quantity` theo internal location; Warehouse total là tổng location quantities. Workflow effects được chốt tại `DEC-010` đến `DEC-015`. Không canonicalize các bucket đã nêu. |
 | OQ-012 | Lot/batch, serial number, expiry date, unit of measure hoặc unit conversion có thuộc phạm vi không? | Mô hình SKU/Stock |
-| OQ-013 | Trigger, điều kiện trước, kết quả thành công, ngoại lệ và trạng thái hoàn tất của từng khu vực quy trình bắt buộc là gì? | `PARTIALLY DECIDED / OPEN`: Round 2 đã quyết định happy path và một số exception/completion branch. Vẫn mở: Receive trigger/completion wording cuối, Putaway exception/downstream handoff, Transfer exception, Audit mismatch completion, Adjust rejected-case closure và các handoff chưa được nêu rõ. |
-| OQ-014 | Có hỗ trợ thực hiện một phần đối với Receive, Putaway, Pick hoặc Transfer không? | Quy tắc quy trình |
+| OQ-013 | Trigger, điều kiện trước, kết quả thành công, ngoại lệ và trạng thái hoàn tất của từng khu vực quy trình bắt buộc là gì? | `PARTIALLY DECIDED / OPEN`: `DEC-036` approve `RECEIVE_RECORDED`, Warehouse Staff mismatch acknowledgement và downstream Putaway eligibility guard, nhưng không canonicalize final Receive completion hoặc exact Receive -> Putaway handoff. Putaway exception/downstream handoff, Transfer exception, Audit mismatch completion, Adjust rejected-case closure và các handoff chưa nêu rõ vẫn mở. |
+| OQ-014 | Có hỗ trợ thực hiện một phần đối với Receive, Putaway, Pick hoặc Transfer không? | `OPEN`: partial Receive là `NOT IMPLEMENTED` trong `US-REC-001` current slice theo `DEC-036`; không có partial status, remaining-quantity lifecycle hoặc multiple-partial semantics. Quyết định này không loại partial Receive vĩnh viễn; partial Putaway/Transfer vẫn chưa quyết định. |
 | OQ-015 | Có cho phép tồn kho âm không? | `RESOLVED — HUMAN PRODUCT DECISION`: `system stock quantity` tại internal location không được âm. Pick, Transfer và Adjust không được confirm/apply nếu operation sẽ tạo quantity âm; không apply quantity change và báo operation không hợp lệ/không thể confirm (`DEC-019`, `CAND-REQ-011`, `CAND-BR-015`). Retry/cancel lifecycle và reservation semantics không được suy diễn. |
 | OQ-016 | Transfer là giữa các location, giữa các Warehouse hay cả hai? | `RESOLVED — HUMAN PRODUCT DECISION`: trong MVP, Transfer chỉ là subsequent relocation giữa tracked internal locations trong cùng một Warehouse; cross-Warehouse Transfer ngoài MVP (`DEC-007`). |
 | OQ-017 | Adjust và Audit yêu cầu lý do, bằng chứng và phê duyệt nào? | `RESOLVED — HUMAN PRODUCT DECISION`: re-check và Adjust reason bắt buộc; attachment/evidence optional; Manager approve/reject trước apply; Audit không auto Adjust (`DEC-014`, `DEC-015`). |
@@ -58,7 +58,7 @@ Khi câu trả lời được phê duyệt, phải dẫn nguồn, cập nhật a
 - `OQ-011` — `RESOLVED — HUMAN PRODUCT DECISION`: dùng `system stock quantity` theo internal location; Warehouse total bằng tổng location quantities; workflow effects được chốt tại `DEC-010` đến `DEC-015`; không canonicalize `on-hand`, `available`, `reserved`, `damaged` hoặc `in-transit`.
 - `OQ-016` — `RESOLVED — HUMAN PRODUCT DECISION`: Transfer trong MVP chỉ là subsequent relocation giữa tracked internal locations trong cùng một Warehouse. Resolution này không xác nhận system Transfer transaction, Movement system record, Stock effect hoặc automatic location update.
 - Location cardinality không có canonical OQ ID. `DEC-006` xác nhận như product modeling rằng một SKU có thể liên kết với nhiều internal locations trong cùng Warehouse; không tạo OQ ID mới.
-- `OQ-013` — `PARTIALLY DECIDED / OPEN`: Round 2 đã xác định nhiều trigger, precondition, action, outcome và completion branch. Các lifecycle gap còn lại được ghi tại bảng OQ và `workflow-overview.md`; không được suy diễn.
+- `OQ-013` — `PARTIALLY DECIDED / OPEN`: Round 2 và `DEC-036` đã xác định nhiều trigger, precondition, action, outcome, `RECEIVE_RECORDED` và mismatch eligibility branch. Final Receive completion/handoff cùng các lifecycle gap còn lại được ghi tại bảng OQ và `workflow-overview.md`; không được suy diễn.
 
 ## Human decision status sau Round 2
 
@@ -67,7 +67,7 @@ Khi câu trả lời được phê duyệt, phải dẫn nguồn, cập nhật a
 - `OQ-019` — `RESOLVED — HUMAN PRODUCT DECISION` bởi `DEC-016`, `DEC-017`.
 - `OQ-020` — `RESOLVED — HUMAN PRODUCT DECISION` bởi `DEC-017`.
 - `OQ-015` — `RESOLVED — HUMAN PRODUCT DECISION` bởi `DEC-019`; không cho phép quantity âm tại internal location.
-- `OQ-014`, `OQ-022` và các OQ AI chưa có quyết định mới vẫn `OPEN QUESTION`.
+- `OQ-014` vẫn `OPEN`; partial Receive là `NOT IMPLEMENTED` trong current slice, không phải permanently out. `OQ-022` và các OQ AI chưa có quyết định mới vẫn `OPEN QUESTION`.
 - Các quyết định Round 2 là HUMAN PRODUCT DECISIONS / MVP ASSUMPTIONS, không phải verified research findings và không tạo `EVD-*` mới.
 
 ## Research Synthesis v1 — trạng thái được thông tin một phần
@@ -77,7 +77,7 @@ Evidence P1/P2/P3 trong [`../01-sources/research-evidence.md`](../01-sources/res
 | ID | Evidence đã thông tin | Nội dung vẫn `OPEN QUESTION` |
 |---|---|---|
 | OQ-009 | Có evidence từ ba participant tại một minimart (`EVD-018`, `EVD-019`). | Khả năng tiếp cận stakeholder/participant bổ sung và usability testing vẫn chưa rõ. |
-| OQ-013 | Có mô tả cấp cao từ research (`EVD-002` đến `EVD-017`) và boundary Putaway/Transfer/Pick từ HUMAN PRODUCT DECISION `DEC-009`. | Trigger, precondition, success outcome, exception và completion state chi tiết vẫn chưa rõ; câu hỏi tiếp tục OPEN. |
+| OQ-013 | Có mô tả cấp cao từ research (`EVD-002` đến `EVD-017`), boundary Putaway/Transfer/Pick từ `DEC-009` và `RECEIVE_RECORDED`/reference-review eligibility từ `DEC-036`. | Final Receive completion/exact Putaway handoff và các lifecycle gap khác vẫn chưa rõ; câu hỏi tiếp tục `PARTIALLY DECIDED / OPEN`. |
 | OQ-016 | Có physical movement giữa backroom và sales shelf (`EVD-010`). HUMAN PRODUCT DECISION `DEC-007` đã giới hạn Transfer trong MVP là subsequent relocation giữa tracked internal locations trong cùng một Warehouse. | System Transfer transaction, Movement system record, Stock effect và automatic location update chưa được xác nhận; chúng không phải nội dung được resolution của `OQ-016` tự động quyết định. |
 | OQ-017 | Có re-check chênh lệch và manager involvement trong vận hành hiện tại (`EVD-012`, `EVD-013`, `EVD-017`). | Lý do, evidence, approval và authority bắt buộc vẫn chưa rõ. |
 | OQ-018 | Có inventory checking hằng ngày, gồm đếm và đối chiếu (`EVD-015`, `EVD-016`). | Audit là cycle count, full stocktake hay cả hai vẫn chưa rõ. |
