@@ -35,9 +35,13 @@ jobs:
 
   backend-checks:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres-version: ["17", "18"]
     services:
       postgres:
-        image: postgres:18
+        image: postgres:${{ matrix.postgres-version }}
         env:
           POSTGRES_DB: warehouse_test
           POSTGRES_USER: warehouse_test

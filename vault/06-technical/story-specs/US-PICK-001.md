@@ -2,14 +2,24 @@
 
 ## Status and authority
 
-`IMPLEMENTATION-READY — HUMAN APPROVED AT DEC-037`
+`IMPLEMENTED IN WORKTREE — AWAITING HUMAN DIFF REVIEW AND POSTGRESQL CI`
+
+- The implementation follows the human-approved plan and `DEC-037` boundary.
+- Fresh local evidence: Ruff lint/format PASS; pytest `113 passed, 3 skipped`
+  (the skips require PostgreSQL); frontend ESLint/TypeScript PASS, Vitest
+  `30 passed`, production build PASS; Playwright discovery lists seven tests,
+  including three isolated Pick scenarios.
+- PostgreSQL 17/18 migration, constraint, integration and concurrency execution,
+  plus browser E2E execution, remain pending CI or an available local PostgreSQL
+  environment.
+- This status is not a commit, merge, release, deployment, or production claim.
 
 - Story: `US-PICK-001 — Thực hiện Pick từ tracked locations`
 - Owner: Trương Huỳnh Thảo Ngân
 - Canonical product story: [`../../04-product/stories/US-PICK-001.md`](../../04-product/stories/US-PICK-001.md)
 - Technical approval: `DEC-037`
 - This document defines the current implementation slice. It does not change the canonical Acceptance Criteria.
-- Application implementation, migration, commit and push are outside this documentation task.
+- Commit, push and deployment remain outside the current implementation task.
 
 ## Traceability
 

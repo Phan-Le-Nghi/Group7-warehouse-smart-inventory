@@ -12,6 +12,57 @@ class PutawayRequest(BaseModel):
     destination_location_id: UUID
 
 
+class PickAllocationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source_location_id: UUID
+    quantity: StrictInt
+
+
+class PickRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    pick_id: UUID
+    allocations: list[PickAllocationRequest]
+
+
+class PickLocationAvailability(BaseModel):
+    id: UUID
+    code: str
+    available_quantity: int
+
+
+class PickContextResponse(BaseModel):
+    pick_id: UUID
+    warehouse_id: UUID
+    sku_id: UUID
+    sku: str
+    requested_quantity: int
+    outcome: str | None
+    locations: list[PickLocationAvailability]
+    warehouse_total: int
+
+
+class PickAllocationResult(BaseModel):
+    source_location_id: UUID
+    source_location: str
+    quantity: int
+    remaining_source_quantity: int
+
+
+class PickResponse(BaseModel):
+    pick_id: UUID
+    sku_id: UUID
+    requested_quantity: int
+    picked_quantity: int
+    remaining_quantity: int
+    outcome: str
+    allocations: list[PickAllocationResult]
+    confirmed_by_user_id: UUID
+    confirmed_at: datetime
+    warehouse_total: int
+
+
 class StockResult(BaseModel):
     destination_quantity: int
     warehouse_total: int

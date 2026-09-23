@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from warehouse_api.auth_routes import router as auth_router
 from warehouse_api.config import get_settings
 from warehouse_api.errors import ApiError
+from warehouse_api.pick_routes import router as pick_router
 from warehouse_api.receive_routes import router as receive_router
 from warehouse_api.routes import router
 
@@ -66,6 +67,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(router)
 app.include_router(receive_router)
+app.include_router(pick_router)
 
 
 @app.exception_handler(ApiError)
@@ -90,12 +92,16 @@ def handle_validation_error(
         item["loc"][-1] in {"quantity", "actual_quantity"} and item["type"] != "missing"
         for item in error.errors()
     )
-    code = "INVALID_QUANTITY" if quantity_error else "INVALID_REQUEST"
-    message = (
-        "Quantity must be an integer."
-        if quantity_error
-        else "The request could not be validated."
-    )
+    allocations_error = any("allocations" in item["loc"] for item in error.errors())
+    if quantity_error:
+        code = "INVALID_QUANTITY"
+        message = "Quantity must be an integer."
+    elif allocations_error:
+        code = "INVALID_ALLOCATIONS"
+        message = "The source allocations are invalid."
+    else:
+        code = "INVALID_REQUEST"
+        message = "The request could not be validated."
     return JSONResponse(
         status_code=422,
         content={

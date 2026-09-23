@@ -211,6 +211,61 @@ class StockBalance(Base):
     quantity: Mapped[int] = mapped_column(Integer, default=0)
 
 
+class PickRequest(Base):
+    __tablename__ = "pick_requests"
+    __table_args__ = (
+        CheckConstraint(
+            "requested_quantity > 0", name="ck_pick_requests_requested_positive"
+        ),
+        CheckConstraint(
+            "outcome IS NULL OR outcome IN ('FULLY_COMPLETED', 'PARTIAL_INSUFFICIENT')",
+            name="ck_pick_requests_outcome",
+        ),
+        CheckConstraint(
+            "(outcome IS NULL AND confirmed_by_user_id IS NULL AND "
+            "confirmed_at IS NULL) OR "
+            "(outcome IS NOT NULL AND confirmed_by_user_id IS NOT NULL AND "
+            "confirmed_at IS NOT NULL)",
+            name="ck_pick_requests_confirmation_complete",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    warehouse_id: Mapped[UUID] = mapped_column(
+        ForeignKey("warehouses.id", ondelete="RESTRICT"), index=True
+    )
+    sku_id: Mapped[UUID] = mapped_column(
+        ForeignKey("skus.id", ondelete="RESTRICT"), index=True
+    )
+    requested_quantity: Mapped[int] = mapped_column(Integer)
+    outcome: Mapped[str | None] = mapped_column(String(32))
+    confirmed_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class PickAllocation(Base):
+    __tablename__ = "pick_allocations"
+    __table_args__ = (
+        CheckConstraint("quantity > 0", name="ck_pick_allocations_quantity_positive"),
+        UniqueConstraint(
+            "pick_id",
+            "source_location_id",
+            name="uq_pick_allocations_pick_source",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    pick_id: Mapped[UUID] = mapped_column(
+        ForeignKey("pick_requests.id", ondelete="RESTRICT"), index=True
+    )
+    source_location_id: Mapped[UUID] = mapped_column(
+        ForeignKey("internal_locations.id", ondelete="RESTRICT"), index=True
+    )
+    quantity: Mapped[int] = mapped_column(Integer)
+
+
 class PutawayAllocation(Base):
     __tablename__ = "putaway_allocations"
     __table_args__ = (

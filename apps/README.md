@@ -1,7 +1,7 @@
-# Warehouse & Smart Inventory Management — US-PUT-001 Vertical Slice
+# Warehouse & Smart Inventory Management — Implemented Vertical Slices
 
-This directory contains the runnable first vertical slice for `US-PUT-001`,
-from React through FastAPI and PostgreSQL persistence.
+This directory contains the runnable `US-PUT-001`, `US-REC-001`, and
+`US-PICK-001` worktree slices from React through FastAPI persistence.
 
 ## Prerequisites
 
@@ -73,6 +73,10 @@ the explicit Putaway context at `/`; `VITE_RECEIVE_ID` supplies the prepared
 Receive context at `/receive`. The two screens remain separate and neither
 creates an automatic Receive-to-Putaway handoff.
 
+Prepared Pick requests are opened at `/pick/{pick_id}`. The Pick ID comes from
+the URL; the application does not create Pick requests. Partial Picks require
+a second explicit confirmation in the UI before `POST /api/v1/picks` is sent.
+
 ```powershell
 Set-Location frontend
 npm ci
@@ -99,11 +103,13 @@ npm run test:e2e
 
 ## Scope boundary
 
-Authentication and `US-PUT-001` are merged implementation baselines. Test actor
+Authentication and `US-PUT-001` are merged implementation baselines. `US-REC-001`
+and `US-PICK-001` are implemented in the worktree pending human diff review and
+CI evidence. Test actor
 injection exists only through FastAPI dependency overrides in automated tests;
 there is no runtime actor environment switch. Human-confirmed merged-PR evidence
 records backend, frontend, and browser E2E CI checks as `PASS` on PostgreSQL 18.
-No local Docker pass is claimed.
+No local PostgreSQL, Docker, or browser E2E pass is claimed for the Pick slice.
 
 `DEC-034/035` approve a staging/demo design with a Vercel React/Vite frontend,
 a same-origin `/api/*` rewrite to the Render FastAPI backend, and Supabase
