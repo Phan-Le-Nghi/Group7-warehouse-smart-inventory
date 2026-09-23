@@ -49,17 +49,21 @@ def _seed_concurrency_case(
         pick_ids[1] = pick_ids[0]
     actor = Actor(uuid4(), f"concurrent.{uuid4().hex}", WAREHOUSE_STAFF)
     with factory.begin() as session:
-        session.add(
-            User(
-                id=actor.user_id,
-                login_identifier=actor.login_identifier,
-                password_hash="test-only",
-                role=actor.role.value,
-                is_active=True,
-            )
+        session.add_all(
+            [
+                User(
+                    id=actor.user_id,
+                    login_identifier=actor.login_identifier,
+                    password_hash="test-only",
+                    role=actor.role.value,
+                    is_active=True,
+                ),
+                Warehouse(id=warehouse_id, code=f"W-{uuid4().hex}"),
+                Sku(id=sku_id, code=f"SKU-{uuid4().hex}"),
+            ]
         )
-        session.add(Warehouse(id=warehouse_id, code=f"W-{uuid4().hex}"))
-        session.add(Sku(id=sku_id, code=f"SKU-{uuid4().hex}"))
+        session.flush()
+
         session.add_all(
             [
                 InternalLocation(
@@ -72,6 +76,8 @@ def _seed_concurrency_case(
                 ),
             ]
         )
+        session.flush()
+
         session.add_all(
             [
                 StockBalance(
@@ -91,6 +97,7 @@ def _seed_concurrency_case(
                     requested_quantity=2 if balance_quantity == 2 else 7,
                 )
             )
+        session.flush()
     return actor, pick_ids, sku_id, location_ids
 
 

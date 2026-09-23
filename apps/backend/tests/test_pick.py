@@ -63,22 +63,22 @@ def pick_api() -> Iterator[tuple[TestClient, sessionmaker[Session], PickFixture]
         unrelated_sku_id=uuid4(),
     )
     with factory.begin() as session:
-        session.add(
-            User(
-                id=fixture.actor.user_id,
-                login_identifier=fixture.actor.login_identifier,
-                password_hash="test-only",
-                role=fixture.actor.role.value,
-                is_active=True,
-            )
-        )
-        session.add(Warehouse(id=fixture.warehouse_id, code="MAIN"))
         session.add_all(
             [
+                User(
+                    id=fixture.actor.user_id,
+                    login_identifier=fixture.actor.login_identifier,
+                    password_hash="test-only",
+                    role=fixture.actor.role.value,
+                    is_active=True,
+                ),
+                Warehouse(id=fixture.warehouse_id, code="MAIN"),
                 Sku(id=fixture.sku_id, code="PICK-SKU"),
                 Sku(id=fixture.unrelated_sku_id, code="UNRELATED-SKU"),
             ]
         )
+        session.flush()
+
         session.add_all(
             [
                 InternalLocation(
@@ -93,6 +93,8 @@ def pick_api() -> Iterator[tuple[TestClient, sessionmaker[Session], PickFixture]
                 ),
             ]
         )
+        session.flush()
+
         session.add(
             PickRequest(
                 id=fixture.pick_id,
@@ -120,6 +122,7 @@ def pick_api() -> Iterator[tuple[TestClient, sessionmaker[Session], PickFixture]
                 ),
             ]
         )
+        session.flush()
 
     def override_session() -> Iterator[Session]:
         session = factory()
