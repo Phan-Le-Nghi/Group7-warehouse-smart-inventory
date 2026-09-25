@@ -83,3 +83,4 @@ def require_roles(*roles: Role) -> Callable[[Actor], Actor]:
 
 
 require_warehouse_staff = require_roles(Role.WAREHOUSE_STAFF)
+require_manager = require_roles(Role.MANAGER)

@@ -2,14 +2,22 @@
 
 ## Status and authority
 
-`IMPLEMENTATION-READY — HUMAN APPROVED`
+`IMPLEMENTED IN WORKTREE — AWAITING HUMAN DIFF REVIEW / POSTGRESQL EVIDENCE`
 
 - Story: `US-TRF-002 — Xem Transfer history`
 - Owner: Nguyễn Thị Ly Na
 - Canonical product story: [`../../04-product/stories/US-TRF-002.md`](../../04-product/stories/US-TRF-002.md)
 - Technical approval: `DEC-039`
-- This document defines the current implementation slice and does not change the canonical Acceptance Criteria.
-- No application code, migration, commit or push is part of this documentation update.
+- This document defines the implemented current slice and does not change the canonical Acceptance Criteria.
+- Human approved the implementation plan before coding. No migration, commit, push or deployment was performed.
+
+## Current implementation evidence
+
+- Backend implements dedicated history schemas, exact Manager-only `GET /api/v1/transfers`, server-side exactly-one-Warehouse resolution, joined immutable fact reads, deterministic ordering and no stock/idempotency response fields.
+- Frontend implements `/transfers/history` with loading, empty, table, retryable server-error, `401` recovery and backend-originated `403` states. Raw timestamps remain in `<time dateTime>` while visible text may be formatted.
+- Automated coverage includes exact response shape, empty/one/multiple rows, ordering/tie-break, four role outcomes, client Warehouse input non-authority, repeated-read/query-failure no-effect checks, component/API/routing states and four Playwright scenarios.
+- Fresh local evidence on 2026-09-26: Ruff lint/format PASS; pytest `142 passed, 9 PostgreSQL-only skipped`; frontend ESLint/TypeScript PASS, Vitest `46 passed`, production build PASS; Playwright discovery lists 14 tests including four `US-TRF-002` scenarios.
+- Real PostgreSQL-backed browser execution is `NOT VERIFIED` locally because `TEST_DATABASE_URL` is unavailable and Docker CLI is not installed. PostgreSQL-only concurrency checks remain skipped; human diff and visual review remain pending.
 
 ## Traceability
 

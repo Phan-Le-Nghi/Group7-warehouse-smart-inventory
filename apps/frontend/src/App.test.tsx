@@ -213,3 +213,43 @@ describe('US-TRF-001 addressing', () => {
     )
   })
 })
+
+describe('US-TRF-002 addressing', () => {
+  it('loads backend-authoritative history at /transfers/history for a Manager', async () => {
+    window.history.pushState({}, '', '/transfers/history')
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockReturnValue(
+      jsonResponse({ items: [] }),
+    )
+
+    render(
+      <App
+        actor={{ ...actor, role: 'MANAGER' }}
+        onLogout={() => undefined}
+        onUnauthorized={() => undefined}
+        receiveLineId={receiveLineId}
+      />,
+    )
+
+    expect(
+      await screen.findByRole('heading', { name: 'Transfer history' }),
+    ).toBeInTheDocument()
+    expect(fetchMock.mock.calls[0][0]).toContain('/api/v1/transfers')
+  })
+
+  it('still requests history for a wrong role so backend can return 403', async () => {
+    window.history.pushState({}, '', '/transfers/history')
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockReturnValue(
+      jsonResponse(
+        { error: { code: 'FORBIDDEN', message: 'Access denied.' } },
+        403,
+      ),
+    )
+
+    renderApp()
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Manager role required',
+    )
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+})

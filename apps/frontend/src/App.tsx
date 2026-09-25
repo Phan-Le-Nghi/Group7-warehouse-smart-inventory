@@ -9,6 +9,7 @@ import {
 import type { Actor } from './auth'
 import PickPage from './PickPage'
 import ReceivePage from './ReceivePage'
+import TransferHistoryPage from './TransferHistoryPage'
 import TransferPage from './TransferPage'
 
 type AppProps = {
@@ -42,7 +43,9 @@ function App({
   receiveId = import.meta.env.VITE_RECEIVE_ID,
   receiveLineId = import.meta.env.VITE_RECEIVE_LINE_ID,
 }: AppProps) {
-  const isReceivePage = window.location.pathname.replace(/\/+$/, '') === '/receive'
+  const currentPath = window.location.pathname.replace(/\/+$/, '') || '/'
+  const isReceivePage = currentPath === '/receive'
+  const isTransferHistoryPage = currentPath === '/transfers/history'
   const pickPathMatch = window.location.pathname.match(/^\/pick\/([^/]+)\/?$/)
   const pickId = pickPathMatch ? decodeURIComponent(pickPathMatch[1]) : null
   const transferPathMatch = window.location.pathname.match(/^\/transfer\/([^/]+)\/?$/)
@@ -53,7 +56,7 @@ function App({
   const [destinationId, setDestinationId] = useState('')
   const [result, setResult] = useState<PutawayResult | null>(null)
   const [error, setError] = useState(() =>
-    receiveLineId || isReceivePage || pickId
+    receiveLineId || isReceivePage || isTransferHistoryPage || pickId || transferSkuId
       ? ''
       : 'Putaway context is not configured.',
   )
@@ -63,6 +66,7 @@ function App({
   useEffect(() => {
     if (
       isReceivePage ||
+      isTransferHistoryPage ||
       pickId ||
       transferSkuId ||
       !receiveLineId ||
@@ -94,7 +98,15 @@ function App({
     return () => {
       active = false
     }
-  }, [actor.role, isReceivePage, onUnauthorized, pickId, receiveLineId, transferSkuId])
+  }, [
+    actor.role,
+    isReceivePage,
+    isTransferHistoryPage,
+    onUnauthorized,
+    pickId,
+    receiveLineId,
+    transferSkuId,
+  ])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -135,7 +147,9 @@ function App({
         </button>
       </header>
 
-      {transferSkuId && actor.role === 'WAREHOUSE_STAFF' ? (
+      {isTransferHistoryPage ? (
+        <TransferHistoryPage onUnauthorized={onUnauthorized} />
+      ) : transferSkuId && actor.role === 'WAREHOUSE_STAFF' ? (
         <TransferPage skuId={transferSkuId} onUnauthorized={onUnauthorized} />
       ) : pickId && actor.role === 'WAREHOUSE_STAFF' ? (
         <PickPage pickId={pickId} onUnauthorized={onUnauthorized} />

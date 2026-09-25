@@ -160,6 +160,51 @@ input {
   box-shadow: 0 1.5rem 4rem rgb(36 75 51 / 10%);
 }
 
+.transfer-history-card {
+  width: min(75rem, 100%);
+}
+
+.history-table-scroll {
+  margin-top: 2rem;
+  overflow-x: auto;
+  border: 1px solid #dce5de;
+  border-radius: 1rem;
+}
+
+.history-table-scroll table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+.history-table-scroll th,
+.history-table-scroll td {
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid #e5ece7;
+  text-align: left;
+  vertical-align: top;
+}
+
+.history-table-scroll th {
+  color: #52645a;
+  background: #f3f6f3;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.history-table-scroll tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.history-table-scroll td small {
+  display: block;
+  margin-top: 0.25rem;
+  color: #718078;
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+
 .title-row {
   display: flex;
   align-items: flex-start;

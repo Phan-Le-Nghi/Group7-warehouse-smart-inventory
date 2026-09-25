@@ -106,6 +106,36 @@ class TransferResponse(BaseModel):
     stock: TransferStockResult
 
 
+class TransferHistorySku(BaseModel):
+    id: UUID
+    code: str
+
+
+class TransferHistoryLocation(BaseModel):
+    id: UUID
+    code: str
+
+
+class TransferHistoryActor(BaseModel):
+    user_id: UUID
+    login_identifier: str
+
+
+class TransferHistoryItem(BaseModel):
+    transfer_id: UUID
+    warehouse_id: UUID
+    sku: TransferHistorySku
+    quantity: int
+    source: TransferHistoryLocation
+    destination: TransferHistoryLocation
+    transferred_by: TransferHistoryActor
+    transferred_at: datetime
+
+
+class TransferHistoryResponse(BaseModel):
+    items: list[TransferHistoryItem]
+
+
 class StockResult(BaseModel):
     destination_quantity: int
     warehouse_total: int
