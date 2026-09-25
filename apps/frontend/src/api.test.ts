@@ -2,6 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import {
   ApiError,
   apiRequest,
+  loadTransferHistory,
   recordReceive,
   submitPick,
   submitTransfer,
@@ -9,6 +10,21 @@ import {
 
 afterEach(() => {
   vi.restoreAllMocks()
+})
+
+it('loads Transfer history with a bodyless GET and no client Warehouse scope', async () => {
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    new Response(JSON.stringify({ items: [] }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  )
+
+  await expect(loadTransferHistory()).resolves.toEqual({ items: [] })
+  expect(fetchMock).toHaveBeenCalledWith(
+    expect.stringMatching(/\/api\/v1\/transfers$/),
+    { credentials: 'include' },
+  )
 })
 
 it('preserves a JSON error envelope', async () => {

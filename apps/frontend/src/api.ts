@@ -96,6 +96,21 @@ export type TransferResult = TransferCommand & {
   }
 }
 
+export type TransferHistoryItem = {
+  transfer_id: string
+  warehouse_id: string
+  sku: { id: string; code: string }
+  quantity: number
+  source: { id: string; code: string }
+  destination: { id: string; code: string }
+  transferred_by: { user_id: string; login_identifier: string }
+  transferred_at: string
+}
+
+export type TransferHistory = {
+  items: TransferHistoryItem[]
+}
+
 export type ReceiveReference = {
   expected: string
   document: string | null
@@ -282,6 +297,10 @@ export async function submitTransfer(
     },
     body: JSON.stringify(command),
   })
+}
+
+export function loadTransferHistory(): Promise<TransferHistory> {
+  return apiRequest<TransferHistory>('/api/v1/transfers')
 }
 
 export async function loadReceiveContext(

@@ -1,7 +1,9 @@
 """Reset documented browser fixtures in a dedicated test database only."""
 
 import argparse
+import hashlib
 import json
+from datetime import UTC, datetime
 from os import getenv
 from uuid import UUID
 
@@ -18,6 +20,7 @@ from warehouse_api.models import (
     Sku,
     StockBalance,
     Transfer,
+    User,
     Warehouse,
 )
 
@@ -42,6 +45,8 @@ PICK_STALE_SKU_ID = UUID("00000000-0000-0000-0000-000000000222")
 TRANSFER_SUCCESS_SKU_ID = UUID("00000000-0000-0000-0000-000000000302")
 TRANSFER_REPLAY_SKU_ID = UUID("00000000-0000-0000-0000-000000000312")
 TRANSFER_STALE_SKU_ID = UUID("00000000-0000-0000-0000-000000000322")
+TRANSFER_HISTORY_NEW_ID = UUID("00000000-0000-0000-0000-000000000402")
+TRANSFER_HISTORY_OLD_ID = UUID("00000000-0000-0000-0000-000000000401")
 
 PICK_FIXTURES = {
     PICK_FULL_ID: (PICK_FULL_SKU_ID, "PICK-SKU-FULL", 6, 4),
@@ -420,6 +425,130 @@ def transfer_effect_snapshot(sku_id: UUID) -> dict[str, object]:
     return result
 
 
+def reset_transfer_history(with_rows: bool) -> None:
+    test_database_url = getenv("TEST_DATABASE_URL")
+    if not test_database_url:
+        raise RuntimeError("TEST_DATABASE_URL is required for the test-only seed")
+    engine = create_engine(test_database_url)
+    with Session(engine) as session, session.begin():
+        session.execute(delete(Transfer))
+        if with_rows:
+            actor = session.scalar(
+                select(User).where(User.login_identifier == "demo.warehouse_staff")
+            )
+            if actor is None:
+                raise RuntimeError("Demo Warehouse Staff user was not prepared")
+            for transfer_id, sku_id, quantity, transferred_at in (
+                (
+                    TRANSFER_HISTORY_OLD_ID,
+                    TRANSFER_SUCCESS_SKU_ID,
+                    2,
+                    datetime(2026, 9, 24, 8, 30, tzinfo=UTC),
+                ),
+                (
+                    TRANSFER_HISTORY_NEW_ID,
+                    TRANSFER_REPLAY_SKU_ID,
+                    4,
+                    datetime(2026, 9, 25, 8, 30, tzinfo=UTC),
+                ),
+            ):
+                session.add(
+                    Transfer(
+                        id=transfer_id,
+                        warehouse_id=WAREHOUSE_ID,
+                        sku_id=sku_id,
+                        source_location_id=BACKROOM_ID,
+                        destination_location_id=SALES_SHELF_ID,
+                        quantity=quantity,
+                        transferred_by_user_id=actor.id,
+                        transferred_at=transferred_at,
+                        idempotency_key=f"history-e2e-{transfer_id}",
+                        request_fingerprint=transfer_id.hex.ljust(64, "0"),
+                    )
+                )
+    engine.dispose()
+
+
+def transfer_history_effect_snapshot() -> dict[str, object]:
+    test_database_url = getenv("TEST_DATABASE_URL")
+    if not test_database_url:
+        raise RuntimeError("TEST_DATABASE_URL is required for the test-only snapshot")
+    engine = create_engine(test_database_url)
+    with Session(engine) as session:
+        state = {
+            "transfers": session.execute(
+                select(
+                    Transfer.id,
+                    Transfer.warehouse_id,
+                    Transfer.sku_id,
+                    Transfer.source_location_id,
+                    Transfer.destination_location_id,
+                    Transfer.quantity,
+                    Transfer.transferred_by_user_id,
+                    Transfer.transferred_at,
+                    Transfer.idempotency_key,
+                    Transfer.request_fingerprint,
+                ).order_by(Transfer.id)
+            ).all(),
+            "stock": session.execute(
+                select(
+                    StockBalance.id,
+                    StockBalance.sku_id,
+                    StockBalance.location_id,
+                    StockBalance.quantity,
+                ).order_by(StockBalance.id)
+            ).all(),
+            "receives": session.execute(
+                select(
+                    Receive.id,
+                    Receive.recorded_by_user_id,
+                    Receive.recorded_at,
+                    Receive.reference_reviewed_by_user_id,
+                    Receive.reference_reviewed_at,
+                ).order_by(Receive.id)
+            ).all(),
+            "receive_lines": session.execute(
+                select(
+                    ReceiveLine.id,
+                    ReceiveLine.actual_quantity,
+                    ReceiveLine.quantity_discrepancy,
+                ).order_by(ReceiveLine.id)
+            ).all(),
+            "putaways": session.execute(
+                select(
+                    PutawayAllocation.id,
+                    PutawayAllocation.quantity,
+                    PutawayAllocation.confirmed_at,
+                ).order_by(PutawayAllocation.id)
+            ).all(),
+            "picks": session.execute(
+                select(
+                    PickRequest.id,
+                    PickRequest.outcome,
+                    PickRequest.confirmed_by_user_id,
+                    PickRequest.confirmed_at,
+                ).order_by(PickRequest.id)
+            ).all(),
+            "pick_allocations": session.execute(
+                select(
+                    PickAllocation.id,
+                    PickAllocation.quantity,
+                ).order_by(PickAllocation.id)
+            ).all(),
+        }
+        encoded = json.dumps(state, default=str, sort_keys=True).encode()
+        result = {
+            "business_state_digest": hashlib.sha256(encoded).hexdigest(),
+            "transfer_count": len(state["transfers"]),
+            "stock_row_count": len(state["stock"]),
+            "receive_count": len(state["receives"]),
+            "putaway_count": len(state["putaways"]),
+            "pick_count": len(state["picks"]),
+        }
+    engine.dispose()
+    return result
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--receive-only", action="store_true")
@@ -430,8 +559,15 @@ if __name__ == "__main__":
     parser.add_argument("--transfer-reset", type=UUID)
     parser.add_argument("--transfer-deplete", type=UUID)
     parser.add_argument("--transfer-snapshot", type=UUID)
+    parser.add_argument("--history-reset", choices=("empty", "rows"))
+    parser.add_argument("--history-snapshot", action="store_true")
     arguments = parser.parse_args()
-    if arguments.transfer_snapshot:
+    if arguments.history_snapshot:
+        print(json.dumps(transfer_history_effect_snapshot()))
+    elif arguments.history_reset:
+        reset_transfer_history(with_rows=arguments.history_reset == "rows")
+        print(f"Transfer history fixture reset: {arguments.history_reset}")
+    elif arguments.transfer_snapshot:
         print(json.dumps(transfer_effect_snapshot(arguments.transfer_snapshot)))
     elif arguments.transfer_deplete:
         deplete_transfer_source(arguments.transfer_deplete)

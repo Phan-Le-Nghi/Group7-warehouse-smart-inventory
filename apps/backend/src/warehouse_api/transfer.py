@@ -8,13 +8,25 @@ from uuid import UUID, uuid4
 from sqlalchemy import case, event, func, select
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from warehouse_api.auth import Actor
 from warehouse_api.errors import ApiError
-from warehouse_api.models import InternalLocation, Sku, StockBalance, Transfer
+from warehouse_api.models import (
+    InternalLocation,
+    Sku,
+    StockBalance,
+    Transfer,
+    User,
+    Warehouse,
+)
 from warehouse_api.schemas import (
     TransferContextResponse,
+    TransferHistoryActor,
+    TransferHistoryItem,
+    TransferHistoryLocation,
+    TransferHistoryResponse,
+    TransferHistorySku,
     TransferLocationAvailability,
     TransferRequest,
     TransferResponse,
@@ -30,6 +42,51 @@ logger = logging.getLogger(__name__)
 class TransferResult:
     response: TransferResponse
     replayed: bool
+
+
+def _canonical_warehouse_id(session: Session) -> UUID:
+    warehouse_ids = list(session.scalars(select(Warehouse.id).limit(2)))
+    if len(warehouse_ids) != 1:
+        raise RuntimeError("The MVP database must contain exactly one Warehouse")
+    return warehouse_ids[0]
+
+
+def get_transfer_history(session: Session) -> TransferHistoryResponse:
+    warehouse_id = _canonical_warehouse_id(session)
+    source = aliased(InternalLocation, name="source_location")
+    destination = aliased(InternalLocation, name="destination_location")
+    rows = session.execute(
+        select(Transfer, Sku, source, destination, User)
+        .join(Sku, Sku.id == Transfer.sku_id)
+        .join(source, source.id == Transfer.source_location_id)
+        .join(destination, destination.id == Transfer.destination_location_id)
+        .join(User, User.id == Transfer.transferred_by_user_id)
+        .where(Transfer.warehouse_id == warehouse_id)
+        .order_by(Transfer.transferred_at.desc(), Transfer.id.desc())
+    ).all()
+    return TransferHistoryResponse(
+        items=[
+            TransferHistoryItem(
+                transfer_id=transfer.id,
+                warehouse_id=transfer.warehouse_id,
+                sku=TransferHistorySku(id=sku.id, code=sku.code),
+                quantity=transfer.quantity,
+                source=TransferHistoryLocation(
+                    id=source_location.id, code=source_location.code
+                ),
+                destination=TransferHistoryLocation(
+                    id=destination_location.id,
+                    code=destination_location.code,
+                ),
+                transferred_by=TransferHistoryActor(
+                    user_id=user.id,
+                    login_identifier=user.login_identifier,
+                ),
+                transferred_at=transfer.transferred_at,
+            )
+            for transfer, sku, source_location, destination_location, user in rows
+        ]
+    )
 
 
 def _fingerprint(command: TransferRequest) -> str:
