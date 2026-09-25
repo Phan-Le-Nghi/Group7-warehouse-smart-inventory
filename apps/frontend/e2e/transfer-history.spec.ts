@@ -52,7 +52,12 @@ test('TEST-TRF2-E2E-003 wrong role receives backend forbidden', async ({ page })
   backendCommand('--history-reset', 'rows')
   await signIn(page, 'demo.warehouse_staff')
   await expect(page.getByRole('alert')).toContainText('Manager role required')
-  await expect(page.getByText('Transfer history')).toBeVisible()
+  await expect(
+    page.getByRole('heading', {
+      name: 'Transfer history',
+      exact: true,
+    }),
+  ).toBeVisible()
 })
 
 test('TEST-TRF2-E2E-004 browser history read has no business-data effect', async ({
