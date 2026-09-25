@@ -399,6 +399,56 @@ class AuditLine(Base):
     result: Mapped[str] = mapped_column(String(16))
 
 
+class AuditRecheck(Base):
+    __tablename__ = "audit_rechecks"
+    __table_args__ = (
+        CheckConstraint(
+            "recheck_system_quantity >= 0",
+            name="ck_audit_rechecks_system_quantity_nonnegative",
+        ),
+        CheckConstraint(
+            "recheck_physical_quantity >= 0 AND "
+            "recheck_physical_quantity <= 2147483647",
+            name="ck_audit_rechecks_physical_quantity_range",
+        ),
+        CheckConstraint(
+            "recheck_quantity_discrepancy = "
+            "recheck_physical_quantity - recheck_system_quantity",
+            name="ck_audit_rechecks_discrepancy_consistent",
+        ),
+        CheckConstraint(
+            "result IN ('MATCH', 'MISMATCH')",
+            name="ck_audit_rechecks_result",
+        ),
+        CheckConstraint(
+            "(recheck_quantity_discrepancy = 0 AND result = 'MATCH') OR "
+            "(recheck_quantity_discrepancy <> 0 AND result = 'MISMATCH')",
+            name="ck_audit_rechecks_result_consistent",
+        ),
+        CheckConstraint(
+            "length(request_fingerprint) = 64",
+            name="ck_audit_rechecks_fingerprint_length",
+        ),
+        UniqueConstraint("audit_line_id", name="uq_audit_rechecks_audit_line_id"),
+        UniqueConstraint("idempotency_key", name="uq_audit_rechecks_idempotency_key"),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    audit_line_id: Mapped[UUID] = mapped_column(
+        ForeignKey("audit_lines.id", ondelete="RESTRICT")
+    )
+    recheck_system_quantity: Mapped[int] = mapped_column(Integer)
+    recheck_physical_quantity: Mapped[int] = mapped_column(Integer)
+    recheck_quantity_discrepancy: Mapped[int] = mapped_column(Integer)
+    result: Mapped[str] = mapped_column(String(16))
+    performed_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    performed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    idempotency_key: Mapped[str] = mapped_column(String(255))
+    request_fingerprint: Mapped[str] = mapped_column(String(64))
+
+
 class PutawayAllocation(Base):
     __tablename__ = "putaway_allocations"
     __table_args__ = (

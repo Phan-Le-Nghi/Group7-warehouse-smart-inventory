@@ -61,6 +61,73 @@ class AuditResponse(BaseModel):
     lines: list[AuditLineResponse]
 
 
+class AuditDiscrepancyActor(BaseModel):
+    user_id: UUID
+    login_identifier: str
+
+
+class AuditDiscrepancySku(BaseModel):
+    id: UUID
+    code: str
+
+
+class AuditDiscrepancyLocation(BaseModel):
+    id: UUID
+    code: str
+
+
+class OriginalAuditEvidence(BaseModel):
+    system_quantity: int
+    physical_quantity: int
+    quantity_discrepancy: int
+    result: Literal["MISMATCH"]
+    audited_by: AuditDiscrepancyActor
+    audited_at: datetime
+
+
+class AuditRecheckEvidence(BaseModel):
+    recheck_id: UUID
+    recheck_system_quantity: int
+    recheck_physical_quantity: int
+    recheck_quantity_discrepancy: int
+    result: Literal["MATCH", "MISMATCH"]
+    performed_by: AuditDiscrepancyActor
+    performed_at: datetime
+
+
+class AuditDiscrepancyItem(BaseModel):
+    audit_id: UUID
+    audit_line_id: UUID
+    warehouse_id: UUID
+    sku: AuditDiscrepancySku
+    location: AuditDiscrepancyLocation
+    original: OriginalAuditEvidence
+    recheck: AuditRecheckEvidence | None
+    adjust_eligible: bool
+
+
+class AuditDiscrepancyListResponse(BaseModel):
+    items: list[AuditDiscrepancyItem]
+
+
+class AuditRecheckRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    recheck_physical_quantity: Annotated[StrictInt, Field(ge=0, le=2_147_483_647)]
+
+
+class AuditRecheckResponse(BaseModel):
+    recheck_id: UUID
+    audit_line_id: UUID
+    recheck_system_quantity: int
+    recheck_physical_quantity: int
+    recheck_quantity_discrepancy: int
+    result: Literal["MATCH", "MISMATCH"]
+    performed_by: AuditDiscrepancyActor
+    performed_at: datetime
+    adjust_eligible: bool
+
+
 class PutawayRequest(BaseModel):
     receive_line_id: UUID
     sku_id: UUID

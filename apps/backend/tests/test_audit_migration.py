@@ -25,6 +25,7 @@ def test_audit_migration_cycles_on_sqlite(
     assert set(inspector.get_table_names()) - legacy_tables == {
         "audit_sessions",
         "audit_lines",
+        "audit_rechecks",
     }
     assert {column["name"] for column in inspector.get_columns("audit_sessions")} == {
         "id",
