@@ -3,6 +3,48 @@ export type LocationOption = {
   code: 'BACKROOM' | 'SALES_SHELF'
 }
 
+export type AuditScopeType = 'SELECTED_PAIRS' | 'WHOLE_WAREHOUSE'
+
+export type AuditContextPair = {
+  sku_id: string
+  sku: string
+  location_id: string
+  location: 'BACKROOM' | 'SALES_SHELF'
+  preview_system_quantity: number
+}
+
+export type AuditContext = {
+  warehouse_id: string
+  pairs: AuditContextPair[]
+}
+
+export type AuditCommand = {
+  scope_type: AuditScopeType
+  lines: Array<{
+    sku_id: string
+    location_id: string
+    physical_quantity: number
+  }>
+}
+
+export type AuditResult = {
+  audit_id: string
+  warehouse_id: string
+  scope_type: AuditScopeType
+  result: 'MATCH' | 'MISMATCH'
+  status: 'MATCH_COMPLETED' | 'MISMATCH_RECORDED'
+  audited_by_user_id: string
+  audited_at: string
+  lines: Array<{
+    sku_id: string
+    location_id: string
+    system_quantity: number
+    physical_quantity: number
+    quantity_discrepancy: number
+    result: 'MATCH' | 'MISMATCH'
+  }>
+}
+
 export type PutawayContext = {
   receive_line_id: string
   sku_id: string
@@ -238,6 +280,24 @@ export async function loadPutawayContext(
   return apiRequest<PutawayContext>(
     `/api/v1/putaways/context/${receiveLineId}`,
   )
+}
+
+export function loadAuditContext(): Promise<AuditContext> {
+  return apiRequest<AuditContext>('/api/v1/audits/context')
+}
+
+export function submitAudit(
+  command: AuditCommand,
+  idempotencyKey: string,
+): Promise<AuditResult> {
+  return apiRequest<AuditResult>('/api/v1/audits', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': idempotencyKey,
+    },
+    body: JSON.stringify(command),
+  })
 }
 
 export async function submitPutaway(

@@ -4,12 +4,47 @@ import {
   apiRequest,
   loadTransferHistory,
   recordReceive,
+  submitAudit,
   submitPick,
   submitTransfer,
 } from './api'
 
 afterEach(() => {
   vi.restoreAllMocks()
+})
+
+it.each([200, 201])('accepts a %s Audit result with its opaque key', async (status) => {
+  const responseBody = {
+    audit_id: 'audit-id',
+    warehouse_id: 'warehouse-id',
+    scope_type: 'SELECTED_PAIRS',
+    result: 'MATCH',
+    status: 'MATCH_COMPLETED',
+    audited_by_user_id: 'actor-id',
+    audited_at: '2026-09-26T00:00:00Z',
+    lines: [],
+  }
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    new Response(JSON.stringify(responseBody), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  )
+  const command = {
+    scope_type: 'SELECTED_PAIRS' as const,
+    lines: [
+      { sku_id: 'sku-id', location_id: 'location-id', physical_quantity: 0 },
+    ],
+  }
+  await expect(submitAudit(command, 'Audit-Key')).resolves.toEqual(responseBody)
+  expect(fetchMock.mock.calls[0][1]).toMatchObject({
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': 'Audit-Key',
+    },
+    body: JSON.stringify(command),
+  })
 })
 
 it('loads Transfer history with a bodyless GET and no client Warehouse scope', async () => {

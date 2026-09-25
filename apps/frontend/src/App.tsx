@@ -7,6 +7,7 @@ import {
   submitPutaway,
 } from './api'
 import type { Actor } from './auth'
+import AuditPage from './AuditPage'
 import PickPage from './PickPage'
 import ReceivePage from './ReceivePage'
 import TransferHistoryPage from './TransferHistoryPage'
@@ -46,6 +47,7 @@ function App({
   const currentPath = window.location.pathname.replace(/\/+$/, '') || '/'
   const isReceivePage = currentPath === '/receive'
   const isTransferHistoryPage = currentPath === '/transfers/history'
+  const isAuditPage = currentPath === '/audits/new'
   const pickPathMatch = window.location.pathname.match(/^\/pick\/([^/]+)\/?$/)
   const pickId = pickPathMatch ? decodeURIComponent(pickPathMatch[1]) : null
   const transferPathMatch = window.location.pathname.match(/^\/transfer\/([^/]+)\/?$/)
@@ -56,7 +58,12 @@ function App({
   const [destinationId, setDestinationId] = useState('')
   const [result, setResult] = useState<PutawayResult | null>(null)
   const [error, setError] = useState(() =>
-    receiveLineId || isReceivePage || isTransferHistoryPage || pickId || transferSkuId
+    receiveLineId ||
+    isReceivePage ||
+    isTransferHistoryPage ||
+    isAuditPage ||
+    pickId ||
+    transferSkuId
       ? ''
       : 'Putaway context is not configured.',
   )
@@ -67,6 +74,7 @@ function App({
     if (
       isReceivePage ||
       isTransferHistoryPage ||
+      isAuditPage ||
       pickId ||
       transferSkuId ||
       !receiveLineId ||
@@ -102,6 +110,7 @@ function App({
     actor.role,
     isReceivePage,
     isTransferHistoryPage,
+    isAuditPage,
     onUnauthorized,
     pickId,
     receiveLineId,
@@ -147,7 +156,15 @@ function App({
         </button>
       </header>
 
-      {isTransferHistoryPage ? (
+      {isAuditPage && actor.role === 'WAREHOUSE_STAFF' ? (
+        <AuditPage onUnauthorized={onUnauthorized} />
+      ) : isAuditPage ? (
+        <section className="putaway-card forbidden-panel">
+          <p className="eyebrow">Forbidden</p>
+          <h1>Warehouse Staff role required</h1>
+          <p>This Audit operation is not available for your current role.</p>
+        </section>
+      ) : isTransferHistoryPage ? (
         <TransferHistoryPage onUnauthorized={onUnauthorized} />
       ) : transferSkuId && actor.role === 'WAREHOUSE_STAFF' ? (
         <TransferPage skuId={transferSkuId} onUnauthorized={onUnauthorized} />

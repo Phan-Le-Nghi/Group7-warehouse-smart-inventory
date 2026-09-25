@@ -2,13 +2,20 @@
 
 ## Status and authority
 
-`IMPLEMENTATION-READY — HUMAN APPROVED`
+`IMPLEMENTED IN WORKTREE — LOCAL COMPONENT VERIFIED — HUMAN REVIEW PENDING`
 
 Canonical product wording and Acceptance Criteria remain authoritative at
 [`../../04-product/stories/US-AUD-001.md`](../../04-product/stories/US-AUD-001.md).
-Human review approved the implementation contract below at `DEC-040`. This spec does
-not change the canonical Acceptance Criteria and does not close `OQ-012`, the broader
+Human review approved the implementation contract below at `DEC-040`; the worktree
+implementation now follows that contract. This spec does not change the canonical
+Acceptance Criteria and does not close `OQ-012`, the broader
 Audit lifecycle/recheck/correction aspects of `OQ-013`, or `OQ-022`.
+
+Fresh local evidence on 2026-09-26: backend Ruff lint/format PASS and pytest
+`164 passed, 13 PostgreSQL-only skipped`; frontend ESLint/TypeScript PASS, Vitest
+`56 passed`, and production build PASS; Playwright discovery lists 20 tests including
+six Audit scenarios. PostgreSQL 17/18 concurrency/migration evidence and real browser
+execution remain pending CI because no local `TEST_DATABASE_URL` or Docker CLI exists.
 
 | Field | Value |
 |---|---|

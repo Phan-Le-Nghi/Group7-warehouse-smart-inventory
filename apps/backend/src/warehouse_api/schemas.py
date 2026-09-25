@@ -1,8 +1,64 @@
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, StrictInt, StringConstraints
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictInt,
+    StringConstraints,
+)
+
+AuditScopeType = Literal["SELECTED_PAIRS", "WHOLE_WAREHOUSE"]
+
+
+class AuditLineRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    sku_id: UUID
+    location_id: UUID
+    physical_quantity: Annotated[StrictInt, Field(ge=0, le=2_147_483_647)]
+
+
+class AuditRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scope_type: AuditScopeType
+    lines: list[AuditLineRequest]
+
+
+class AuditContextPair(BaseModel):
+    sku_id: UUID
+    sku: str
+    location_id: UUID
+    location: str
+    preview_system_quantity: int
+
+
+class AuditContextResponse(BaseModel):
+    warehouse_id: UUID
+    pairs: list[AuditContextPair]
+
+
+class AuditLineResponse(BaseModel):
+    sku_id: UUID
+    location_id: UUID
+    system_quantity: int
+    physical_quantity: int
+    quantity_discrepancy: int
+    result: Literal["MATCH", "MISMATCH"]
+
+
+class AuditResponse(BaseModel):
+    audit_id: UUID
+    warehouse_id: UUID
+    scope_type: AuditScopeType
+    result: Literal["MATCH", "MISMATCH"]
+    status: Literal["MATCH_COMPLETED", "MISMATCH_RECORDED"]
+    audited_by_user_id: UUID
+    audited_at: datetime
+    lines: list[AuditLineResponse]
 
 
 class PutawayRequest(BaseModel):

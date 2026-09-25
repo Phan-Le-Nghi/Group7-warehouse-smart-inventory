@@ -253,3 +253,34 @@ describe('US-TRF-002 addressing', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('US-AUD-001 addressing', () => {
+  it('loads the Audit page at /audits/new', async () => {
+    window.history.pushState({}, '', '/audits/new')
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockReturnValue(
+      jsonResponse({ warehouse_id: 'warehouse-id', pairs: [] }),
+    )
+    renderApp()
+    expect(
+      await screen.findByRole('heading', { name: 'New Audit' }),
+    ).toBeInTheDocument()
+    expect(fetchMock.mock.calls[0][0]).toContain('/api/v1/audits/context')
+  })
+
+  it('shows a presentation guard for a wrong role', () => {
+    window.history.pushState({}, '', '/audits/new')
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+    render(
+      <App
+        actor={{ ...actor, role: 'MANAGER' }}
+        onLogout={() => undefined}
+        onUnauthorized={() => undefined}
+        receiveLineId={receiveLineId}
+      />,
+    )
+    expect(
+      screen.getByRole('heading', { name: 'Warehouse Staff role required' }),
+    ).toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+})
