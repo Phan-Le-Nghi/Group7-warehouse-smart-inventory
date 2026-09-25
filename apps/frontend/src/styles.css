@@ -205,6 +205,32 @@ input {
   overflow-wrap: anywhere;
 }
 
+.audit-card {
+  max-width: 1120px;
+}
+
+.audit-mode {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.audit-mode label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.audit-table-scroll input[type='text'],
+.audit-table-scroll input:not([type]) {
+  min-width: 8rem;
+}
+
+.audit-table-scroll td:first-child,
+.audit-table-scroll th:first-child {
+  text-align: center;
+}
+
 .title-row {
   display: flex;
   align-items: flex-start;

@@ -304,6 +304,101 @@ class Transfer(Base):
     request_fingerprint: Mapped[str] = mapped_column(String(64))
 
 
+class AuditSession(Base):
+    __tablename__ = "audit_sessions"
+    __table_args__ = (
+        CheckConstraint(
+            "scope_type IN ('SELECTED_PAIRS', 'WHOLE_WAREHOUSE')",
+            name="ck_audit_sessions_scope_type",
+        ),
+        CheckConstraint(
+            "result IN ('MATCH', 'MISMATCH')",
+            name="ck_audit_sessions_result",
+        ),
+        CheckConstraint(
+            "status IN ('MATCH_COMPLETED', 'MISMATCH_RECORDED')",
+            name="ck_audit_sessions_status",
+        ),
+        CheckConstraint(
+            "(result = 'MATCH' AND status = 'MATCH_COMPLETED') OR "
+            "(result = 'MISMATCH' AND status = 'MISMATCH_RECORDED')",
+            name="ck_audit_sessions_result_status_consistent",
+        ),
+        CheckConstraint(
+            "length(request_fingerprint) = 64",
+            name="ck_audit_sessions_fingerprint_length",
+        ),
+        UniqueConstraint("idempotency_key", name="uq_audit_sessions_idempotency_key"),
+        Index(
+            "ix_audit_sessions_warehouse_audited_at",
+            "warehouse_id",
+            "audited_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    warehouse_id: Mapped[UUID] = mapped_column(
+        ForeignKey("warehouses.id", ondelete="RESTRICT"), index=True
+    )
+    scope_type: Mapped[str] = mapped_column(String(32))
+    result: Mapped[str] = mapped_column(String(16))
+    status: Mapped[str] = mapped_column(String(32))
+    audited_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    audited_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    idempotency_key: Mapped[str] = mapped_column(String(255))
+    request_fingerprint: Mapped[str] = mapped_column(String(64))
+
+
+class AuditLine(Base):
+    __tablename__ = "audit_lines"
+    __table_args__ = (
+        CheckConstraint(
+            "system_quantity >= 0",
+            name="ck_audit_lines_system_quantity_nonnegative",
+        ),
+        CheckConstraint(
+            "physical_quantity >= 0",
+            name="ck_audit_lines_physical_quantity_nonnegative",
+        ),
+        CheckConstraint(
+            "quantity_discrepancy = physical_quantity - system_quantity",
+            name="ck_audit_lines_discrepancy_consistent",
+        ),
+        CheckConstraint(
+            "result IN ('MATCH', 'MISMATCH')",
+            name="ck_audit_lines_result",
+        ),
+        CheckConstraint(
+            "(quantity_discrepancy = 0 AND result = 'MATCH') OR "
+            "(quantity_discrepancy <> 0 AND result = 'MISMATCH')",
+            name="ck_audit_lines_result_consistent",
+        ),
+        UniqueConstraint(
+            "audit_id",
+            "sku_id",
+            "location_id",
+            name="uq_audit_lines_audit_sku_location",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    audit_id: Mapped[UUID] = mapped_column(
+        ForeignKey("audit_sessions.id", ondelete="RESTRICT")
+    )
+    sku_id: Mapped[UUID] = mapped_column(
+        ForeignKey("skus.id", ondelete="RESTRICT"), index=True
+    )
+    location_id: Mapped[UUID] = mapped_column(
+        ForeignKey("internal_locations.id", ondelete="RESTRICT"), index=True
+    )
+    system_quantity: Mapped[int] = mapped_column(Integer)
+    physical_quantity: Mapped[int] = mapped_column(Integer)
+    quantity_discrepancy: Mapped[int] = mapped_column(Integer)
+    result: Mapped[str] = mapped_column(String(16))
+
+
 class PutawayAllocation(Base):
     __tablename__ = "putaway_allocations"
     __table_args__ = (

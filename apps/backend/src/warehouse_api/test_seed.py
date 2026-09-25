@@ -11,6 +11,8 @@ from sqlalchemy import create_engine, delete, func, select
 from sqlalchemy.orm import Session
 
 from warehouse_api.models import (
+    AuditLine,
+    AuditSession,
     InternalLocation,
     PickAllocation,
     PickRequest,
@@ -47,6 +49,8 @@ TRANSFER_REPLAY_SKU_ID = UUID("00000000-0000-0000-0000-000000000312")
 TRANSFER_STALE_SKU_ID = UUID("00000000-0000-0000-0000-000000000322")
 TRANSFER_HISTORY_NEW_ID = UUID("00000000-0000-0000-0000-000000000402")
 TRANSFER_HISTORY_OLD_ID = UUID("00000000-0000-0000-0000-000000000401")
+AUDIT_SKU_ID = UUID("00000000-0000-0000-0000-000000000502")
+AUDIT_SCOPE_CHANGE_SKU_ID = UUID("00000000-0000-0000-0000-000000000599")
 
 PICK_FIXTURES = {
     PICK_FULL_ID: (PICK_FULL_SKU_ID, "PICK-SKU-FULL", 6, 4),
@@ -59,6 +63,41 @@ TRANSFER_FIXTURES = {
     TRANSFER_REPLAY_SKU_ID: ("TRANSFER-SKU-REPLAY", 12, 6),
     TRANSFER_STALE_SKU_ID: ("TRANSFER-SKU-STALE", 12, 6),
 }
+
+
+def _reset_audit_fixture(session: Session) -> None:
+    session.execute(delete(AuditLine))
+    session.execute(delete(AuditSession))
+    temporary_sku = session.get(Sku, AUDIT_SCOPE_CHANGE_SKU_ID)
+    if temporary_sku is not None:
+        session.delete(temporary_sku)
+    sku = session.get(Sku, AUDIT_SKU_ID)
+    if sku is None:
+        session.add(Sku(id=AUDIT_SKU_ID, code="AUDIT-SKU-MISSING-BALANCE"))
+    balance = session.scalar(
+        select(StockBalance).where(
+            StockBalance.sku_id == AUDIT_SKU_ID,
+            StockBalance.location_id == BACKROOM_ID,
+        )
+    )
+    if balance is None:
+        session.add(
+            StockBalance(
+                sku_id=AUDIT_SKU_ID,
+                location_id=BACKROOM_ID,
+                quantity=7,
+            )
+        )
+    else:
+        balance.quantity = 7
+    missing_balance = session.scalar(
+        select(StockBalance).where(
+            StockBalance.sku_id == AUDIT_SKU_ID,
+            StockBalance.location_id == SALES_SHELF_ID,
+        )
+    )
+    if missing_balance is not None:
+        session.delete(missing_balance)
 
 
 def _reset_transfer_fixture(session: Session, sku_id: UUID) -> None:
@@ -255,6 +294,7 @@ def seed_test_fixture() -> None:
             _reset_pick_fixture(session, pick_id)
         for transfer_sku_id in TRANSFER_FIXTURES:
             _reset_transfer_fixture(session, transfer_sku_id)
+        _reset_audit_fixture(session)
     engine.dispose()
 
 
@@ -549,6 +589,79 @@ def transfer_history_effect_snapshot() -> dict[str, object]:
     return result
 
 
+def reset_audit_fixture() -> None:
+    test_database_url = getenv("TEST_DATABASE_URL")
+    if not test_database_url:
+        raise RuntimeError("TEST_DATABASE_URL is required for the test-only seed")
+    engine = create_engine(test_database_url)
+    with Session(engine) as session, session.begin():
+        _reset_audit_fixture(session)
+    engine.dispose()
+
+
+def set_audit_scope_change(present: bool) -> None:
+    test_database_url = getenv("TEST_DATABASE_URL")
+    if not test_database_url:
+        raise RuntimeError("TEST_DATABASE_URL is required for the test-only seed")
+    engine = create_engine(test_database_url)
+    with Session(engine) as session, session.begin():
+        sku = session.get(Sku, AUDIT_SCOPE_CHANGE_SKU_ID)
+        if present and sku is None:
+            session.add(Sku(id=AUDIT_SCOPE_CHANGE_SKU_ID, code="AUDIT-SCOPE-CHANGE"))
+        elif not present and sku is not None:
+            session.delete(sku)
+    engine.dispose()
+
+
+def audit_effect_snapshot() -> dict[str, object]:
+    test_database_url = getenv("TEST_DATABASE_URL")
+    if not test_database_url:
+        raise RuntimeError("TEST_DATABASE_URL is required for the test-only snapshot")
+    engine = create_engine(test_database_url)
+    with Session(engine) as session:
+        business_state = {
+            "stock": session.execute(
+                select(
+                    StockBalance.id,
+                    StockBalance.sku_id,
+                    StockBalance.location_id,
+                    StockBalance.quantity,
+                ).order_by(StockBalance.id)
+            ).all(),
+            "receives": session.execute(select(Receive.id).order_by(Receive.id)).all(),
+            "putaways": session.execute(
+                select(PutawayAllocation.id).order_by(PutawayAllocation.id)
+            ).all(),
+            "picks": session.execute(
+                select(PickAllocation.id).order_by(PickAllocation.id)
+            ).all(),
+            "transfers": session.execute(
+                select(Transfer.id).order_by(Transfer.id)
+            ).all(),
+        }
+        encoded = json.dumps(business_state, default=str, sort_keys=True).encode()
+        result = {
+            "business_state_digest": hashlib.sha256(encoded).hexdigest(),
+            "audit_count": int(
+                session.scalar(select(func.count(AuditSession.id))) or 0
+            ),
+            "audit_line_count": int(
+                session.scalar(select(func.count(AuditLine.id))) or 0
+            ),
+            "missing_balance_count": int(
+                session.scalar(
+                    select(func.count(StockBalance.id)).where(
+                        StockBalance.sku_id == AUDIT_SKU_ID,
+                        StockBalance.location_id == SALES_SHELF_ID,
+                    )
+                )
+                or 0
+            ),
+        }
+    engine.dispose()
+    return result
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--receive-only", action="store_true")
@@ -561,8 +674,23 @@ if __name__ == "__main__":
     parser.add_argument("--transfer-snapshot", type=UUID)
     parser.add_argument("--history-reset", choices=("empty", "rows"))
     parser.add_argument("--history-snapshot", action="store_true")
+    parser.add_argument("--audit-reset", action="store_true")
+    parser.add_argument("--audit-snapshot", action="store_true")
+    parser.add_argument("--audit-scope-add", action="store_true")
+    parser.add_argument("--audit-scope-remove", action="store_true")
     arguments = parser.parse_args()
-    if arguments.history_snapshot:
+    if arguments.audit_snapshot:
+        print(json.dumps(audit_effect_snapshot()))
+    elif arguments.audit_scope_add:
+        set_audit_scope_change(True)
+        print("Audit scope-change SKU added")
+    elif arguments.audit_scope_remove:
+        set_audit_scope_change(False)
+        print("Audit scope-change SKU removed")
+    elif arguments.audit_reset:
+        reset_audit_fixture()
+        print("US-AUD-001 test fixtures reset")
+    elif arguments.history_snapshot:
         print(json.dumps(transfer_history_effect_snapshot()))
     elif arguments.history_reset:
         reset_transfer_history(with_rows=arguments.history_reset == "rows")

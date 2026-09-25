@@ -3,6 +3,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from warehouse_api.audit_routes import router as audit_router
 from warehouse_api.auth_routes import router as auth_router
 from warehouse_api.config import get_settings
 from warehouse_api.errors import ApiError
@@ -70,6 +71,7 @@ app.include_router(router)
 app.include_router(receive_router)
 app.include_router(pick_router)
 app.include_router(transfer_router)
+app.include_router(audit_router)
 
 
 @app.exception_handler(ApiError)
@@ -91,8 +93,11 @@ def handle_validation_error(
     request: Request, error: RequestValidationError
 ) -> JSONResponse:
     quantity_error = any(
-        item["loc"][-1] in {"quantity", "actual_quantity"}
-        and (item["type"] != "missing" or request.url.path == "/api/v1/transfers")
+        item["loc"][-1] == "physical_quantity"
+        or (
+            item["loc"][-1] in {"quantity", "actual_quantity"}
+            and (item["type"] != "missing" or request.url.path == "/api/v1/transfers")
+        )
         for item in error.errors()
     )
     allocations_error = any("allocations" in item["loc"] for item in error.errors())

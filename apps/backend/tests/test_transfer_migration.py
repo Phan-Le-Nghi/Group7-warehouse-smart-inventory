@@ -20,7 +20,7 @@ def test_transfer_migration_cycles_on_sqlite(
     engine = create_engine(database_url)
     legacy_tables = set(inspect(engine).get_table_names())
 
-    command.upgrade(config, "head")
+    command.upgrade(config, "20260925_0005")
     inspector = inspect(engine)
     assert set(inspector.get_table_names()) - legacy_tables == {"transfers"}
     assert {column["name"] for column in inspector.get_columns("transfers")} == {
@@ -45,7 +45,7 @@ def test_transfer_migration_cycles_on_sqlite(
 
     command.downgrade(config, "20260922_0004")
     assert set(inspect(engine).get_table_names()) == legacy_tables
-    command.upgrade(config, "head")
+    command.upgrade(config, "20260925_0005")
     assert "transfers" in inspect(engine).get_table_names()
     engine.dispose()
     get_settings.cache_clear()
