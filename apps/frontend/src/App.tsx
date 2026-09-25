@@ -9,6 +9,7 @@ import {
 import type { Actor } from './auth'
 import PickPage from './PickPage'
 import ReceivePage from './ReceivePage'
+import TransferPage from './TransferPage'
 
 type AppProps = {
   actor: Actor
@@ -44,6 +45,10 @@ function App({
   const isReceivePage = window.location.pathname.replace(/\/+$/, '') === '/receive'
   const pickPathMatch = window.location.pathname.match(/^\/pick\/([^/]+)\/?$/)
   const pickId = pickPathMatch ? decodeURIComponent(pickPathMatch[1]) : null
+  const transferPathMatch = window.location.pathname.match(/^\/transfer\/([^/]+)\/?$/)
+  const transferSkuId = transferPathMatch
+    ? decodeURIComponent(transferPathMatch[1])
+    : null
   const [context, setContext] = useState<PutawayContext | null>(null)
   const [destinationId, setDestinationId] = useState('')
   const [result, setResult] = useState<PutawayResult | null>(null)
@@ -56,7 +61,13 @@ function App({
   const [idempotencyKey] = useState(createIdempotencyKey)
 
   useEffect(() => {
-    if (isReceivePage || pickId || !receiveLineId || actor.role !== 'WAREHOUSE_STAFF') return
+    if (
+      isReceivePage ||
+      pickId ||
+      transferSkuId ||
+      !receiveLineId ||
+      actor.role !== 'WAREHOUSE_STAFF'
+    ) return
 
     let active = true
     loadPutawayContext(receiveLineId)
@@ -83,7 +94,7 @@ function App({
     return () => {
       active = false
     }
-  }, [actor.role, isReceivePage, onUnauthorized, pickId, receiveLineId])
+  }, [actor.role, isReceivePage, onUnauthorized, pickId, receiveLineId, transferSkuId])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -124,7 +135,9 @@ function App({
         </button>
       </header>
 
-      {pickId && actor.role === 'WAREHOUSE_STAFF' ? (
+      {transferSkuId && actor.role === 'WAREHOUSE_STAFF' ? (
+        <TransferPage skuId={transferSkuId} onUnauthorized={onUnauthorized} />
+      ) : pickId && actor.role === 'WAREHOUSE_STAFF' ? (
         <PickPage pickId={pickId} onUnauthorized={onUnauthorized} />
       ) : isReceivePage && actor.role === 'WAREHOUSE_STAFF' ? (
         <ReceivePage receiveId={receiveId} onUnauthorized={onUnauthorized} />

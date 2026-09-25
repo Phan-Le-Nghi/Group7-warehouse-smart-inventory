@@ -24,8 +24,9 @@ from warehouse_api.models import (
     User,
     Warehouse,
 )
-from warehouse_api.pick import _ordered_source_ids, confirm_pick
+from warehouse_api.pick import confirm_pick
 from warehouse_api.schemas import PickRequest as PickCommand
+from warehouse_api.stock import ordered_location_ids
 
 
 @dataclass(frozen=True, slots=True)
@@ -497,8 +498,8 @@ def test_source_ids_are_ordered_independently_of_client_order() -> None:
     first, second = uuid4(), uuid4()
     expected = sorted([first, second], key=str)
 
-    assert _ordered_source_ids([second, first]) == expected
-    assert _ordered_source_ids([first, second]) == expected
+    assert ordered_location_ids([second, first]) == expected
+    assert ordered_location_ids([first, second]) == expected
 
 
 def test_pick_request_database_constraints(pick_api) -> None:

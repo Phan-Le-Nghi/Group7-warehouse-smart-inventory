@@ -24,7 +24,7 @@ def test_pick_migration_cycles_on_sqlite(
     engine = create_engine(database_url)
     legacy_tables = set(inspect(engine).get_table_names())
 
-    command.upgrade(config, "head")
+    command.upgrade(config, "20260922_0004")
     upgraded_tables = set(inspect(engine).get_table_names())
     assert upgraded_tables - legacy_tables == {"pick_requests", "pick_allocations"}
     request_columns = {

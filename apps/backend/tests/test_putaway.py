@@ -20,6 +20,7 @@ from warehouse_api.models import (
     ReceiveLine,
     Sku,
     StockBalance,
+    Transfer,
     Warehouse,
 )
 
@@ -205,7 +206,7 @@ def test_put_004_allocation_above_remaining_has_no_data_effect(api) -> None:
 
 
 def test_put_005_has_no_transfer_or_movement_write_path(api) -> None:
-    """TEST-PUT-005: the slice introduces no Transfer or Movement persistence."""
+    """TEST-PUT-005: Putaway creates no Transfer or Movement record."""
     client, factory, fixture = api
 
     response = client.post(
@@ -216,7 +217,8 @@ def test_put_005_has_no_transfer_or_movement_write_path(api) -> None:
 
     assert response.status_code == 201
     table_names = set(inspect(factory.kw["bind"]).get_table_names())
-    assert "transfers" not in table_names
+    with factory() as session:
+        assert session.scalar(select(func.count(Transfer.id))) == 0
     assert "movements" not in table_names
 
 

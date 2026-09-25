@@ -266,6 +266,44 @@ class PickAllocation(Base):
     quantity: Mapped[int] = mapped_column(Integer)
 
 
+class Transfer(Base):
+    __tablename__ = "transfers"
+    __table_args__ = (
+        CheckConstraint("quantity > 0", name="ck_transfers_quantity_positive"),
+        CheckConstraint(
+            "source_location_id <> destination_location_id",
+            name="ck_transfers_different_locations",
+        ),
+        UniqueConstraint("idempotency_key", name="uq_transfers_idempotency_key"),
+        Index(
+            "ix_transfers_warehouse_transferred_at",
+            "warehouse_id",
+            "transferred_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    warehouse_id: Mapped[UUID] = mapped_column(
+        ForeignKey("warehouses.id", ondelete="RESTRICT"), index=True
+    )
+    sku_id: Mapped[UUID] = mapped_column(
+        ForeignKey("skus.id", ondelete="RESTRICT"), index=True
+    )
+    source_location_id: Mapped[UUID] = mapped_column(
+        ForeignKey("internal_locations.id", ondelete="RESTRICT"), index=True
+    )
+    destination_location_id: Mapped[UUID] = mapped_column(
+        ForeignKey("internal_locations.id", ondelete="RESTRICT"), index=True
+    )
+    quantity: Mapped[int] = mapped_column(Integer)
+    transferred_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT")
+    )
+    transferred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    idempotency_key: Mapped[str] = mapped_column(String(255))
+    request_fingerprint: Mapped[str] = mapped_column(String(64))
+
+
 class PutawayAllocation(Base):
     __tablename__ = "putaway_allocations"
     __table_args__ = (

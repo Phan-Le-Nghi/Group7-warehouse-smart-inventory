@@ -188,3 +188,28 @@ describe('US-PICK-001 addressing', () => {
     )
   })
 })
+
+describe('US-TRF-001 addressing', () => {
+  it('reads the SKU ID from /transfer/{sku_id}', async () => {
+    const skuId = '00000000-0000-0000-0000-000000000302'
+    window.history.pushState({}, '', `/transfer/${skuId}`)
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockReturnValue(
+      jsonResponse({
+        warehouse_id: 'warehouse-id',
+        sku_id: skuId,
+        sku: 'TRANSFER-SKU',
+        locations: [],
+        warehouse_total: 0,
+      }),
+    )
+
+    renderApp()
+
+    expect(
+      await screen.findByRole('heading', { name: 'Confirm Transfer' }),
+    ).toBeInTheDocument()
+    expect(fetchMock.mock.calls[0][0]).toContain(
+      `/api/v1/transfers/context/${skuId}`,
+    )
+  })
+})

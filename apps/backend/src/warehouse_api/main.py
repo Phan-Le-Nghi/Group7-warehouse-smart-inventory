@@ -9,6 +9,7 @@ from warehouse_api.errors import ApiError
 from warehouse_api.pick_routes import router as pick_router
 from warehouse_api.receive_routes import router as receive_router
 from warehouse_api.routes import router
+from warehouse_api.transfer_routes import router as transfer_router
 
 app = FastAPI(
     title="Warehouse & Smart Inventory Management API",
@@ -68,6 +69,7 @@ app.include_router(auth_router)
 app.include_router(router)
 app.include_router(receive_router)
 app.include_router(pick_router)
+app.include_router(transfer_router)
 
 
 @app.exception_handler(ApiError)
@@ -86,10 +88,11 @@ def handle_api_error(_request: Request, error: ApiError) -> JSONResponse:
 
 @app.exception_handler(RequestValidationError)
 def handle_validation_error(
-    _request: Request, error: RequestValidationError
+    request: Request, error: RequestValidationError
 ) -> JSONResponse:
     quantity_error = any(
-        item["loc"][-1] in {"quantity", "actual_quantity"} and item["type"] != "missing"
+        item["loc"][-1] in {"quantity", "actual_quantity"}
+        and (item["type"] != "missing" or request.url.path == "/api/v1/transfers")
         for item in error.errors()
     )
     allocations_error = any("allocations" in item["loc"] for item in error.errors())

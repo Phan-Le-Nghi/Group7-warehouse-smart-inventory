@@ -63,6 +63,49 @@ class PickResponse(BaseModel):
     warehouse_total: int
 
 
+class TransferRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    sku_id: UUID
+    source_location_id: UUID
+    destination_location_id: UUID
+    quantity: StrictInt
+
+
+class TransferLocationAvailability(BaseModel):
+    id: UUID
+    code: str
+    available_quantity: int
+
+
+class TransferContextResponse(BaseModel):
+    warehouse_id: UUID
+    sku_id: UUID
+    sku: str
+    locations: list[TransferLocationAvailability]
+    warehouse_total: int
+
+
+class TransferStockResult(BaseModel):
+    source_quantity: int
+    destination_quantity: int
+    warehouse_total: int
+
+
+class TransferResponse(BaseModel):
+    transfer_id: UUID
+    warehouse_id: UUID
+    sku_id: UUID
+    quantity: int
+    source_location_id: UUID
+    source_location: str
+    destination_location_id: UUID
+    destination_location: str
+    transferred_by_user_id: UUID
+    transferred_at: datetime
+    stock: TransferStockResult
+
+
 class StockResult(BaseModel):
     destination_quantity: int
     warehouse_total: int

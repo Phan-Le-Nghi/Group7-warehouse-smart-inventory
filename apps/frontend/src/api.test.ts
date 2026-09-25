@@ -1,5 +1,11 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { ApiError, apiRequest, recordReceive, submitPick } from './api'
+import {
+  ApiError,
+  apiRequest,
+  recordReceive,
+  submitPick,
+  submitTransfer,
+} from './api'
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -139,5 +145,42 @@ it('sends Pick allocations without an idempotency or partial-confirmed field', a
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ pick_id: 'pick-id', allocations }),
+  })
+})
+
+it.each([200, 201])('accepts a %s Transfer result with its idempotency key', async (status) => {
+  const responseBody = {
+    transfer_id: 'transfer-id',
+    warehouse_id: 'warehouse-id',
+    sku_id: 'sku-id',
+    quantity: 4,
+    source_location_id: 'source-id',
+    source_location: 'BACKROOM',
+    destination_location_id: 'destination-id',
+    destination_location: 'SALES_SHELF',
+    transferred_by_user_id: 'actor-id',
+    transferred_at: '2026-09-25T00:00:00Z',
+    stock: { source_quantity: 8, destination_quantity: 10, warehouse_total: 18 },
+  }
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    new Response(JSON.stringify(responseBody), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  )
+  const command = {
+    sku_id: 'sku-id',
+    source_location_id: 'source-id',
+    destination_location_id: 'destination-id',
+    quantity: 4,
+  }
+  await expect(submitTransfer(command, 'opaque-Key')).resolves.toEqual(responseBody)
+  expect(fetchMock.mock.calls[0][1]).toMatchObject({
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': 'opaque-Key',
+    },
+    body: JSON.stringify(command),
   })
 })

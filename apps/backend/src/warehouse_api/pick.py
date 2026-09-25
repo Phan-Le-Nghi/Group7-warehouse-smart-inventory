@@ -20,9 +20,8 @@ from warehouse_api.schemas import (
     PickLocationAvailability,
     PickResponse,
 )
-from warehouse_api.schemas import (
-    PickRequest as PickCommand,
-)
+from warehouse_api.schemas import PickRequest as PickCommand
+from warehouse_api.stock import ordered_location_ids
 
 FULLY_COMPLETED = "FULLY_COMPLETED"
 PARTIAL_INSUFFICIENT = "PARTIAL_INSUFFICIENT"
@@ -41,10 +40,6 @@ def _warehouse_total(session: Session, sku_id: UUID, warehouse_id: UUID) -> int:
         )
     )
     return int(session.scalar(statement) or 0)
-
-
-def _ordered_source_ids(source_ids: list[UUID]) -> list[UUID]:
-    return sorted(source_ids, key=str)
 
 
 def _log_rejection(pick_id: UUID, actor: Actor, code: str) -> None:
@@ -185,7 +180,7 @@ def confirm_pick(session: Session, command: PickCommand, actor: Actor) -> PickRe
         allocation.source_location_id: allocation for allocation in command.allocations
     }
     locked_balances: dict[UUID, StockBalance] = {}
-    for source_id in _ordered_source_ids(source_ids):
+    for source_id in ordered_location_ids(source_ids):
         balance = session.scalar(
             select(StockBalance)
             .where(
@@ -213,7 +208,7 @@ def confirm_pick(session: Session, command: PickCommand, actor: Actor) -> PickRe
         else PARTIAL_INSUFFICIENT
     )
     allocation_rows: list[PickAllocation] = []
-    for source_id in _ordered_source_ids(source_ids):
+    for source_id in ordered_location_ids(source_ids):
         requested = allocations_by_source[source_id].quantity
         locked_balances[source_id].quantity -= requested
         allocation = PickAllocation(
