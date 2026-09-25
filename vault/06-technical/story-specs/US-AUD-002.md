@@ -2,7 +2,7 @@
 
 ## Status and authority
 
-`IMPLEMENTATION-READY — HUMAN APPROVED`
+`IMPLEMENTED IN WORKTREE — LOCAL COMPONENT VERIFIED — HUMAN REVIEW PENDING`
 
 Canonical product wording and Acceptance Criteria remain authoritative at
 [`../../04-product/stories/US-AUD-002.md`](../../04-product/stories/US-AUD-002.md).
@@ -23,8 +23,13 @@ Audit close/resolve/correction aspects of `OQ-013`, or `OQ-022`.
 | Open boundaries | `OQ-012`, remaining `OQ-013`, `OQ-022`; Adjust creation/application remains `US-ADJ-001/002` |
 
 `DEC-041` is a HUMAN APPROVED TECHNICAL IMPLEMENTATION SPEC, not verified research
-evidence. No application code, migration or test was created while finalizing this
-document.
+evidence. The worktree implementation follows that contract. Fresh local evidence on
+2026-09-26: backend Ruff lint/format PASS and pytest `191 passed, 18 PostgreSQL-only
+skipped`; frontend ESLint/TypeScript PASS, Vitest `66 passed`, and production build
+PASS; Playwright discovery lists 25 tests including five US-AUD-002 scenarios. SQLite
+migration upgrade/downgrade/re-upgrade passes. PostgreSQL 17/18 migration/concurrency
+execution and real Chromium/PostgreSQL execution remain pending because no local
+`TEST_DATABASE_URL` is available.
 
 ## Goal
 
@@ -431,6 +436,22 @@ Adjust form/CTA, stock-apply action, original-Audit edit or repeated-recheck act
 - Playwright scenarios pass against PostgreSQL.
 - Implementation evidence and Traceability are updated after implementation.
 - Human reviews the implementation diff before commit or integration.
+
+## Current implementation evidence
+
+- `audit_rechecks` model and Alembic revision `20260926_0007` implement only the
+  approved recheck fields, constraints, unique claims and performer index; no
+  speculative `audit_lines` index was added.
+- Manager-only list/detail/recheck routes, shared discrepancy shape, current-stock
+  snapshot, missing-zero behavior, typed conflicts and derived `adjust_eligible` are
+  implemented.
+- The `/audit-discrepancies` master/detail UI implements attempt-scoped idempotency,
+  immutable original evidence, read-only persisted rechecks and backend-authoritative
+  `401`/`403` handling.
+- Local SQLite/component evidence is PASS as recorded above. The five PostgreSQL-only
+  US-AUD-002 concurrency/workflow-race tests are present but skipped locally; CI must
+  provide PostgreSQL 17/18 evidence. Five Chromium scenarios are discovered but not
+  locally executed.
 
 ## Open questions and boundaries
 

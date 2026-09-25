@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from warehouse_api.models import (
     AuditLine,
+    AuditRecheck,
     AuditSession,
     InternalLocation,
     PickAllocation,
@@ -66,6 +67,7 @@ TRANSFER_FIXTURES = {
 
 
 def _reset_audit_fixture(session: Session) -> None:
+    session.execute(delete(AuditRecheck))
     session.execute(delete(AuditLine))
     session.execute(delete(AuditSession))
     temporary_sku = session.get(Sku, AUDIT_SCOPE_CHANGE_SKU_ID)
@@ -647,6 +649,9 @@ def audit_effect_snapshot() -> dict[str, object]:
             ),
             "audit_line_count": int(
                 session.scalar(select(func.count(AuditLine.id))) or 0
+            ),
+            "audit_recheck_count": int(
+                session.scalar(select(func.count(AuditRecheck.id))) or 0
             ),
             "missing_balance_count": int(
                 session.scalar(

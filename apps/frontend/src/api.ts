@@ -45,6 +45,48 @@ export type AuditResult = {
   }>
 }
 
+export type AuditDiscrepancyActor = {
+  user_id: string
+  login_identifier: string
+}
+
+export type AuditRecheckEvidence = {
+  recheck_id: string
+  recheck_system_quantity: number
+  recheck_physical_quantity: number
+  recheck_quantity_discrepancy: number
+  result: 'MATCH' | 'MISMATCH'
+  performed_by: AuditDiscrepancyActor
+  performed_at: string
+}
+
+export type AuditDiscrepancy = {
+  audit_id: string
+  audit_line_id: string
+  warehouse_id: string
+  sku: { id: string; code: string }
+  location: { id: string; code: string }
+  original: {
+    system_quantity: number
+    physical_quantity: number
+    quantity_discrepancy: number
+    result: 'MISMATCH'
+    audited_by: AuditDiscrepancyActor
+    audited_at: string
+  }
+  recheck: AuditRecheckEvidence | null
+  adjust_eligible: boolean
+}
+
+export type AuditDiscrepancyList = {
+  items: AuditDiscrepancy[]
+}
+
+export type AuditRecheckResult = AuditRecheckEvidence & {
+  audit_line_id: string
+  adjust_eligible: boolean
+}
+
 export type PutawayContext = {
   receive_line_id: string
   sku_id: string
@@ -298,6 +340,38 @@ export function submitAudit(
     },
     body: JSON.stringify(command),
   })
+}
+
+export function loadAuditDiscrepancies(): Promise<AuditDiscrepancyList> {
+  return apiRequest<AuditDiscrepancyList>('/api/v1/audit-discrepancies')
+}
+
+export function loadAuditDiscrepancy(
+  auditLineId: string,
+): Promise<AuditDiscrepancy> {
+  return apiRequest<AuditDiscrepancy>(
+    `/api/v1/audit-discrepancies/${auditLineId}`,
+  )
+}
+
+export function submitAuditRecheck(
+  auditLineId: string,
+  recheckPhysicalQuantity: number,
+  idempotencyKey: string,
+): Promise<AuditRecheckResult> {
+  return apiRequest<AuditRecheckResult>(
+    `/api/v1/audit-discrepancies/${auditLineId}/rechecks`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': idempotencyKey,
+      },
+      body: JSON.stringify({
+        recheck_physical_quantity: recheckPhysicalQuantity,
+      }),
+    },
+  )
 }
 
 export async function submitPutaway(

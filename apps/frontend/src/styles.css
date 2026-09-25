@@ -571,6 +571,31 @@ button:disabled {
   margin-top: 0;
 }
 
+.audit-discrepancy-card {
+  max-width: 76rem;
+}
+
+.audit-discrepancy-layout,
+.audit-evidence-grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.audit-evidence-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 1.5rem;
+}
+
+.audit-evidence-grid > section {
+  padding: 1.25rem;
+  border: 1px solid #d7dee8;
+  border-radius: 0.8rem;
+}
+
+.audit-evidence-summary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 @media (max-width: 36rem) {
   .role-chip,
   .step-badge {
@@ -582,7 +607,9 @@ button:disabled {
   .pick-location,
   .pick-summary,
   .pick-totals,
-  .reference-comparison {
+  .reference-comparison,
+  .audit-evidence-grid,
+  .audit-evidence-summary {
     grid-template-columns: 1fr;
   }
 

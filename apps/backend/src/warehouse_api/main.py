@@ -3,6 +3,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from warehouse_api.audit_discrepancy_routes import router as audit_discrepancy_router
 from warehouse_api.audit_routes import router as audit_router
 from warehouse_api.auth_routes import router as auth_router
 from warehouse_api.config import get_settings
@@ -72,6 +73,7 @@ app.include_router(receive_router)
 app.include_router(pick_router)
 app.include_router(transfer_router)
 app.include_router(audit_router)
+app.include_router(audit_discrepancy_router)
 
 
 @app.exception_handler(ApiError)
@@ -92,6 +94,9 @@ def handle_api_error(_request: Request, error: ApiError) -> JSONResponse:
 def handle_validation_error(
     request: Request, error: RequestValidationError
 ) -> JSONResponse:
+    recheck_quantity_error = any(
+        item["loc"][-1] == "recheck_physical_quantity" for item in error.errors()
+    )
     quantity_error = any(
         item["loc"][-1] == "physical_quantity"
         or (
@@ -101,7 +106,10 @@ def handle_validation_error(
         for item in error.errors()
     )
     allocations_error = any("allocations" in item["loc"] for item in error.errors())
-    if quantity_error:
+    if recheck_quantity_error:
+        code = "INVALID_RECHECK_QUANTITY"
+        message = "Recheck physical quantity must be an integer from 0 to 2147483647."
+    elif quantity_error:
         code = "INVALID_QUANTITY"
         message = "Quantity must be an integer."
     elif allocations_error:

@@ -284,3 +284,39 @@ describe('US-AUD-001 addressing', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 })
+
+describe('US-AUD-002 addressing', () => {
+  it('loads backend-authoritative discrepancies at /audit-discrepancies', async () => {
+    window.history.pushState({}, '', '/audit-discrepancies')
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockReturnValue(
+      jsonResponse({ items: [] }),
+    )
+    render(
+      <App
+        actor={{ ...actor, role: 'MANAGER' }}
+        onLogout={() => undefined}
+        onUnauthorized={() => undefined}
+        receiveLineId={receiveLineId}
+      />,
+    )
+    expect(
+      await screen.findByRole('heading', { name: 'Audit discrepancies' }),
+    ).toBeInTheDocument()
+    expect(fetchMock.mock.calls[0][0]).toContain('/api/v1/audit-discrepancies')
+  })
+
+  it('still requests discrepancies for a wrong role so backend returns 403', async () => {
+    window.history.pushState({}, '', '/audit-discrepancies')
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockReturnValue(
+      jsonResponse(
+        { error: { code: 'FORBIDDEN', message: 'Access denied.' } },
+        403,
+      ),
+    )
+    renderApp()
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Manager role required',
+    )
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+})

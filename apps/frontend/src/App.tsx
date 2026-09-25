@@ -7,6 +7,7 @@ import {
   submitPutaway,
 } from './api'
 import type { Actor } from './auth'
+import AuditDiscrepancyPage from './AuditDiscrepancyPage'
 import AuditPage from './AuditPage'
 import PickPage from './PickPage'
 import ReceivePage from './ReceivePage'
@@ -48,6 +49,7 @@ function App({
   const isReceivePage = currentPath === '/receive'
   const isTransferHistoryPage = currentPath === '/transfers/history'
   const isAuditPage = currentPath === '/audits/new'
+  const isAuditDiscrepancyPage = currentPath === '/audit-discrepancies'
   const pickPathMatch = window.location.pathname.match(/^\/pick\/([^/]+)\/?$/)
   const pickId = pickPathMatch ? decodeURIComponent(pickPathMatch[1]) : null
   const transferPathMatch = window.location.pathname.match(/^\/transfer\/([^/]+)\/?$/)
@@ -62,6 +64,7 @@ function App({
     isReceivePage ||
     isTransferHistoryPage ||
     isAuditPage ||
+    isAuditDiscrepancyPage ||
     pickId ||
     transferSkuId
       ? ''
@@ -75,6 +78,7 @@ function App({
       isReceivePage ||
       isTransferHistoryPage ||
       isAuditPage ||
+      isAuditDiscrepancyPage ||
       pickId ||
       transferSkuId ||
       !receiveLineId ||
@@ -111,6 +115,7 @@ function App({
     isReceivePage,
     isTransferHistoryPage,
     isAuditPage,
+    isAuditDiscrepancyPage,
     onUnauthorized,
     pickId,
     receiveLineId,
@@ -156,7 +161,9 @@ function App({
         </button>
       </header>
 
-      {isAuditPage && actor.role === 'WAREHOUSE_STAFF' ? (
+      {isAuditDiscrepancyPage ? (
+        <AuditDiscrepancyPage onUnauthorized={onUnauthorized} />
+      ) : isAuditPage && actor.role === 'WAREHOUSE_STAFF' ? (
         <AuditPage onUnauthorized={onUnauthorized} />
       ) : isAuditPage ? (
         <section className="putaway-card forbidden-panel">
