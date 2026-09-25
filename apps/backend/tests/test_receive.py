@@ -20,6 +20,7 @@ from warehouse_api.models import (
     ReceiveLine,
     Sku,
     StockBalance,
+    Transfer,
     User,
     Warehouse,
 )
@@ -188,7 +189,8 @@ def test_rec_001_004_008_013_014_records_matching_context_without_side_effects(
     assert snapshot_effects(factory) == (before[0], before[1], 2)
     assert "authoritative_reference" not in body
     assert "completed_at" not in body
-    assert "transfers" not in inspect(factory.kw["bind"]).get_table_names()
+    with factory() as session:
+        assert session.scalar(select(func.count(Transfer.id))) == 0
     assert "movements" not in inspect(factory.kw["bind"]).get_table_names()
 
 

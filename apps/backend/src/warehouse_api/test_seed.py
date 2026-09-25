@@ -17,6 +17,7 @@ from warehouse_api.models import (
     ReceiveLine,
     Sku,
     StockBalance,
+    Transfer,
     Warehouse,
 )
 
@@ -38,12 +39,52 @@ PICK_PARTIAL_ID = UUID("00000000-0000-0000-0000-000000000211")
 PICK_PARTIAL_SKU_ID = UUID("00000000-0000-0000-0000-000000000212")
 PICK_STALE_ID = UUID("00000000-0000-0000-0000-000000000221")
 PICK_STALE_SKU_ID = UUID("00000000-0000-0000-0000-000000000222")
+TRANSFER_SUCCESS_SKU_ID = UUID("00000000-0000-0000-0000-000000000302")
+TRANSFER_REPLAY_SKU_ID = UUID("00000000-0000-0000-0000-000000000312")
+TRANSFER_STALE_SKU_ID = UUID("00000000-0000-0000-0000-000000000322")
 
 PICK_FIXTURES = {
     PICK_FULL_ID: (PICK_FULL_SKU_ID, "PICK-SKU-FULL", 6, 4),
     PICK_PARTIAL_ID: (PICK_PARTIAL_SKU_ID, "PICK-SKU-PARTIAL", 8, 6),
     PICK_STALE_ID: (PICK_STALE_SKU_ID, "PICK-SKU-STALE", 8, 6),
 }
+
+TRANSFER_FIXTURES = {
+    TRANSFER_SUCCESS_SKU_ID: ("TRANSFER-SKU-SUCCESS", 12, 6),
+    TRANSFER_REPLAY_SKU_ID: ("TRANSFER-SKU-REPLAY", 12, 6),
+    TRANSFER_STALE_SKU_ID: ("TRANSFER-SKU-STALE", 12, 6),
+}
+
+
+def _reset_transfer_fixture(session: Session, sku_id: UUID) -> None:
+    try:
+        sku_code, backroom_quantity, shelf_quantity = TRANSFER_FIXTURES[sku_id]
+    except KeyError as error:
+        raise RuntimeError("Unknown Transfer test fixture") from error
+    session.execute(delete(Transfer).where(Transfer.sku_id == sku_id))
+    sku = session.get(Sku, sku_id)
+    if sku is None:
+        session.add(Sku(id=sku_id, code=sku_code))
+    for location_id, quantity in (
+        (BACKROOM_ID, backroom_quantity),
+        (SALES_SHELF_ID, shelf_quantity),
+    ):
+        balance = session.scalar(
+            select(StockBalance).where(
+                StockBalance.sku_id == sku_id,
+                StockBalance.location_id == location_id,
+            )
+        )
+        if balance is None:
+            session.add(
+                StockBalance(
+                    sku_id=sku_id,
+                    location_id=location_id,
+                    quantity=quantity,
+                )
+            )
+        else:
+            balance.quantity = quantity
 
 
 def _reset_pick_fixture(session: Session, pick_id: UUID) -> None:
@@ -207,6 +248,8 @@ def seed_test_fixture() -> None:
         _reset_receive_fixtures(session)
         for pick_id in PICK_FIXTURES:
             _reset_pick_fixture(session, pick_id)
+        for transfer_sku_id in TRANSFER_FIXTURES:
+            _reset_transfer_fixture(session, transfer_sku_id)
     engine.dispose()
 
 
@@ -318,6 +361,65 @@ def pick_effect_snapshot(pick_id: UUID) -> dict[str, object]:
     return result
 
 
+def reset_transfer_fixture(sku_id: UUID) -> None:
+    test_database_url = getenv("TEST_DATABASE_URL")
+    if not test_database_url:
+        raise RuntimeError("TEST_DATABASE_URL is required for the test-only seed")
+    engine = create_engine(test_database_url)
+    with Session(engine) as session, session.begin():
+        _reset_transfer_fixture(session, sku_id)
+    engine.dispose()
+
+
+def deplete_transfer_source(sku_id: UUID) -> None:
+    test_database_url = getenv("TEST_DATABASE_URL")
+    if not test_database_url:
+        raise RuntimeError("TEST_DATABASE_URL is required for the test-only seed")
+    if sku_id not in TRANSFER_FIXTURES:
+        raise RuntimeError("Unknown Transfer test fixture")
+    engine = create_engine(test_database_url)
+    with Session(engine) as session, session.begin():
+        balance = session.scalar(
+            select(StockBalance).where(
+                StockBalance.sku_id == sku_id,
+                StockBalance.location_id == BACKROOM_ID,
+            )
+        )
+        if balance is None:
+            raise RuntimeError("Transfer source balance was not prepared")
+        balance.quantity = 2
+    engine.dispose()
+
+
+def transfer_effect_snapshot(sku_id: UUID) -> dict[str, object]:
+    test_database_url = getenv("TEST_DATABASE_URL")
+    if not test_database_url:
+        raise RuntimeError("TEST_DATABASE_URL is required for the test-only seed")
+    if sku_id not in TRANSFER_FIXTURES:
+        raise RuntimeError("Unknown Transfer test fixture")
+    engine = create_engine(test_database_url)
+    with Session(engine) as session:
+        balances = dict(
+            session.execute(
+                select(InternalLocation.code, StockBalance.quantity)
+                .join(StockBalance, StockBalance.location_id == InternalLocation.id)
+                .where(StockBalance.sku_id == sku_id)
+            ).all()
+        )
+        result: dict[str, object] = {
+            "transfer_count": int(
+                session.scalar(
+                    select(func.count(Transfer.id)).where(Transfer.sku_id == sku_id)
+                )
+                or 0
+            ),
+            "balances": balances,
+            "warehouse_total": sum(balances.values()),
+        }
+    engine.dispose()
+    return result
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--receive-only", action="store_true")
@@ -325,8 +427,19 @@ if __name__ == "__main__":
     parser.add_argument("--pick-reset", type=UUID)
     parser.add_argument("--pick-deplete", type=UUID)
     parser.add_argument("--pick-snapshot", type=UUID)
+    parser.add_argument("--transfer-reset", type=UUID)
+    parser.add_argument("--transfer-deplete", type=UUID)
+    parser.add_argument("--transfer-snapshot", type=UUID)
     arguments = parser.parse_args()
-    if arguments.pick_snapshot:
+    if arguments.transfer_snapshot:
+        print(json.dumps(transfer_effect_snapshot(arguments.transfer_snapshot)))
+    elif arguments.transfer_deplete:
+        deplete_transfer_source(arguments.transfer_deplete)
+        print(f"Transfer test fixture depleted: {arguments.transfer_deplete}")
+    elif arguments.transfer_reset:
+        reset_transfer_fixture(arguments.transfer_reset)
+        print(f"Transfer test fixture reset: {arguments.transfer_reset}")
+    elif arguments.pick_snapshot:
         print(json.dumps(pick_effect_snapshot(arguments.pick_snapshot)))
     elif arguments.pick_deplete:
         deplete_pick_source(arguments.pick_deplete)

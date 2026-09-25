@@ -67,6 +67,35 @@ export type PickResult = {
   warehouse_total: number
 }
 
+export type TransferContext = {
+  warehouse_id: string
+  sku_id: string
+  sku: string
+  locations: PickLocation[]
+  warehouse_total: number
+}
+
+export type TransferCommand = {
+  sku_id: string
+  source_location_id: string
+  destination_location_id: string
+  quantity: number
+}
+
+export type TransferResult = TransferCommand & {
+  transfer_id: string
+  warehouse_id: string
+  source_location: string
+  destination_location: string
+  transferred_by_user_id: string
+  transferred_at: string
+  stock: {
+    source_quantity: number
+    destination_quantity: number
+    warehouse_total: number
+  }
+}
+
 export type ReceiveReference = {
   expected: string
   document: string | null
@@ -233,6 +262,26 @@ export async function submitPick(
     },
     201,
   )
+}
+
+export async function loadTransferContext(
+  skuId: string,
+): Promise<TransferContext> {
+  return apiRequest<TransferContext>(`/api/v1/transfers/context/${skuId}`)
+}
+
+export async function submitTransfer(
+  command: TransferCommand,
+  idempotencyKey: string,
+): Promise<TransferResult> {
+  return apiRequest<TransferResult>('/api/v1/transfers', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': idempotencyKey,
+    },
+    body: JSON.stringify(command),
+  })
 }
 
 export async function loadReceiveContext(
