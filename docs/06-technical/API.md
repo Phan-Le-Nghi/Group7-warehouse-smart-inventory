@@ -33,10 +33,14 @@ Session cookie là host-only `warehouse_session`, `HttpOnly`, `Path=/`, absolute
 | `POST /api/v1/audits` | Selected-scope count and comparison | `US-AUD-001` |
 | `POST /api/v1/audit-discrepancies/{id}/rechecks` | Mandatory re-check context; no auto Adjust | `US-AUD-002` |
 | `POST /api/v1/adjustments` | Re-checked request with reason; no pre-decision stock change | `US-ADJ-001` |
-| `POST /api/v1/adjustments/{id}/decision` | Manager approve/reject | `US-ADJ-002` |
+| `GET /api/v1/adjustments?status=PENDING_MANAGER_DECISION` | Manager pending Adjust work queue only | `US-ADJ-002`; no history/search/export/advanced query |
+| `GET /api/v1/adjustments/{id}` | Manager exact pending or terminal detail | `US-ADJ-002`; `PENDING_MANAGER_DECISION`, `APPLIED`, `REJECTED` |
+| `POST /api/v1/adjustments/{id}/decision` | Manager approve/reject with separate required idempotency | `US-ADJ-002`; first commit/replay `200` |
 
-The three Receive routes and Putaway routes are implemented. Other listed routes
-remain conceptual and require story-specific technical review.
+Routes through `US-ADJ-001` have implementation candidates or the merged status
+recorded in the Story Specs Index. The three `US-ADJ-002` Manager routes have a
+human-approved implementation contract at `DEC-043` but no application
+implementation yet.
 
 ## US-REC-001 Receive contract
 
@@ -78,8 +82,52 @@ Transaction tạo Putaway allocation và tăng destination balance atomically; R
 
 Quantity thấp hơn remaining không bị contract này reject chỉ vì có thể là partial. Partial Putaway vẫn OPEN tại `OQ-014`; first slice chỉ test happy path dùng toàn bộ 16 eligible units.
 
+## US-ADJ-002 Manager decision contract
+
+Only authenticated `MANAGER` may use the pending list, exact detail and decision
+routes. Warehouse Staff, Purchasing and Admin receive `403`; unauthenticated
+requests receive `401`. Detail supports pending and terminal reload, while the
+list remains a pending-only work queue. The response includes requester/time,
+reason, SKU/location, Original Audit, Manager Recheck, immutable snapshots and
+requested change, status and applicable decision/apply evidence. It never
+exposes idempotency facts or previews current stock.
+
+The decision request requires an opaque case-sensitive `Idempotency-Key` and is
+one of:
+
+```json
+{"decision": "APPROVE"}
+```
+
+```json
+{"decision": "REJECT", "rejection_reason": "Required trimmed text"}
+```
+
+Reject reason is required, non-empty after trim and at most 500 characters;
+approve forbids it. First successful commit and same-key/same-command historical
+replay both return `200`. Decision idempotency key/fingerprint are separate from
+US-ADJ-001 creation idempotency; replay never rereads or reapplies stock.
+
+Approve locks the exact request, conflict-safely materializes a missing exact
+balance as zero, locks/re-reads that balance, and requires current quantity to
+equal the persisted recheck system snapshot. It then applies
+`current_stock + requested_change` only when the result is non-negative and
+atomically persists `APPLIED`, Manager/time and before/after evidence. Stale or
+negative attempts return `409 ADJUSTMENT_STALE` or
+`409 INSUFFICIENT_STOCK_FOR_ADJUSTMENT`, leave the request pending and have no
+stock/decision effect. Reject locks only the request, persists required evidence
+as terminal `REJECTED`, and has zero stock effect.
+
+Other typed outcomes are `404 ADJUSTMENT_NOT_FOUND`,
+`409 ADJUSTMENT_NOT_PENDING`, `409 IDEMPOTENCY_KEY_REUSED`,
+`422 INVALID_REJECTION_REASON` and `422 INVALID_IDEMPOTENCY_KEY`. Rejected
+requests cannot reopen or recreate from the same Audit recheck; a continuing
+discrepancy requires a fresh Audit -> Recheck -> Adjust chain. The exact canonical
+contract is in
+[`../../vault/06-technical/story-specs/US-ADJ-002.md`](../../vault/06-technical/story-specs/US-ADJ-002.md).
+
 ## Contract boundaries
 
 - Actor/auth dependency phải giữ canonical permission theo `DEC-017/031/033`; implementation đã merge và CI pass, nhưng staging HTTPS cookie behavior và PostgreSQL 17/Supabase evidence chưa được verify.
-- Adjust target-vs-delta, attachment storage, advanced pagination/filtering, long-term production deployment và unresolved NFR còn TBD. Render chỉ được approve cho staging/demo tại `DEC-032`.
+- Adjust Manager decision/apply is approved at `DEC-043`; attachment storage, advanced pagination/filtering, long-term production deployment và unresolved NFR còn TBD. Render chỉ được approve cho staging/demo tại `DEC-032`.
 - `OQ-012`, `OQ-013` và `OQ-014` vẫn OPEN.

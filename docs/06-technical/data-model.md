@@ -26,7 +26,7 @@ Canonical detail: [`../../vault/06-technical/data-model.md`](../../vault/06-tech
 | Pick | request + source allocations | Conceptual; schema chi tiết deferred |
 | Transfer | minimum confirmed Transfer record | Conceptual; canonical fields đã duyệt |
 | Audit | session + comparison lines + discrepancy/re-check persistence khi cần | Conceptual; lifecycle còn OPEN |
-| Adjust | request/decision context | Conceptual; quantity representation và attachment storage TBD |
+| Adjust | `adjust_requests` with immutable request intent plus terminal decision/apply evidence | US-ADJ-001 implemented candidate; US-ADJ-002 schema contract approved at `DEC-043`; attachment storage TBD |
 | User | `users`: normalized unique login identity, Argon2id password hash, current role, active state | Exact schema approved tại `DEC-033`; implementation merged và CI verified |
 | Auth Session | `auth_sessions`: SHA-256 session digest, user link, created/expiry/revocation timestamps | Exact schema approved tại `DEC-033`; implementation merged và CI verified |
 
@@ -65,6 +65,28 @@ introduced.
 
 Downgrade to `20260919_0002` fails explicitly when any post-migration Receive line
 still has `actual_quantity IS NULL`; it neither backfills nor deletes that data.
+
+## US-ADJ-002 decision/apply model
+
+`DEC-043` approves extending `adjust_requests` rather than creating an
+application table or generic movement/decision ledger. Status is exactly
+`PENDING_MANAGER_DECISION`, `APPLIED` or `REJECTED`. Nullable decision fields are
+`decided_by_user_id`, `decided_at`, normalized `rejection_reason`,
+`applied_stock_before`, `applied_stock_after`,
+`decision_idempotency_key` and `decision_request_fingerprint`.
+
+State-dependent checks require all decision/application fields null while
+pending; Manager/time plus before/after and decision-idempotency facts for
+`APPLIED`; and Manager/time, required rejection reason and decision-idempotency
+facts for `REJECTED`. Apply evidence satisfies
+`applied_stock_after = applied_stock_before + requested_change` with non-negative
+before/after values. Creation and decision idempotency remain separate.
+
+Approve conflict-safely inserts an exact missing `stock_balances` row at zero,
+then locks/re-reads it before snapshot-match and non-negative validation. The
+balance change and terminal decision evidence share one transaction. Reject does
+not read, create, lock or mutate stock. No `adjustment_applications`, generic
+Movement, Warehouse total or duplicated applied-change field is introduced.
 
 ## Không thuộc model này
 
