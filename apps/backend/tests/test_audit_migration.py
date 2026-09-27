@@ -26,6 +26,7 @@ def test_audit_migration_cycles_on_sqlite(
         "audit_sessions",
         "audit_lines",
         "audit_rechecks",
+        "adjust_requests",
     }
     assert {column["name"] for column in inspector.get_columns("audit_sessions")} == {
         "id",

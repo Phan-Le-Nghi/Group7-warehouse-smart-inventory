@@ -2,18 +2,63 @@ import { afterEach, expect, it, vi } from 'vitest'
 import {
   ApiError,
   apiRequest,
+  loadAdjustmentContext,
   loadAuditDiscrepancies,
   loadAuditDiscrepancy,
   loadTransferHistory,
   recordReceive,
   submitAudit,
   submitAuditRecheck,
+  submitAdjustmentRequest,
   submitPick,
   submitTransfer,
 } from './api'
 
 afterEach(() => {
   vi.restoreAllMocks()
+})
+
+it('uses the approved exact Adjustment context and create contract', async () => {
+  const fetchMock = vi
+    .spyOn(globalThis, 'fetch')
+    .mockResolvedValueOnce(
+      new Response(JSON.stringify({ audit_recheck_id: 'recheck-id' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    .mockResolvedValueOnce(
+      new Response(JSON.stringify({ adjustment_id: 'adjustment-id' }), {
+        status: 201,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    .mockResolvedValueOnce(
+      new Response(JSON.stringify({ adjustment_id: 'adjustment-id' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+  await loadAdjustmentContext('recheck-id')
+  await submitAdjustmentRequest('recheck-id', 'Count confirmed', 'Adjust-Key')
+  await submitAdjustmentRequest('recheck-id', 'Count confirmed', 'Adjust-Key')
+
+  expect(fetchMock.mock.calls[0][0]).toMatch(
+    /\/api\/v1\/adjustments\/context\/recheck-id$/,
+  )
+  expect(fetchMock.mock.calls[1][0]).toMatch(/\/api\/v1\/adjustments$/)
+  expect(fetchMock.mock.calls[1][1]).toMatchObject({
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': 'Adjust-Key',
+    },
+    body: JSON.stringify({
+      audit_recheck_id: 'recheck-id',
+      reason: 'Count confirmed',
+    }),
+  })
 })
 
 it('uses the approved Audit discrepancy endpoints and recheck key', async () => {

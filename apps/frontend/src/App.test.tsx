@@ -320,3 +320,41 @@ describe('US-AUD-002 addressing', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('US-ADJ-001 exact-context addressing', () => {
+  it('loads the exact recheck at /adjustments/{audit_recheck_id}', async () => {
+    const recheckId = '00000000-0000-0000-0000-000000000701'
+    window.history.pushState({}, '', `/adjustments/${recheckId}`)
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockReturnValue(
+      jsonResponse({
+        audit_recheck_id: recheckId,
+        warehouse_id: 'warehouse-id',
+        sku: { id: 'sku-id', code: 'AUDIT-SKU' },
+        location: { id: 'location-id', code: 'BACKROOM' },
+        original_audit: {
+          audit_id: 'audit-id',
+          audit_line_id: 'line-id',
+          system_quantity: 12,
+          physical_quantity: 10,
+          quantity_discrepancy: -2,
+        },
+        recheck: {
+          recheck_system_quantity: 10,
+          recheck_physical_quantity: 8,
+          recheck_quantity_discrepancy: -2,
+          result: 'MISMATCH',
+          performed_at: '2026-09-27T08:00:00Z',
+        },
+        requested_change: -2,
+        existing_adjustment: null,
+      }),
+    )
+    renderApp()
+    expect(
+      await screen.findByRole('heading', { name: 'Create Adjust request' }),
+    ).toBeVisible()
+    expect(fetchMock.mock.calls[0][0]).toContain(
+      `/api/v1/adjustments/context/${recheckId}`,
+    )
+  })
+})

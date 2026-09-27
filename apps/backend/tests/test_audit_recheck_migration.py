@@ -22,7 +22,10 @@ def test_audit_recheck_migration_cycles_on_sqlite(
 
     command.upgrade(config, "head")
     inspector = inspect(engine)
-    assert set(inspector.get_table_names()) - legacy_tables == {"audit_rechecks"}
+    assert set(inspector.get_table_names()) - legacy_tables == {
+        "audit_rechecks",
+        "adjust_requests",
+    }
     assert {column["name"] for column in inspector.get_columns("audit_rechecks")} == {
         "id",
         "audit_line_id",

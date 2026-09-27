@@ -466,6 +466,28 @@ approve/reject/apply controls or claim stock was changed.
 - Implementation evidence and Traceability are updated after implementation.
 - Human reviews the implementation diff before commit or integration.
 
+## Current implementation evidence
+
+- The worktree contains the minimum constrained `adjust_requests` model and
+  Alembic revision `20260927_0008`, with source snapshots, exact initial status,
+  normalized reason protection, `RESTRICT` foreign keys and both atomic claim
+  constraints.
+- Staff-only exact-context and create routes derive eligibility and request intent
+  from persisted Audit/recheck evidence. The creation module does not import or
+  query `StockBalance`; safe replay is resolved before current source derivation.
+- `/adjustments/{audit_recheck_id}` implements the approved direct exact-context
+  page and attempt-scoped idempotency lifecycle. No upstream Staff discovery CTA
+  is claimed or added.
+- Fresh local evidence: Ruff lint/format pass; pytest reports `211 passed` and `21`
+  PostgreSQL-only skips; frontend ESLint/TypeScript pass, Vitest reports `73
+  passed`, production build passes, and Playwright discovery lists `28` scenarios,
+  including three US-ADJ-001 scenarios. The SQLite migration
+  upgrade/downgrade/re-upgrade test passes.
+- PostgreSQL 17/18 migration/concurrency execution and real Chromium/PostgreSQL
+  browser execution remain `NOT VERIFIED` locally because no `TEST_DATABASE_URL`
+  is available. Human diff and visual review remain pending. No commit, push or
+  deployment was performed.
+
 ## Open questions and boundaries
 
 - `OQ-012` remains open globally. This story derives from the existing integer

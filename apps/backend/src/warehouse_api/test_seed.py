@@ -11,6 +11,7 @@ from sqlalchemy import create_engine, delete, func, select
 from sqlalchemy.orm import Session
 
 from warehouse_api.models import (
+    AdjustRequest,
     AuditLine,
     AuditRecheck,
     AuditSession,
@@ -67,6 +68,7 @@ TRANSFER_FIXTURES = {
 
 
 def _reset_audit_fixture(session: Session) -> None:
+    session.execute(delete(AdjustRequest))
     session.execute(delete(AuditRecheck))
     session.execute(delete(AuditLine))
     session.execute(delete(AuditSession))
@@ -652,6 +654,9 @@ def audit_effect_snapshot() -> dict[str, object]:
             ),
             "audit_recheck_count": int(
                 session.scalar(select(func.count(AuditRecheck.id))) or 0
+            ),
+            "adjust_request_count": int(
+                session.scalar(select(func.count(AdjustRequest.id))) or 0
             ),
             "missing_balance_count": int(
                 session.scalar(
