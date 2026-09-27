@@ -478,8 +478,50 @@ class AdjustRequest(Base):
             name="ck_adjust_requests_reason_trimmed",
         ),
         CheckConstraint(
-            "status = 'PENDING_MANAGER_DECISION'",
+            "status IN ('PENDING_MANAGER_DECISION', 'APPLIED', 'REJECTED')",
             name="ck_adjust_requests_status",
+        ),
+        CheckConstraint(
+            "(status = 'PENDING_MANAGER_DECISION' AND "
+            "decided_by_user_id IS NULL AND decided_at IS NULL AND "
+            "rejection_reason IS NULL AND applied_stock_before IS NULL AND "
+            "applied_stock_after IS NULL AND decision_idempotency_key IS NULL AND "
+            "decision_request_fingerprint IS NULL) OR "
+            "(status = 'APPLIED' AND decided_by_user_id IS NOT NULL AND "
+            "decided_at IS NOT NULL AND rejection_reason IS NULL AND "
+            "applied_stock_before IS NOT NULL AND applied_stock_after IS NOT NULL AND "
+            "decision_idempotency_key IS NOT NULL AND "
+            "decision_request_fingerprint IS NOT NULL) OR "
+            "(status = 'REJECTED' AND decided_by_user_id IS NOT NULL AND "
+            "decided_at IS NOT NULL AND rejection_reason IS NOT NULL AND "
+            "applied_stock_before IS NULL AND applied_stock_after IS NULL AND "
+            "decision_idempotency_key IS NOT NULL AND "
+            "decision_request_fingerprint IS NOT NULL)",
+            name="ck_adjust_requests_decision_state",
+        ),
+        CheckConstraint(
+            "applied_stock_before IS NULL OR applied_stock_before >= 0",
+            name="ck_adjust_requests_applied_before_nonnegative",
+        ),
+        CheckConstraint(
+            "applied_stock_after IS NULL OR applied_stock_after >= 0",
+            name="ck_adjust_requests_applied_after_nonnegative",
+        ),
+        CheckConstraint(
+            "status <> 'APPLIED' OR "
+            "applied_stock_after = applied_stock_before + requested_change",
+            name="ck_adjust_requests_applied_stock_consistent",
+        ),
+        CheckConstraint(
+            "rejection_reason IS NULL OR "
+            "(length(rejection_reason) BETWEEN 1 AND 500 AND "
+            "rejection_reason = trim(rejection_reason))",
+            name="ck_adjust_requests_rejection_reason_normalized",
+        ),
+        CheckConstraint(
+            "decision_request_fingerprint IS NULL OR "
+            "length(decision_request_fingerprint) = 64",
+            name="ck_adjust_requests_decision_fingerprint_length",
         ),
         CheckConstraint(
             "length(request_fingerprint) = 64",
@@ -489,6 +531,10 @@ class AdjustRequest(Base):
             "audit_recheck_id", name="uq_adjust_requests_audit_recheck_id"
         ),
         UniqueConstraint("idempotency_key", name="uq_adjust_requests_idempotency_key"),
+        UniqueConstraint(
+            "decision_idempotency_key",
+            name="uq_adjust_requests_decision_idempotency_key",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
@@ -510,6 +556,15 @@ class AdjustRequest(Base):
     requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     idempotency_key: Mapped[str] = mapped_column(String(255))
     request_fingerprint: Mapped[str] = mapped_column(String(64))
+    decided_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT")
+    )
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    rejection_reason: Mapped[str | None] = mapped_column(String(500))
+    applied_stock_before: Mapped[int | None] = mapped_column(Integer)
+    applied_stock_after: Mapped[int | None] = mapped_column(Integer)
+    decision_idempotency_key: Mapped[str | None] = mapped_column(String(255))
+    decision_request_fingerprint: Mapped[str | None] = mapped_column(String(64))
 
 
 class PutawayAllocation(Base):

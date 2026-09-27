@@ -26,7 +26,7 @@ Canonical detail: [`../../vault/06-technical/data-model.md`](../../vault/06-tech
 | Pick | request + source allocations | Conceptual; schema chi tiết deferred |
 | Transfer | minimum confirmed Transfer record | Conceptual; canonical fields đã duyệt |
 | Audit | session + comparison lines + discrepancy/re-check persistence khi cần | Conceptual; lifecycle còn OPEN |
-| Adjust | `adjust_requests` with immutable request intent plus terminal decision/apply evidence | US-ADJ-001 implemented candidate; US-ADJ-002 schema contract approved at `DEC-043`; attachment storage TBD |
+| Adjust | `adjust_requests` with immutable request intent plus terminal decision/apply evidence | US-ADJ-001/002 worktree implementation candidate through migration `20260927_0009`; attachment storage TBD |
 | User | `users`: normalized unique login identity, Argon2id password hash, current role, active state | Exact schema approved tại `DEC-033`; implementation merged và CI verified |
 | Auth Session | `auth_sessions`: SHA-256 session digest, user link, created/expiry/revocation timestamps | Exact schema approved tại `DEC-033`; implementation merged và CI verified |
 

@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import event, func, select
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm.attributes import set_committed_value
 
 from warehouse_api.auth import Actor, Role, get_actor
 from warehouse_api.main import app
@@ -477,3 +478,298 @@ def test_failure_after_insert_rolls_back(adjustment_api, monkeypatch) -> None:
         _post(client, fixture.negative_recheck_id, key="rollback-key")
     with factory() as session:
         assert session.scalar(select(func.count(AdjustRequest.id))) == 0
+
+
+def _decide(
+    client: TestClient,
+    adjustment_id: str,
+    decision: str,
+    key: str = "decision-key",
+    rejection_reason: str | None = None,
+):
+    payload: dict[str, object] = {"decision": decision}
+    if rejection_reason is not None:
+        payload["rejection_reason"] = rejection_reason
+    return client.post(
+        f"/api/v1/adjustments/{adjustment_id}/decision",
+        json=payload,
+        headers={"Idempotency-Key": key},
+    )
+
+
+def test_manager_list_detail_and_approve_apply_exactly_once(adjustment_api) -> None:
+    client, factory, fixture = adjustment_api
+    created = _post(client, fixture.negative_recheck_id, key="create-for-approve")
+    adjustment_id = created.json()["adjustment_id"]
+    with factory.begin() as session:
+        balance = session.scalar(select(StockBalance))
+        assert balance is not None
+        balance.quantity = 10
+    app.dependency_overrides[get_actor] = lambda: fixture.manager
+
+    queue = client.get("/api/v1/adjustments?status=PENDING_MANAGER_DECISION")
+    assert queue.status_code == 200
+    assert queue.json()["items"][0]["adjustment_id"] == adjustment_id
+    detail = client.get(f"/api/v1/adjustments/{adjustment_id}")
+    assert detail.status_code == 200
+    assert detail.json()["status"] == "PENDING_MANAGER_DECISION"
+    assert "decision_idempotency_key" not in detail.json()
+
+    approved = _decide(client, adjustment_id, "APPROVE")
+    assert approved.status_code == 200
+    assert approved.json()["status"] == "APPLIED"
+    assert approved.json()["applied_stock_before"] == 10
+    assert approved.json()["applied_stock_after"] == 8
+    replay = _decide(client, adjustment_id, "APPROVE")
+    assert replay.status_code == 200
+    assert replay.json() == approved.json()
+    with factory() as session:
+        assert session.scalar(select(StockBalance.quantity)) == 8
+
+
+def test_reject_normalizes_reason_and_never_queries_stock(adjustment_api) -> None:
+    client, factory, fixture = adjustment_api
+    created = _post(client, fixture.negative_recheck_id, key="create-for-reject")
+    adjustment_id = created.json()["adjustment_id"]
+    app.dependency_overrides[get_actor] = lambda: fixture.manager
+    statements: list[str] = []
+    engine = factory.kw["bind"]
+
+    def capture(_conn, _cursor, statement, _parameters, _context, _executemany):
+        statements.append(statement.lower())
+
+    event.listen(engine, "before_cursor_execute", capture)
+    try:
+        rejected = _decide(
+            client,
+            adjustment_id,
+            "REJECT",
+            key="reject-key",
+            rejection_reason="  Evidence is not accepted  ",
+        )
+    finally:
+        event.remove(engine, "before_cursor_execute", capture)
+    assert rejected.status_code == 200
+    assert rejected.json()["status"] == "REJECTED"
+    assert rejected.json()["rejection_reason"] == "Evidence is not accepted"
+    assert all("stock_balances" not in statement for statement in statements)
+
+
+def test_stale_and_negative_approval_leave_request_pending(adjustment_api) -> None:
+    client, factory, fixture = adjustment_api
+    stale_created = _post(client, fixture.negative_recheck_id, key="stale-create")
+    stale_id = stale_created.json()["adjustment_id"]
+    app.dependency_overrides[get_actor] = lambda: fixture.manager
+    stale = _decide(client, stale_id, "APPROVE", key="stale-decision")
+    assert stale.status_code == 409
+    assert stale.json()["error"]["code"] == "ADJUSTMENT_STALE"
+    with factory() as session:
+        request = session.get(AdjustRequest, UUID(stale_id))
+        assert request is not None
+        assert request.status == "PENDING_MANAGER_DECISION"
+        assert request.decided_at is None
+
+
+def test_defensive_negative_candidate_leaves_request_pending(
+    adjustment_api, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client, factory, fixture = adjustment_api
+    created = _post(client, fixture.negative_recheck_id, key="negative-create")
+    adjustment_id = created.json()["adjustment_id"]
+    with factory.begin() as session:
+        balance = session.scalar(select(StockBalance))
+        assert balance is not None
+        balance.quantity = 10
+
+    def force_defensive_branch(adjustment, *_args):
+        set_committed_value(adjustment, "requested_change", -11)
+
+    monkeypatch.setattr(
+        "warehouse_api.adjustment._validate_immutable_source",
+        force_defensive_branch,
+    )
+    app.dependency_overrides[get_actor] = lambda: fixture.manager
+    response = _decide(client, adjustment_id, "APPROVE", key="negative-decision")
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "INSUFFICIENT_STOCK_FOR_ADJUSTMENT"
+    with factory() as session:
+        request = session.get(AdjustRequest, UUID(adjustment_id))
+        assert request is not None
+        assert request.status == "PENDING_MANAGER_DECISION"
+        assert request.requested_change == -2
+        assert session.scalar(select(StockBalance.quantity)) == 10
+
+
+def test_staff_replay_and_context_report_current_terminal_status(
+    adjustment_api,
+) -> None:
+    client, factory, fixture = adjustment_api
+    created = _post(
+        client,
+        fixture.negative_recheck_id,
+        reason="Stable creation intent",
+        key="staff-terminal-replay",
+    )
+    adjustment_id = created.json()["adjustment_id"]
+    app.dependency_overrides[get_actor] = lambda: fixture.manager
+    rejected = _decide(
+        client,
+        adjustment_id,
+        "REJECT",
+        key="manager-reject",
+        rejection_reason="Rejected after review",
+    )
+    assert rejected.status_code == 200
+
+    app.dependency_overrides[get_actor] = lambda: fixture.staff
+    context = client.get(f"/api/v1/adjustments/context/{fixture.negative_recheck_id}")
+    assert context.json()["existing_adjustment"]["status"] == "REJECTED"
+    replay = _post(
+        client,
+        fixture.negative_recheck_id,
+        reason="Stable creation intent",
+        key="staff-terminal-replay",
+    )
+    assert replay.status_code == 200
+    assert replay.json()["status"] == "REJECTED"
+    with factory() as session:
+        assert session.scalar(select(func.count(AdjustRequest.id))) == 1
+
+
+def test_missing_zero_balance_positive_adjustment_applies(adjustment_api) -> None:
+    client, factory, fixture = adjustment_api
+    with factory.begin() as session:
+        positive_from_zero = _add_audit_case(
+            session,
+            warehouse_id=fixture.warehouse_id,
+            sku_id=fixture.sku_id,
+            location_id=fixture.location_id,
+            auditor_id=fixture.staff.user_id,
+            manager_id=fixture.manager.user_id,
+            audit_system=0,
+            audit_physical=3,
+            recheck_system=0,
+            recheck_physical=3,
+        )
+        balance = session.scalar(select(StockBalance))
+        assert balance is not None
+        session.delete(balance)
+    created = _post(client, positive_from_zero, key="missing-zero-create")
+    app.dependency_overrides[get_actor] = lambda: fixture.manager
+    approved = _decide(
+        client,
+        created.json()["adjustment_id"],
+        "APPROVE",
+        key="missing-zero-decision",
+    )
+    assert approved.status_code == 200
+    assert approved.json()["applied_stock_before"] == 0
+    assert approved.json()["applied_stock_after"] == 3
+    with factory() as session:
+        assert session.scalar(select(StockBalance.quantity)) == 3
+
+
+@pytest.mark.parametrize(
+    ("decision", "reason"),
+    [
+        ("REJECT", None),
+        ("REJECT", "   "),
+        ("REJECT", "x" * 501),
+        ("APPROVE", "not allowed"),
+    ],
+)
+def test_decision_rejection_reason_validation(
+    adjustment_api, decision: str, reason: str | None
+) -> None:
+    client, _factory, fixture = adjustment_api
+    created = _post(client, fixture.negative_recheck_id, key="validation-create")
+    app.dependency_overrides[get_actor] = lambda: fixture.manager
+    response = _decide(
+        client,
+        created.json()["adjustment_id"],
+        decision,
+        key="validation-decision",
+        rejection_reason=reason,
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "INVALID_REJECTION_REASON"
+
+
+def test_decision_key_conflicts_and_terminal_different_key(adjustment_api) -> None:
+    client, factory, fixture = adjustment_api
+    created = _post(client, fixture.negative_recheck_id, key="terminal-create")
+    adjustment_id = created.json()["adjustment_id"]
+    app.dependency_overrides[get_actor] = lambda: fixture.manager
+    rejected = _decide(
+        client,
+        adjustment_id,
+        "REJECT",
+        key="terminal-key",
+        rejection_reason="Rejected",
+    )
+    assert rejected.status_code == 200
+    conflicting = _decide(
+        client,
+        adjustment_id,
+        "APPROVE",
+        key="terminal-key",
+    )
+    assert conflicting.status_code == 409
+    assert conflicting.json()["error"]["code"] == "IDEMPOTENCY_KEY_REUSED"
+    different = _decide(
+        client,
+        adjustment_id,
+        "REJECT",
+        key="different-terminal-key",
+        rejection_reason="Rejected",
+    )
+    assert different.status_code == 409
+    assert different.json()["error"]["code"] == "ADJUSTMENT_NOT_PENDING"
+    with factory() as session:
+        assert session.scalar(select(StockBalance.quantity)) == 99
+
+
+@pytest.mark.parametrize("role", [Role.WAREHOUSE_STAFF, Role.PURCHASING, Role.ADMIN])
+def test_manager_adjustment_routes_forbid_wrong_roles(
+    adjustment_api, role: Role
+) -> None:
+    client, _factory, fixture = adjustment_api
+    created = _post(client, fixture.negative_recheck_id, key=f"role-create-{role}")
+    adjustment_id = created.json()["adjustment_id"]
+    app.dependency_overrides[get_actor] = lambda: Actor(
+        uuid4(), f"wrong.{role.value.lower()}", role
+    )
+    assert (
+        client.get("/api/v1/adjustments?status=PENDING_MANAGER_DECISION").status_code
+        == 403
+    )
+    assert client.get(f"/api/v1/adjustments/{adjustment_id}").status_code == 403
+    assert _decide(client, adjustment_id, "APPROVE").status_code == 403
+
+
+def test_failure_after_applied_evidence_flush_rolls_back(
+    adjustment_api, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client, factory, fixture = adjustment_api
+    created = _post(client, fixture.negative_recheck_id, key="rollback-create")
+    adjustment_id = created.json()["adjustment_id"]
+    with factory.begin() as session:
+        balance = session.scalar(select(StockBalance))
+        assert balance is not None
+        balance.quantity = 10
+    app.dependency_overrides[get_actor] = lambda: fixture.manager
+
+    def fail_after_flush(*_args, **_kwargs):
+        raise RuntimeError("forced post-evidence failure")
+
+    monkeypatch.setattr(
+        "warehouse_api.adjustment._log_decision_after_commit", fail_after_flush
+    )
+    with pytest.raises(RuntimeError, match="forced post-evidence failure"):
+        _decide(client, adjustment_id, "APPROVE", key="rollback-decision")
+    with factory() as session:
+        request = session.get(AdjustRequest, UUID(adjustment_id))
+        assert request is not None
+        assert request.status == "PENDING_MANAGER_DECISION"
+        assert request.decided_at is None
+        assert session.scalar(select(StockBalance.quantity)) == 10

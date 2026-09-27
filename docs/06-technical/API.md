@@ -37,10 +37,9 @@ Session cookie là host-only `warehouse_session`, `HttpOnly`, `Path=/`, absolute
 | `GET /api/v1/adjustments/{id}` | Manager exact pending or terminal detail | `US-ADJ-002`; `PENDING_MANAGER_DECISION`, `APPLIED`, `REJECTED` |
 | `POST /api/v1/adjustments/{id}/decision` | Manager approve/reject with separate required idempotency | `US-ADJ-002`; first commit/replay `200` |
 
-Routes through `US-ADJ-001` have implementation candidates or the merged status
-recorded in the Story Specs Index. The three `US-ADJ-002` Manager routes have a
-human-approved implementation contract at `DEC-043` but no application
-implementation yet.
+Routes through `US-ADJ-002` now have worktree implementation candidates recorded
+in the Story Specs Index. PostgreSQL 17/18 concurrency/migration and real browser
+execution remain pending evidence.
 
 ## US-REC-001 Receive contract
 

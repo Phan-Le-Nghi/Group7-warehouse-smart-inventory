@@ -109,7 +109,16 @@ def handle_validation_error(
     )
     allocations_error = any("allocations" in item["loc"] for item in error.errors())
     reason_error = any(item["loc"][-1] == "reason" for item in error.errors())
-    if reason_error:
+    rejection_reason_error = any(
+        item["loc"][-1] == "rejection_reason" for item in error.errors()
+    )
+    if rejection_reason_error:
+        code = "INVALID_REJECTION_REASON"
+        message = (
+            "Reject requires a trimmed reason from 1 to 500 characters; "
+            "approve forbids it."
+        )
+    elif reason_error:
         code = "INVALID_REASON"
         message = "Reason must contain from 1 to 500 characters after trimming."
     elif recheck_quantity_error:

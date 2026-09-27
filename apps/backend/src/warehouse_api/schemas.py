@@ -163,7 +163,7 @@ class ExistingAdjustmentSummary(BaseModel):
     adjustment_id: UUID
     reason: str
     requested_change: int
-    status: Literal["PENDING_MANAGER_DECISION"]
+    status: Literal["PENDING_MANAGER_DECISION", "APPLIED", "REJECTED"]
     requested_by: AdjustmentActor
     requested_at: datetime
 
@@ -196,9 +196,77 @@ class AdjustmentResponse(BaseModel):
     recheck_physical_quantity_snapshot: int
     requested_change: int
     reason: str
+    status: Literal["PENDING_MANAGER_DECISION", "APPLIED", "REJECTED"]
+    requested_by: AdjustmentActor
+    requested_at: datetime
+
+
+AdjustmentStatus = Literal["PENDING_MANAGER_DECISION", "APPLIED", "REJECTED"]
+
+
+class AdjustmentDecisionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    decision: Literal["APPROVE", "REJECT"]
+    rejection_reason: str | None = None
+
+
+class AdjustmentQueueItem(BaseModel):
+    adjustment_id: UUID
     status: Literal["PENDING_MANAGER_DECISION"]
     requested_by: AdjustmentActor
     requested_at: datetime
+    reason: str
+    sku: AdjustmentSku
+    location: AdjustmentLocation
+    requested_change: int
+
+
+class AdjustmentQueueResponse(BaseModel):
+    items: list[AdjustmentQueueItem]
+
+
+class AdjustmentManagerOriginalAuditEvidence(BaseModel):
+    audit_id: UUID
+    audit_line_id: UUID
+    system_quantity: int
+    physical_quantity: int
+    quantity_discrepancy: int
+    result: Literal["MISMATCH"]
+    audited_by: AdjustmentActor
+    audited_at: datetime
+
+
+class AdjustmentManagerRecheckEvidence(BaseModel):
+    recheck_id: UUID
+    recheck_system_quantity: int
+    recheck_physical_quantity: int
+    recheck_quantity_discrepancy: int
+    result: Literal["MISMATCH"]
+    performed_by: AdjustmentActor
+    performed_at: datetime
+
+
+class AdjustmentDetailResponse(BaseModel):
+    adjustment_id: UUID
+    audit_recheck_id: UUID
+    warehouse_id: UUID
+    sku: AdjustmentSku
+    location: AdjustmentLocation
+    original_audit: AdjustmentManagerOriginalAuditEvidence
+    manager_recheck: AdjustmentManagerRecheckEvidence
+    recheck_system_quantity_snapshot: int
+    recheck_physical_quantity_snapshot: int
+    requested_change: int
+    reason: str
+    requested_by: AdjustmentActor
+    requested_at: datetime
+    status: AdjustmentStatus
+    decided_by: AdjustmentActor | None
+    decided_at: datetime | None
+    rejection_reason: str | None
+    applied_stock_before: int | None
+    applied_stock_after: int | None
 
 
 class PutawayRequest(BaseModel):
