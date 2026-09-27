@@ -449,6 +449,69 @@ class AuditRecheck(Base):
     request_fingerprint: Mapped[str] = mapped_column(String(64))
 
 
+class AdjustRequest(Base):
+    __tablename__ = "adjust_requests"
+    __table_args__ = (
+        CheckConstraint(
+            "recheck_system_quantity_snapshot >= 0",
+            name="ck_adjust_requests_system_snapshot_nonnegative",
+        ),
+        CheckConstraint(
+            "recheck_physical_quantity_snapshot >= 0",
+            name="ck_adjust_requests_physical_snapshot_nonnegative",
+        ),
+        CheckConstraint(
+            "requested_change = recheck_physical_quantity_snapshot - "
+            "recheck_system_quantity_snapshot",
+            name="ck_adjust_requests_change_consistent",
+        ),
+        CheckConstraint(
+            "requested_change <> 0",
+            name="ck_adjust_requests_change_nonzero",
+        ),
+        CheckConstraint(
+            "length(reason) BETWEEN 1 AND 500",
+            name="ck_adjust_requests_reason_length",
+        ),
+        CheckConstraint(
+            "reason = trim(reason)",
+            name="ck_adjust_requests_reason_trimmed",
+        ),
+        CheckConstraint(
+            "status = 'PENDING_MANAGER_DECISION'",
+            name="ck_adjust_requests_status",
+        ),
+        CheckConstraint(
+            "length(request_fingerprint) = 64",
+            name="ck_adjust_requests_fingerprint_length",
+        ),
+        UniqueConstraint(
+            "audit_recheck_id", name="uq_adjust_requests_audit_recheck_id"
+        ),
+        UniqueConstraint("idempotency_key", name="uq_adjust_requests_idempotency_key"),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    audit_recheck_id: Mapped[UUID] = mapped_column(
+        ForeignKey("audit_rechecks.id", ondelete="RESTRICT")
+    )
+    sku_id: Mapped[UUID] = mapped_column(ForeignKey("skus.id", ondelete="RESTRICT"))
+    location_id: Mapped[UUID] = mapped_column(
+        ForeignKey("internal_locations.id", ondelete="RESTRICT")
+    )
+    recheck_system_quantity_snapshot: Mapped[int] = mapped_column(Integer)
+    recheck_physical_quantity_snapshot: Mapped[int] = mapped_column(Integer)
+    requested_change: Mapped[int] = mapped_column(Integer)
+    reason: Mapped[str] = mapped_column(String(500))
+    status: Mapped[str] = mapped_column(String(32))
+    requested_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    idempotency_key: Mapped[str] = mapped_column(String(255))
+    request_fingerprint: Mapped[str] = mapped_column(String(64))
+
+
 class PutawayAllocation(Base):
     __tablename__ = "putaway_allocations"
     __table_args__ = (

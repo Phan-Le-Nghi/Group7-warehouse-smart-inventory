@@ -128,6 +128,79 @@ class AuditRecheckResponse(BaseModel):
     adjust_eligible: bool
 
 
+class AdjustmentActor(BaseModel):
+    user_id: UUID
+    login_identifier: str
+
+
+class AdjustmentSku(BaseModel):
+    id: UUID
+    code: str
+
+
+class AdjustmentLocation(BaseModel):
+    id: UUID
+    code: str
+
+
+class AdjustmentOriginalAuditEvidence(BaseModel):
+    audit_id: UUID
+    audit_line_id: UUID
+    system_quantity: int
+    physical_quantity: int
+    quantity_discrepancy: int
+
+
+class AdjustmentRecheckEvidence(BaseModel):
+    recheck_system_quantity: int
+    recheck_physical_quantity: int
+    recheck_quantity_discrepancy: int
+    result: Literal["MISMATCH"]
+    performed_at: datetime
+
+
+class ExistingAdjustmentSummary(BaseModel):
+    adjustment_id: UUID
+    reason: str
+    requested_change: int
+    status: Literal["PENDING_MANAGER_DECISION"]
+    requested_by: AdjustmentActor
+    requested_at: datetime
+
+
+class AdjustmentContextResponse(BaseModel):
+    audit_recheck_id: UUID
+    warehouse_id: UUID
+    sku: AdjustmentSku
+    location: AdjustmentLocation
+    original_audit: AdjustmentOriginalAuditEvidence
+    recheck: AdjustmentRecheckEvidence
+    requested_change: int
+    existing_adjustment: ExistingAdjustmentSummary | None
+
+
+class AdjustmentCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    audit_recheck_id: UUID
+    reason: str
+
+
+class AdjustmentResponse(BaseModel):
+    adjustment_id: UUID
+    audit_recheck_id: UUID
+    warehouse_id: UUID
+    sku: AdjustmentSku
+    location: AdjustmentLocation
+    recheck_system_quantity_snapshot: int
+    recheck_physical_quantity_snapshot: int
+    requested_change: int
+    reason: str
+    status: Literal["PENDING_MANAGER_DECISION"]
+    requested_by: AdjustmentActor
+    requested_at: datetime
+
+
 class PutawayRequest(BaseModel):
     receive_line_id: UUID
     sku_id: UUID

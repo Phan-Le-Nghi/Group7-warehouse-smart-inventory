@@ -3,6 +3,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from warehouse_api.adjustment_routes import router as adjustment_router
 from warehouse_api.audit_discrepancy_routes import router as audit_discrepancy_router
 from warehouse_api.audit_routes import router as audit_router
 from warehouse_api.auth_routes import router as auth_router
@@ -74,6 +75,7 @@ app.include_router(pick_router)
 app.include_router(transfer_router)
 app.include_router(audit_router)
 app.include_router(audit_discrepancy_router)
+app.include_router(adjustment_router)
 
 
 @app.exception_handler(ApiError)
@@ -106,7 +108,11 @@ def handle_validation_error(
         for item in error.errors()
     )
     allocations_error = any("allocations" in item["loc"] for item in error.errors())
-    if recheck_quantity_error:
+    reason_error = any(item["loc"][-1] == "reason" for item in error.errors())
+    if reason_error:
+        code = "INVALID_REASON"
+        message = "Reason must contain from 1 to 500 characters after trimming."
+    elif recheck_quantity_error:
         code = "INVALID_RECHECK_QUANTITY"
         message = "Recheck physical quantity must be an integer from 0 to 2147483647."
     elif quantity_error:

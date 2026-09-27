@@ -87,6 +87,58 @@ export type AuditRecheckResult = AuditRecheckEvidence & {
   adjust_eligible: boolean
 }
 
+export type AdjustmentActor = {
+  user_id: string
+  login_identifier: string
+}
+
+export type ExistingAdjustment = {
+  adjustment_id: string
+  reason: string
+  requested_change: number
+  status: 'PENDING_MANAGER_DECISION'
+  requested_by: AdjustmentActor
+  requested_at: string
+}
+
+export type AdjustmentContext = {
+  audit_recheck_id: string
+  warehouse_id: string
+  sku: { id: string; code: string }
+  location: { id: string; code: string }
+  original_audit: {
+    audit_id: string
+    audit_line_id: string
+    system_quantity: number
+    physical_quantity: number
+    quantity_discrepancy: number
+  }
+  recheck: {
+    recheck_system_quantity: number
+    recheck_physical_quantity: number
+    recheck_quantity_discrepancy: number
+    result: 'MISMATCH'
+    performed_at: string
+  }
+  requested_change: number
+  existing_adjustment: ExistingAdjustment | null
+}
+
+export type AdjustmentResult = {
+  adjustment_id: string
+  audit_recheck_id: string
+  warehouse_id: string
+  sku: { id: string; code: string }
+  location: { id: string; code: string }
+  recheck_system_quantity_snapshot: number
+  recheck_physical_quantity_snapshot: number
+  requested_change: number
+  reason: string
+  status: 'PENDING_MANAGER_DECISION'
+  requested_by: AdjustmentActor
+  requested_at: string
+}
+
 export type PutawayContext = {
   receive_line_id: string
   sku_id: string
@@ -372,6 +424,29 @@ export function submitAuditRecheck(
       }),
     },
   )
+}
+
+export function loadAdjustmentContext(
+  auditRecheckId: string,
+): Promise<AdjustmentContext> {
+  return apiRequest<AdjustmentContext>(
+    `/api/v1/adjustments/context/${auditRecheckId}`,
+  )
+}
+
+export function submitAdjustmentRequest(
+  auditRecheckId: string,
+  reason: string,
+  idempotencyKey: string,
+): Promise<AdjustmentResult> {
+  return apiRequest<AdjustmentResult>('/api/v1/adjustments', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': idempotencyKey,
+    },
+    body: JSON.stringify({ audit_recheck_id: auditRecheckId, reason }),
+  })
 }
 
 export async function submitPutaway(

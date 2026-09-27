@@ -7,6 +7,7 @@ import {
   submitPutaway,
 } from './api'
 import type { Actor } from './auth'
+import AdjustmentPage from './AdjustmentPage'
 import AuditDiscrepancyPage from './AuditDiscrepancyPage'
 import AuditPage from './AuditPage'
 import PickPage from './PickPage'
@@ -56,6 +57,12 @@ function App({
   const transferSkuId = transferPathMatch
     ? decodeURIComponent(transferPathMatch[1])
     : null
+  const adjustmentPathMatch = window.location.pathname.match(
+    /^\/adjustments\/([^/]+)\/?$/,
+  )
+  const adjustmentRecheckId = adjustmentPathMatch
+    ? decodeURIComponent(adjustmentPathMatch[1])
+    : null
   const [context, setContext] = useState<PutawayContext | null>(null)
   const [destinationId, setDestinationId] = useState('')
   const [result, setResult] = useState<PutawayResult | null>(null)
@@ -66,7 +73,8 @@ function App({
     isAuditPage ||
     isAuditDiscrepancyPage ||
     pickId ||
-    transferSkuId
+    transferSkuId ||
+    adjustmentRecheckId
       ? ''
       : 'Putaway context is not configured.',
   )
@@ -81,6 +89,7 @@ function App({
       isAuditDiscrepancyPage ||
       pickId ||
       transferSkuId ||
+      adjustmentRecheckId ||
       !receiveLineId ||
       actor.role !== 'WAREHOUSE_STAFF'
     ) return
@@ -120,6 +129,7 @@ function App({
     pickId,
     receiveLineId,
     transferSkuId,
+    adjustmentRecheckId,
   ])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -161,7 +171,12 @@ function App({
         </button>
       </header>
 
-      {isAuditDiscrepancyPage ? (
+      {adjustmentRecheckId ? (
+        <AdjustmentPage
+          auditRecheckId={adjustmentRecheckId}
+          onUnauthorized={onUnauthorized}
+        />
+      ) : isAuditDiscrepancyPage ? (
         <AuditDiscrepancyPage onUnauthorized={onUnauthorized} />
       ) : isAuditPage && actor.role === 'WAREHOUSE_STAFF' ? (
         <AuditPage onUnauthorized={onUnauthorized} />
