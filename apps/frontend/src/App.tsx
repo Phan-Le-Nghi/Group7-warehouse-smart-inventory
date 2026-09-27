@@ -8,6 +8,7 @@ import {
 } from './api'
 import type { Actor } from './auth'
 import AdjustmentPage from './AdjustmentPage'
+import AdjustmentDecisionPage from './AdjustmentDecisionPage'
 import AuditDiscrepancyPage from './AuditDiscrepancyPage'
 import AuditPage from './AuditPage'
 import PickPage from './PickPage'
@@ -51,6 +52,7 @@ function App({
   const isTransferHistoryPage = currentPath === '/transfers/history'
   const isAuditPage = currentPath === '/audits/new'
   const isAuditDiscrepancyPage = currentPath === '/audit-discrepancies'
+  const isAdjustmentDecisionPage = currentPath === '/adjustment-decisions'
   const pickPathMatch = window.location.pathname.match(/^\/pick\/([^/]+)\/?$/)
   const pickId = pickPathMatch ? decodeURIComponent(pickPathMatch[1]) : null
   const transferPathMatch = window.location.pathname.match(/^\/transfer\/([^/]+)\/?$/)
@@ -72,6 +74,7 @@ function App({
     isTransferHistoryPage ||
     isAuditPage ||
     isAuditDiscrepancyPage ||
+    isAdjustmentDecisionPage ||
     pickId ||
     transferSkuId ||
     adjustmentRecheckId
@@ -87,6 +90,7 @@ function App({
       isTransferHistoryPage ||
       isAuditPage ||
       isAuditDiscrepancyPage ||
+      isAdjustmentDecisionPage ||
       pickId ||
       transferSkuId ||
       adjustmentRecheckId ||
@@ -125,6 +129,7 @@ function App({
     isTransferHistoryPage,
     isAuditPage,
     isAuditDiscrepancyPage,
+    isAdjustmentDecisionPage,
     onUnauthorized,
     pickId,
     receiveLineId,
@@ -171,7 +176,9 @@ function App({
         </button>
       </header>
 
-      {adjustmentRecheckId ? (
+      {isAdjustmentDecisionPage ? (
+        <AdjustmentDecisionPage onUnauthorized={onUnauthorized} />
+      ) : adjustmentRecheckId ? (
         <AdjustmentPage
           auditRecheckId={adjustmentRecheckId}
           onUnauthorized={onUnauthorized}

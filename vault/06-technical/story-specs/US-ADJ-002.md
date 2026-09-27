@@ -24,8 +24,14 @@ or device/integration behavior at `OQ-022`.
 | Open boundaries | `OQ-012`; broader Audit correction/reversal aspects of `OQ-013`; `OQ-022`; attachment storage/provider/policy |
 
 `DEC-043` is a HUMAN APPROVED TECHNICAL IMPLEMENTATION SPEC, not verified
-research evidence. No application code, migration or automated test was created
-while finalizing this document.
+research evidence. The worktree now contains an implementation candidate. Fresh
+local evidence on 2026-09-28: backend Ruff lint PASS and pytest `227 passed, 32
+PostgreSQL-only skipped`; frontend ESLint/TypeScript PASS, Vitest `77 passed`,
+and production build PASS; Playwright discovery lists 31 tests including three
+US-ADJ-002 scenarios. SQLite migration upgrade/downgrade/re-upgrade and explicit
+terminal-row downgrade refusal pass. PostgreSQL 17/18 migration/concurrency and
+real Chromium/PostgreSQL execution remain pending because no local
+`TEST_DATABASE_URL` or Docker CLI is available.
 
 ## Goal
 
@@ -424,3 +430,20 @@ Staff edit, attachment behavior, reopen action or generic workflow controls.
 - `OQ-022` remains open. No scanner, mobile/offline or integration behavior is
   introduced.
 - Attachment storage/provider/policy remains outside this story.
+
+## Current implementation evidence
+
+- Alembic revision `20260927_0009` extends `adjust_requests` with the approved
+  terminal states, decision/apply evidence, state constraints, nullable global
+  decision-key uniqueness and downgrade refusal when terminal rows exist.
+- Manager-only pending list, exact pending/terminal detail and decision routes
+  implement deterministic newest-first queue order, request-then-balance locking,
+  safe zero materialization, stale/negative guards and historical replay.
+- Staff context and creation replay now expose the current persisted request
+  status without exposing Manager-only evidence.
+- `/adjustment-decisions` implements the approved master/detail flow, confirmation,
+  terminal reload through the selected query identity and attempt-scoped keys.
+- Local component evidence is PASS as recorded above. Eleven new PostgreSQL-only
+  decision/concurrency cases are discovered but skipped locally; CI must supply
+  PostgreSQL 17/18 evidence. Three Chromium scenarios are discovered but were not
+  executed locally.

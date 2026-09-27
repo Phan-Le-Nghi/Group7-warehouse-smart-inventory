@@ -26,6 +26,8 @@ function snapshot() {
     audit_line_count: number
     audit_recheck_count: number
     adjust_request_count: number
+    adjust_statuses: string[]
+    adjust_stock_quantity: number
   }
 }
 
@@ -172,4 +174,77 @@ test('TEST-ADJ1-E2E-003 Manager receives real backend 403 responses', async ({
   )
   expect(createResponse.status()).toBe(403)
   expect(snapshot().adjust_request_count).toBe(0)
+})
+
+async function createPendingAdjustment(page: Page) {
+  const recheckId = await prepareMismatchRecheck(page)
+  await openAsStaff(page, recheckId)
+  await page.getByLabel('Reason').fill('Manager decision E2E evidence')
+  await page.getByRole('button', { name: 'Create Adjust request' }).click()
+  await expect(
+    page.getByRole('heading', { name: 'PENDING_MANAGER_DECISION' }),
+  ).toBeVisible()
+  const context = await page.request.get(
+    `http://127.0.0.1:8000/api/v1/adjustments/context/${recheckId}`,
+  )
+  const adjustmentId = (await context.json()).existing_adjustment
+    .adjustment_id as string
+  await page.getByRole('button', { name: 'Sign out' }).click()
+  await signIn(page, '/adjustment-decisions', 'demo.manager')
+  return adjustmentId
+}
+
+test('TEST-ADJ2-E2E-001 Manager approves once and reloads APPLIED', async ({
+  page,
+}) => {
+  const adjustmentId = await createPendingAdjustment(page)
+  await page.getByRole('button', { name: /Review AUDIT-SKU-MISSING-BALANCE/ }).click()
+  await page.getByRole('button', { name: 'Approve' }).click()
+  let intercepted = false
+  await page.route('**/api/v1/adjustments/*/decision', async (route) => {
+    if (intercepted) {
+      await route.continue()
+      return
+    }
+    intercepted = true
+    await route.fetch()
+    await route.abort('failed')
+  })
+  await page.getByRole('button', { name: 'Confirm approval' }).click()
+  await expect(page.getByRole('alert')).toContainText('Failed to fetch')
+  await page.unroute('**/api/v1/adjustments/*/decision')
+  await page.getByRole('button', { name: 'Confirm approval' }).click()
+  await expect(page.getByRole('heading', { name: 'APPLIED' })).toBeVisible()
+  expect(snapshot().adjust_stock_quantity).toBe(2)
+  expect(snapshot().adjust_statuses).toEqual(['APPLIED'])
+
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'APPLIED' })).toBeVisible()
+  expect(new URL(page.url()).searchParams.get('adjustment_id')).toBe(adjustmentId)
+  expect(snapshot().adjust_stock_quantity).toBe(2)
+})
+
+test('TEST-ADJ2-E2E-002 Manager rejects without changing stock', async ({ page }) => {
+  await createPendingAdjustment(page)
+  await page.getByRole('button', { name: /Review AUDIT-SKU-MISSING-BALANCE/ }).click()
+  await page.getByRole('button', { name: 'Reject' }).click()
+  await page.getByLabel('Rejection reason').fill('Evidence is not accepted')
+  await page.getByRole('button', { name: 'Confirm rejection' }).click()
+  await expect(page.getByRole('heading', { name: 'REJECTED' })).toBeVisible()
+  expect(snapshot().adjust_stock_quantity).toBe(0)
+  expect(snapshot().adjust_statuses).toEqual(['REJECTED'])
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'REJECTED' })).toBeVisible()
+})
+
+test('TEST-ADJ2-E2E-003 Warehouse Staff receives real backend 403', async ({
+  page,
+}) => {
+  backendCommand('--audit-reset')
+  await signIn(page, '/adjustment-decisions', 'demo.warehouse_staff')
+  await expect(page.getByRole('alert')).toContainText('Manager role required')
+  const response = await page.request.get(
+    'http://127.0.0.1:8000/api/v1/adjustments?status=PENDING_MANAGER_DECISION',
+  )
+  expect(response.status()).toBe(403)
 })

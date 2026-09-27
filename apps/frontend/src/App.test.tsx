@@ -358,3 +358,26 @@ describe('US-ADJ-001 exact-context addressing', () => {
     )
   })
 })
+
+describe('US-ADJ-002 Manager addressing', () => {
+  it('loads the Manager queue at /adjustment-decisions', async () => {
+    window.history.pushState({}, '', '/adjustment-decisions')
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockReturnValue(
+      jsonResponse({ items: [] }),
+    )
+    render(
+      <App
+        actor={{ ...actor, role: 'MANAGER' }}
+        onLogout={() => undefined}
+        onUnauthorized={() => undefined}
+        receiveLineId={receiveLineId}
+      />,
+    )
+    expect(
+      await screen.findByRole('heading', { name: 'Adjust decisions' }),
+    ).toBeVisible()
+    expect(fetchMock.mock.calls[0][0]).toContain(
+      '/api/v1/adjustments?status=PENDING_MANAGER_DECISION',
+    )
+  })
+})

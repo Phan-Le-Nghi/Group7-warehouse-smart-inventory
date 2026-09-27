@@ -96,7 +96,7 @@ export type ExistingAdjustment = {
   adjustment_id: string
   reason: string
   requested_change: number
-  status: 'PENDING_MANAGER_DECISION'
+  status: AdjustmentStatus
   requested_by: AdjustmentActor
   requested_at: string
 }
@@ -134,10 +134,71 @@ export type AdjustmentResult = {
   recheck_physical_quantity_snapshot: number
   requested_change: number
   reason: string
-  status: 'PENDING_MANAGER_DECISION'
+  status: AdjustmentStatus
   requested_by: AdjustmentActor
   requested_at: string
 }
+
+export type AdjustmentStatus =
+  | 'PENDING_MANAGER_DECISION'
+  | 'APPLIED'
+  | 'REJECTED'
+
+export type AdjustmentQueueItem = {
+  adjustment_id: string
+  status: 'PENDING_MANAGER_DECISION'
+  requested_by: AdjustmentActor
+  requested_at: string
+  reason: string
+  sku: { id: string; code: string }
+  location: { id: string; code: string }
+  requested_change: number
+}
+
+export type AdjustmentQueue = { items: AdjustmentQueueItem[] }
+
+export type AdjustmentDetail = {
+  adjustment_id: string
+  audit_recheck_id: string
+  warehouse_id: string
+  sku: { id: string; code: string }
+  location: { id: string; code: string }
+  original_audit: {
+    audit_id: string
+    audit_line_id: string
+    system_quantity: number
+    physical_quantity: number
+    quantity_discrepancy: number
+    result: 'MISMATCH'
+    audited_by: AdjustmentActor
+    audited_at: string
+  }
+  manager_recheck: {
+    recheck_id: string
+    recheck_system_quantity: number
+    recheck_physical_quantity: number
+    recheck_quantity_discrepancy: number
+    result: 'MISMATCH'
+    performed_by: AdjustmentActor
+    performed_at: string
+  }
+  recheck_system_quantity_snapshot: number
+  recheck_physical_quantity_snapshot: number
+  requested_change: number
+  reason: string
+  requested_by: AdjustmentActor
+  requested_at: string
+  status: AdjustmentStatus
+  decided_by: AdjustmentActor | null
+  decided_at: string | null
+  rejection_reason: string | null
+  applied_stock_before: number | null
+  applied_stock_after: number | null
+}
+
+export type AdjustmentDecisionCommand =
+  | { decision: 'APPROVE' }
+  | { decision: 'REJECT'; rejection_reason: string }
 
 export type PutawayContext = {
   receive_line_id: string
@@ -447,6 +508,38 @@ export function submitAdjustmentRequest(
     },
     body: JSON.stringify({ audit_recheck_id: auditRecheckId, reason }),
   })
+}
+
+export function loadPendingAdjustments(): Promise<AdjustmentQueue> {
+  return apiRequest<AdjustmentQueue>(
+    '/api/v1/adjustments?status=PENDING_MANAGER_DECISION',
+  )
+}
+
+export function loadAdjustmentDetail(
+  adjustmentId: string,
+): Promise<AdjustmentDetail> {
+  return apiRequest<AdjustmentDetail>(
+    `/api/v1/adjustments/${encodeURIComponent(adjustmentId)}`,
+  )
+}
+
+export function submitAdjustmentDecision(
+  adjustmentId: string,
+  command: AdjustmentDecisionCommand,
+  idempotencyKey: string,
+): Promise<AdjustmentDetail> {
+  return apiRequest<AdjustmentDetail>(
+    `/api/v1/adjustments/${encodeURIComponent(adjustmentId)}/decision`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': idempotencyKey,
+      },
+      body: JSON.stringify(command),
+    },
+  )
 }
 
 export async function submitPutaway(

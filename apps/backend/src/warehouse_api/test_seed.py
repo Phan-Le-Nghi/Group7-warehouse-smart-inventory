@@ -658,6 +658,18 @@ def audit_effect_snapshot() -> dict[str, object]:
             "adjust_request_count": int(
                 session.scalar(select(func.count(AdjustRequest.id))) or 0
             ),
+            "adjust_statuses": list(
+                session.scalars(select(AdjustRequest.status).order_by(AdjustRequest.id))
+            ),
+            "adjust_stock_quantity": int(
+                session.scalar(
+                    select(StockBalance.quantity).where(
+                        StockBalance.sku_id == AUDIT_SKU_ID,
+                        StockBalance.location_id == SALES_SHELF_ID,
+                    )
+                )
+                or 0
+            ),
             "missing_balance_count": int(
                 session.scalar(
                     select(func.count(StockBalance.id)).where(
