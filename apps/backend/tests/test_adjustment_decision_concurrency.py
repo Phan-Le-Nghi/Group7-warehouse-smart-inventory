@@ -389,6 +389,10 @@ def test_two_adjustments_same_balance(postgres_decision_factory) -> None:
 
 def test_global_decision_key_race_across_requests(postgres_decision_factory) -> None:
     factory, fixture = postgres_decision_factory
+    raced_ids = {
+        fixture.adjustment_id,
+        fixture.other_balance_adjustment_id,
+    }
     results = _run_decisions(
         factory,
         fixture,
@@ -403,6 +407,36 @@ def test_global_decision_key_race_across_requests(postgres_decision_factory) -> 
         ],
     )
     assert sorted(results) == ["APPLIED", "IDEMPOTENCY_KEY_REUSED"]
+    with factory() as session:
+        requests = list(
+            session.scalars(
+                select(AdjustRequest).where(AdjustRequest.id.in_(raced_ids))
+            )
+        )
+    assert sorted(request.status for request in requests) == [
+        "APPLIED",
+        "PENDING_MANAGER_DECISION",
+    ]
+    winner = next(request for request in requests if request.status == "APPLIED")
+    loser = next(
+        request for request in requests if request.status == "PENDING_MANAGER_DECISION"
+    )
+    assert winner.decision_idempotency_key == "global-key"
+    assert winner.decided_by_user_id == fixture.manager.user_id
+    assert winner.applied_stock_before == 10
+    assert winner.applied_stock_after == 8
+    assert loser.decision_idempotency_key is None
+    assert loser.decision_request_fingerprint is None
+    assert loser.decided_by_user_id is None
+    assert loser.decided_at is None
+    assert loser.applied_stock_before is None
+    assert loser.applied_stock_after is None
+    assert sorted(
+        [
+            _stock(factory, fixture.sku_id, fixture.source_id),
+            _stock(factory, fixture.second_sku_id, fixture.destination_id),
+        ]
+    ) == [8, 10]
 
 
 def test_global_decision_key_race_on_same_balance(postgres_decision_factory) -> None:

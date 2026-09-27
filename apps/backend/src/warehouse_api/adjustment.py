@@ -747,52 +747,62 @@ def decide_adjustment(
     recheck, line, audit, location = source
     _validate_immutable_source(adjustment, recheck, line, audit, location, warehouse_id)
 
-    now = datetime.now(UTC)
-    if command.decision == "APPROVE":
-        _materialize_zero_balance(session, adjustment)
-        balance = session.scalar(
-            select(StockBalance)
-            .where(
-                StockBalance.sku_id == adjustment.sku_id,
-                StockBalance.location_id == adjustment.location_id,
-            )
-            .with_for_update()
-            .execution_options(populate_existing=True)
-        )
-        if balance is None:
-            raise RuntimeError("Stock balance could not be materialized")
-        # A concurrent decision on another request may have claimed the global
-        # key while this transaction waited for the exact stock-row lock.
-        _ensure_decision_key_unclaimed(session, decision_key)
-        current = balance.quantity
-        if current != adjustment.recheck_system_quantity_snapshot:
-            raise ApiError(
-                409,
-                "ADJUSTMENT_STALE",
-                "Current stock no longer matches the recheck snapshot.",
-            )
-        candidate = current + adjustment.requested_change
-        if candidate < 0:
-            raise ApiError(
-                409,
-                "INSUFFICIENT_STOCK_FOR_ADJUSTMENT",
-                "The approved adjustment would make stock negative.",
-            )
-        balance.quantity = candidate
-        adjustment.status = "APPLIED"
-        adjustment.applied_stock_before = current
-        adjustment.applied_stock_after = candidate
-    else:
-        adjustment.status = "REJECTED"
-        adjustment.rejection_reason = reason
-    adjustment.decided_by_user_id = actor.user_id
-    adjustment.decided_at = now
-    adjustment.decision_idempotency_key = decision_key
-    adjustment.decision_request_fingerprint = fingerprint
+    # Python's sqlite3 legacy transaction mode does not begin a database
+    # transaction for the SELECTs above. Without an explicit outer BEGIN, the
+    # SAVEPOINT below can become the top-level transaction and its release can
+    # commit tentative decision work before the request scope commits.
+    connection = session.connection()
+    if connection.dialect.name == "sqlite":
+        driver_connection = connection.connection.driver_connection
+        if not driver_connection.in_transaction:
+            connection.exec_driver_sql("BEGIN")
+
     try:
-        session.flush()
+        with session.begin_nested():
+            now = datetime.now(UTC)
+            if command.decision == "APPROVE":
+                _materialize_zero_balance(session, adjustment)
+                balance = session.scalar(
+                    select(StockBalance)
+                    .where(
+                        StockBalance.sku_id == adjustment.sku_id,
+                        StockBalance.location_id == adjustment.location_id,
+                    )
+                    .with_for_update()
+                    .execution_options(populate_existing=True)
+                )
+                if balance is None:
+                    raise RuntimeError("Stock balance could not be materialized")
+                # A concurrent decision on another request may have claimed the
+                # global key while this transaction waited for the stock-row lock.
+                _ensure_decision_key_unclaimed(session, decision_key)
+                current = balance.quantity
+                if current != adjustment.recheck_system_quantity_snapshot:
+                    raise ApiError(
+                        409,
+                        "ADJUSTMENT_STALE",
+                        "Current stock no longer matches the recheck snapshot.",
+                    )
+                candidate = current + adjustment.requested_change
+                if candidate < 0:
+                    raise ApiError(
+                        409,
+                        "INSUFFICIENT_STOCK_FOR_ADJUSTMENT",
+                        "The approved adjustment would make stock negative.",
+                    )
+                balance.quantity = candidate
+                adjustment.status = "APPLIED"
+                adjustment.applied_stock_before = current
+                adjustment.applied_stock_after = candidate
+            else:
+                adjustment.status = "REJECTED"
+                adjustment.rejection_reason = reason
+            adjustment.decided_by_user_id = actor.user_id
+            adjustment.decided_at = now
+            adjustment.decision_idempotency_key = decision_key
+            adjustment.decision_request_fingerprint = fingerprint
+            session.flush()
     except IntegrityError as error:
-        session.rollback()
         winner = session.scalar(
             select(AdjustRequest).where(
                 AdjustRequest.decision_idempotency_key == decision_key
