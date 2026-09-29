@@ -72,6 +72,7 @@ def _reset_audit_fixture(session: Session) -> None:
     session.execute(delete(AuditRecheck))
     session.execute(delete(AuditLine))
     session.execute(delete(AuditSession))
+    session.execute(delete(Transfer).where(Transfer.sku_id == AUDIT_SKU_ID))
     temporary_sku = session.get(Sku, AUDIT_SCOPE_CHANGE_SKU_ID)
     if temporary_sku is not None:
         session.delete(temporary_sku)

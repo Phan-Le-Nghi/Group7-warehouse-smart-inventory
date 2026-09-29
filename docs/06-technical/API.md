@@ -2,7 +2,7 @@
 
 ## Trạng thái
 
-`PROPOSED TECHNICAL CONTRACT — DOCUMENTATION ONLY`
+`IMPLEMENTED ROUTE INVENTORY THROUGH US-ADJ-002`
 
 Canonical technical proposal: [`../../vault/06-technical/api-contract.md`](../../vault/06-technical/api-contract.md). Exact route và JSON shape là technical contract, không phải product requirement.
 
@@ -10,13 +10,13 @@ Canonical technical proposal: [`../../vault/06-technical/api-contract.md`](../..
 
 | Route | Purpose | Trạng thái |
 |---|---|---|
-| `POST /api/v1/auth/login` | `{login_identifier,password}`; verify Argon2id, tạo PostgreSQL session, set cookie; response chỉ có actor | POST-REVIEW IMPLEMENTATION CANDIDATE — chờ PostgreSQL/E2E evidence |
-| `POST /api/v1/auth/logout` | Revoke current server-side session, expire cookie, trả `204` | POST-REVIEW IMPLEMENTATION CANDIDATE — chờ PostgreSQL/E2E evidence |
-| `GET /api/v1/auth/me` | Trả actor từ session, active user và current database role | POST-REVIEW IMPLEMENTATION CANDIDATE — chờ PostgreSQL/E2E evidence |
+| `POST /api/v1/auth/login` | `{login_identifier,password}`; verify Argon2id, tạo PostgreSQL session, set cookie; response chỉ có actor | IMPLEMENTED / MERGED |
+| `POST /api/v1/auth/logout` | Revoke current server-side session, expire cookie, trả `204` | IMPLEMENTED / MERGED |
+| `GET /api/v1/auth/me` | Trả actor từ session, active user và current database role | IMPLEMENTED / MERGED |
 
 Session cookie là host-only `warehouse_session`, `HttpOnly`, `Path=/`, absolute 8 giờ, `Secure` tại staging/production và configurable `SameSite` theo topology. Missing/invalid/expired/revoked session hoặc inactive user trả `401`; authenticated actor thiếu quyền trả `403`. Login và `/me` trả `id`, normalized `login_identifier`, current `role`; token không xuất hiện trong JSON. Frontend không được truyền role làm source-of-truth; test actor injection chỉ dùng dependency override trong automated tests. Current MVP không thêm JWT, refresh token, self-registration, password reset, social login, OAuth, Keycloak hoặc external identity provider.
 
-## MVP route map đề xuất
+## Implemented MVP route map
 
 | Route | Purpose | Story/boundary |
 |---|---|---|
@@ -30,16 +30,21 @@ Session cookie là host-only `warehouse_session`, `HttpOnly`, `Path=/`, absolute
 | `POST /api/v1/picks` | Multi-location/full/`PARTIAL / INSUFFICIENT` Pick | `US-PICK-001` |
 | `POST /api/v1/transfers` | Atomic internal Transfer confirmation | `US-TRF-001` |
 | `GET /api/v1/transfers` | Confirmed Transfer history | `US-TRF-002` |
+| `GET /api/v1/audits/context` | Staff Audit SKU/location context with preview quantities | `US-AUD-001`; POST remains authoritative |
 | `POST /api/v1/audits` | Selected-scope count and comparison | `US-AUD-001` |
+| `GET /api/v1/audit-discrepancies` | Manager mismatch work list | `US-AUD-002`; read-only |
+| `GET /api/v1/audit-discrepancies/{audit_line_id}` | Manager exact discrepancy/recheck detail | `US-AUD-002`; read-only |
 | `POST /api/v1/audit-discrepancies/{id}/rechecks` | Mandatory re-check context; no auto Adjust | `US-AUD-002` |
+| `GET /api/v1/adjustments/context/{audit_recheck_id}` | Staff exact Adjust context and persisted request status | `US-ADJ-001`; no current-stock preview |
 | `POST /api/v1/adjustments` | Re-checked request with reason; no pre-decision stock change | `US-ADJ-001` |
 | `GET /api/v1/adjustments?status=PENDING_MANAGER_DECISION` | Manager pending Adjust work queue only | `US-ADJ-002`; no history/search/export/advanced query |
 | `GET /api/v1/adjustments/{id}` | Manager exact pending or terminal detail | `US-ADJ-002`; `PENDING_MANAGER_DECISION`, `APPLIED`, `REJECTED` |
 | `POST /api/v1/adjustments/{id}/decision` | Manager approve/reject with separate required idempotency | `US-ADJ-002`; first commit/replay `200` |
 
-Routes through `US-ADJ-002` now have worktree implementation candidates recorded
-in the Story Specs Index. PostgreSQL 17/18 concurrency/migration and real browser
-execution remain pending evidence.
+Routes through `US-ADJ-002` above are implemented and merged. This inventory was
+verified against the FastAPI route modules; it does not claim deployment. Exact
+successful GitHub CI URLs and job results are not available locally and must be
+recorded manually.
 
 ## US-REC-001 Receive contract
 
@@ -62,7 +67,7 @@ automatically navigate/call Putaway.
 
 ## POST /api/v1/putaways
 
-Proposed request:
+Implemented request:
 
 ```json
 {
@@ -73,7 +78,7 @@ Proposed request:
 }
 ```
 
-Request dùng proposed `Idempotency-Key` header. Destination ID phải tham chiếu `BACKROOM` hoặc `SALES_SHELF` thuộc Warehouse của Receive line. Success trả Putaway ID, Receive line, SKU, quantity, destination ID/code, confirmation time, committed destination balance và derived Warehouse total.
+Request dùng required `Idempotency-Key` header. Destination ID phải tham chiếu `BACKROOM` hoặc `SALES_SHELF` thuộc Warehouse của Receive line. Success trả Putaway ID, Receive line, SKU, quantity, destination ID/code, confirmation time, committed destination balance và derived Warehouse total.
 
 Error cases gồm missing/mismatched Receive/SKU, non-positive or malformed Round 1 integer quantity, invalid destination, allocation vượt eligible remaining và idempotency conflict. Tất cả failure đều không có data effect. Same-key/same-payload replay trả original result và không increment lần hai.
 
@@ -127,6 +132,6 @@ contract is in
 
 ## Contract boundaries
 
-- Actor/auth dependency phải giữ canonical permission theo `DEC-017/031/033`; implementation đã merge và CI pass, nhưng staging HTTPS cookie behavior và PostgreSQL 17/Supabase evidence chưa được verify.
+- Actor/auth dependency phải giữ canonical permission theo `DEC-017/031/033`; implementation đã merge, nhưng exact external CI run URL/job evidence và staging HTTPS cookie behavior không có trong repository để verify.
 - Adjust Manager decision/apply is approved at `DEC-043`; attachment storage, advanced pagination/filtering, long-term production deployment và unresolved NFR còn TBD. Render chỉ được approve cho staging/demo tại `DEC-032`.
 - `OQ-012`, `OQ-013` và `OQ-014` vẫn OPEN.

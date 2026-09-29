@@ -97,7 +97,9 @@ test('TEST-ADJ1-E2E-001 Staff creates and reloads an immutable Adjust request', 
   await expect(
     page.getByRole('heading', { name: 'PENDING_MANAGER_DECISION' }),
   ).toBeVisible()
-  await expect(page.getByText(/Stock was not changed/)).toBeVisible()
+  await expect(
+    page.getByText(/Creating this request did not change stock/),
+  ).toBeVisible()
 
   await page.reload()
   await expect(
@@ -189,15 +191,20 @@ async function createPendingAdjustment(page: Page) {
   )
   const adjustmentId = (await context.json()).existing_adjustment
     .adjustment_id as string
+  return { adjustmentId, recheckId }
+}
+
+async function openAsManager(page: Page) {
   await page.getByRole('button', { name: 'Sign out' }).click()
   await signIn(page, '/adjustment-decisions', 'demo.manager')
-  return adjustmentId
+  await expect(page.getByRole('heading', { name: 'Adjust decisions' })).toBeVisible()
 }
 
 test('TEST-ADJ2-E2E-001 Manager approves once and reloads APPLIED', async ({
   page,
 }) => {
-  const adjustmentId = await createPendingAdjustment(page)
+  const { adjustmentId, recheckId } = await createPendingAdjustment(page)
+  await openAsManager(page)
   await page.getByRole('button', { name: /Review AUDIT-SKU-MISSING-BALANCE/ }).click()
   await page.getByRole('button', { name: 'Approve' }).click()
   let intercepted = false
@@ -222,10 +229,23 @@ test('TEST-ADJ2-E2E-001 Manager approves once and reloads APPLIED', async ({
   await expect(page.getByRole('heading', { name: 'APPLIED' })).toBeVisible()
   expect(new URL(page.url()).searchParams.get('adjustment_id')).toBe(adjustmentId)
   expect(snapshot().adjust_stock_quantity).toBe(2)
+
+  await page.getByRole('button', { name: 'Sign out' }).click()
+  await signIn(
+    page,
+    `/adjustments/${encodeURIComponent(recheckId)}`,
+    'demo.warehouse_staff',
+  )
+  await expect(page.getByRole('heading', { name: 'APPLIED' })).toBeVisible()
+  await expect(page.getByText(/approved and applied this request/)).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'APPLIED' })).toBeVisible()
+  await expect(page.getByText(/approved and applied this request/)).toBeVisible()
 })
 
 test('TEST-ADJ2-E2E-002 Manager rejects without changing stock', async ({ page }) => {
-  await createPendingAdjustment(page)
+  const { recheckId } = await createPendingAdjustment(page)
+  await openAsManager(page)
   await page.getByRole('button', { name: /Review AUDIT-SKU-MISSING-BALANCE/ }).click()
   await page.getByRole('button', { name: 'Reject' }).click()
   await page.getByLabel('Rejection reason').fill('Evidence is not accepted')
@@ -235,6 +255,91 @@ test('TEST-ADJ2-E2E-002 Manager rejects without changing stock', async ({ page }
   expect(snapshot().adjust_statuses).toEqual(['REJECTED'])
   await page.reload()
   await expect(page.getByRole('heading', { name: 'REJECTED' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Sign out' }).click()
+  await signIn(
+    page,
+    `/adjustments/${encodeURIComponent(recheckId)}`,
+    'demo.warehouse_staff',
+  )
+  await expect(page.getByRole('heading', { name: 'REJECTED' })).toBeVisible()
+  await expect(page.getByText(/No adjustment was applied/)).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'REJECTED' })).toBeVisible()
+  await expect(page.getByText(/No adjustment was applied/)).toBeVisible()
+})
+
+test('TEST-ADJ2-E2E-004 stale approval stays pending without decision evidence', async ({
+  page,
+}) => {
+  const { adjustmentId } = await createPendingAdjustment(page)
+
+  const actorResponse = await page.request.get(
+    'http://127.0.0.1:8000/api/v1/auth/me',
+  )
+  expect(actorResponse.status()).toBe(200)
+  expect(await actorResponse.json()).toMatchObject({ role: 'WAREHOUSE_STAFF' })
+  const transfer = await page.request.post(
+    'http://127.0.0.1:8000/api/v1/transfers',
+    {
+      headers: { 'Idempotency-Key': 'adjustment-stale-approved-transfer' },
+      data: {
+        sku_id: '00000000-0000-0000-0000-000000000502',
+        source_location_id: '00000000-0000-0000-0000-000000000005',
+        destination_location_id: '00000000-0000-0000-0000-000000000006',
+        quantity: 1,
+      },
+    },
+  )
+  const transferBody = await transfer.json()
+  expect(transfer.status(), JSON.stringify(transferBody)).toBe(201)
+  expect(transferBody).toMatchObject({
+    sku_id: '00000000-0000-0000-0000-000000000502',
+    source_location_id: '00000000-0000-0000-0000-000000000005',
+    destination_location_id: '00000000-0000-0000-0000-000000000006',
+    quantity: 1,
+    stock: {
+      source_quantity: 6,
+      destination_quantity: 1,
+      warehouse_total: 7,
+    },
+  })
+  const beforeApproval = snapshot()
+  await openAsManager(page)
+  await page.getByRole('button', { name: /Review AUDIT-SKU-MISSING-BALANCE/ }).click()
+
+  await page.getByRole('button', { name: 'Approve' }).click()
+  const decisionResponse = page.waitForResponse(
+    (response) =>
+      response.url().endsWith(`/api/v1/adjustments/${adjustmentId}/decision`) &&
+      response.request().method() === 'POST',
+  )
+  await page.getByRole('button', { name: 'Confirm approval' }).click()
+  const stale = await decisionResponse
+  expect(stale.status()).toBe(409)
+  expect((await stale.json()).error.code).toBe('ADJUSTMENT_STALE')
+  await expect(page.getByRole('alert')).toContainText(
+    'Current stock no longer matches the recheck snapshot',
+  )
+
+  const afterApproval = snapshot()
+  expect(afterApproval.adjust_stock_quantity).toBe(beforeApproval.adjust_stock_quantity)
+  expect(afterApproval.adjust_statuses).toEqual(['PENDING_MANAGER_DECISION'])
+
+  const detailResponse = await page.request.get(
+    `http://127.0.0.1:8000/api/v1/adjustments/${adjustmentId}`,
+  )
+  expect(detailResponse.status()).toBe(200)
+  const detail = await detailResponse.json()
+  expect(detail.status).toBe('PENDING_MANAGER_DECISION')
+  expect(detail.decided_by).toBeNull()
+  expect(detail.decided_at).toBeNull()
+  expect(detail.applied_stock_before).toBeNull()
+  expect(detail.applied_stock_after).toBeNull()
+
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'PENDING_MANAGER_DECISION' })).toBeVisible()
+  expect(snapshot().adjust_stock_quantity).toBe(beforeApproval.adjust_stock_quantity)
 })
 
 test('TEST-ADJ2-E2E-003 Warehouse Staff receives real backend 403', async ({

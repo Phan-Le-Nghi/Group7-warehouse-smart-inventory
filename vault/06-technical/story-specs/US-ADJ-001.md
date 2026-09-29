@@ -2,7 +2,7 @@
 
 ## Status and authority
 
-`IMPLEMENTATION-READY — HUMAN APPROVED`
+`IMPLEMENTED / MERGED`
 
 Canonical product wording and Acceptance Criteria remain authoritative at
 [`../../04-product/stories/US-ADJ-001.md`](../../04-product/stories/US-ADJ-001.md).
@@ -24,8 +24,7 @@ storage/provider/policy boundary.
 | Open boundaries | `OQ-012`, broader `OQ-013`, `OQ-022`; attachment storage/provider/policy; Manager decision/apply remains `US-ADJ-002` |
 
 `DEC-042` is a HUMAN APPROVED TECHNICAL IMPLEMENTATION SPEC, not verified
-research evidence. No application code, migration or automated test was created
-while finalizing this document.
+research evidence. Repository history records the implementation merge at `c34b4b1`.
 
 ## Goal
 
@@ -468,7 +467,7 @@ approve/reject/apply controls or claim stock was changed.
 
 ## Current implementation evidence
 
-- The worktree contains the minimum constrained `adjust_requests` model and
+- The merged implementation contains the minimum constrained `adjust_requests` model and
   Alembic revision `20260927_0008`, with source snapshots, exact initial status,
   normalized reason protection, `RESTRICT` foreign keys and both atomic claim
   constraints.
@@ -485,16 +484,17 @@ approve/reject/apply controls or claim stock was changed.
   upgrade/downgrade/re-upgrade test passes.
 - PostgreSQL 17/18 migration/concurrency execution and real Chromium/PostgreSQL
   browser execution remain `NOT VERIFIED` locally because no `TEST_DATABASE_URL`
-  is available. Human diff and visual review remain pending. No commit, push or
-  deployment was performed.
+  was available for that run. External GitHub CI evidence must be recorded manually
+  with the commit SHA, workflow run URL and job results. No deployment is claimed.
 
 ## Open questions and boundaries
 
 - `OQ-012` remains open globally. This story derives from the existing integer
   recheck slice and does not canonicalize UOM, decimal quantity or conversion.
-- `OQ-013` remains `PARTIALLY DECIDED / OPEN`. `DEC-042` decides current Adjust
-  request creation only; Manager decision/apply, stale apply handling, rejected-case
-  closure and broader Audit/Adjust lifecycle remain outside this story.
+- `DEC-042` decides request creation; `DEC-043` subsequently decides the current
+  Manager decision/apply lifecycle: `APPLIED` and `REJECTED` are terminal, stale or
+  insufficient failed approval remains pending, and the same recheck cannot create
+  another request. Broader Audit correction/reversal remains open at `OQ-013`.
 - `OQ-022` remains open for scanner/device, mobile/offline and external integration.
 - Attachment is optional, but storage/provider/policy and actual file I/O remain
   `OPEN / TBD` and are not implemented in this slice.

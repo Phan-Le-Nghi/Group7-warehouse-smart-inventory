@@ -291,7 +291,7 @@ Không đưa secret, dữ liệu cá nhân, Context Pack tạm thời hoặc bư
 - **Artifact references:** [`../vault/06-technical/story-specs/US-AUD-001.md`](../vault/06-technical/story-specs/US-AUD-001.md), [`../vault/08-decisions/decision-log.md`](../vault/08-decisions/decision-log.md), [`../vault/02-requirements/open-questions.md`](../vault/02-requirements/open-questions.md), [`06-technical/story-specs-index.md`](06-technical/story-specs-index.md), [`TRACEABILITY.md`](TRACEABILITY.md).
 - **Human review:** Human approved H1–H10 and requested docs-only synchronization. Implementation still requires normal code diff review and fresh verification. No commit or push was performed.
 
-### AI-USE-025 — US-AUD-001 worktree implementation
+### AI-USE-025 — US-AUD-001 implementation (subsequently merged)
 
 - **Task:** Implement the human-approved `US-AUD-001` contract across schema/migration, Audit domain/API, frontend form, automated tests, PostgreSQL concurrency scenarios, Playwright fixtures and traceability without commit, push or deployment.
 - **AI support:** AI added `audit_sessions`/`audit_lines` with portable checks; selected-pair and single-statement whole-Warehouse snapshots; missing-balance-zero behavior; historical replay-before-current-scope lookup; PostgreSQL/SQLite atomic claim support; Staff-only routes and typed errors; `/audits/new` with selected/whole modes and attempt-scoped keys; no-effect fixtures; and component, migration, concurrency and browser scenarios.
@@ -299,7 +299,9 @@ Không đưa secret, dữ liệu cá nhân, Context Pack tạm thời hoặc bư
 - **Scope guard:** No Manager review/recheck, Adjust action/CTA, stock mutation, Audit history/filter, generic idempotency/workflow framework, scanner/device, notification, AI, deployment, commit or push was added. `OQ-012`, broader `OQ-013` and `OQ-022` remain unchanged.
 - **Verification boundary:** Fresh local evidence: backend Ruff lint/format PASS; pytest `164 passed, 13 PostgreSQL-only skipped`; frontend ESLint/TypeScript PASS, Vitest `56 passed`, production build PASS; Playwright discovery lists 20 tests including six Audit scenarios. SQLite migration upgrade/downgrade/re-upgrade passes in `test_audit_migration.py`. Real PostgreSQL concurrency/migration and browser execution are `NOT VERIFIED` because `TEST_DATABASE_URL` is unset and Docker CLI is unavailable.
 - **Artifact references:** [`../vault/06-technical/story-specs/US-AUD-001.md`](../vault/06-technical/story-specs/US-AUD-001.md), [`06-technical/story-specs-index.md`](06-technical/story-specs-index.md), [`TRACEABILITY.md`](TRACEABILITY.md), application files under `../apps/`.
-- **Human review:** Implementation diff, one-page Audit visual quality and PostgreSQL/browser evidence await human review. No commit, push or deployment was performed.
+- **Repository reconciliation:** The implementation was subsequently merged at
+  `66d4e5c`. Exact GitHub workflow URL/job results are not recorded locally; no
+  deployment is claimed.
 
 ### AI-USE-026 — US-AUD-002 Technical Story Spec human-review finalization
 
@@ -312,7 +314,7 @@ Không đưa secret, dữ liệu cá nhân, Context Pack tạm thời hoặc bư
 - **Artifact references:** [`../vault/06-technical/story-specs/US-AUD-002.md`](../vault/06-technical/story-specs/US-AUD-002.md), [`../vault/08-decisions/decision-log.md`](../vault/08-decisions/decision-log.md), [`../vault/02-requirements/open-questions.md`](../vault/02-requirements/open-questions.md), [`06-technical/story-specs-index.md`](06-technical/story-specs-index.md), [`TRACEABILITY.md`](TRACEABILITY.md).
 - **Human review:** Human approved H1–H12 and requested docs-only synchronization. Implementation still requires normal code diff review and fresh verification. No commit or push was performed.
 
-### AI-USE-027 — US-AUD-002 worktree implementation
+### AI-USE-027 — US-AUD-002 implementation (subsequently merged)
 
 - **Task:** Implement the human-approved `US-AUD-002` Manager discrepancy/recheck contract across persistence, API, frontend, automated tests, Playwright fixtures and traceability without commit, push or deployment.
 - **AI support:** AI added the constrained `audit_rechecks` model and migration; shared mismatch-only list/detail read model; Manager-only routes; submit-time current-stock snapshot with missing-zero behavior; two-unique atomic insert/replay classification; derived Adjust eligibility; `/audit-discrepancies` master/detail UI; attempt-scoped frontend keys; no-effect fixtures; and component, migration, PostgreSQL-only concurrency/workflow-race and browser scenarios.
@@ -320,7 +322,9 @@ Không đưa secret, dữ liệu cá nhân, Context Pack tạm thời hoặc bư
 - **Scope guard:** No AuditSession/AuditLine or StockBalance mutation, repeated/session-batch recheck, Adjust FK/request/application/CTA/navigation, generic idempotency/workflow framework, scanner/device, notification, AI, CI workflow edit, deployment, commit or push was added. `OQ-012`, remaining `OQ-013` and `OQ-022` remain unchanged.
 - **Verification boundary:** Fresh local evidence: backend Ruff lint/format PASS; pytest `191 passed, 18 PostgreSQL-only skipped`; frontend ESLint/TypeScript PASS, Vitest `66 passed`, production build PASS; Playwright discovery lists 25 tests including five US-AUD-002 scenarios. SQLite migration upgrade/downgrade/re-upgrade passes. PostgreSQL 17/18 migration/concurrency and real Chromium/PostgreSQL execution are `NOT VERIFIED` because no local `TEST_DATABASE_URL` is available.
 - **Artifact references:** [`../vault/06-technical/story-specs/US-AUD-002.md`](../vault/06-technical/story-specs/US-AUD-002.md), [`06-technical/story-specs-index.md`](06-technical/story-specs-index.md), [`TRACEABILITY.md`](TRACEABILITY.md), application files under `../apps/`.
-- **Human review:** Implementation diff, Manager master/detail visual quality and PostgreSQL/browser evidence await human review. No commit, push or deployment was performed.
+- **Repository reconciliation:** The implementation was subsequently merged at
+  `0b0ff17`. Exact GitHub workflow URL/job results are not recorded locally; no
+  deployment is claimed.
 
 ### AI-USE-028 — US-ADJ-001 Technical Story Spec human-review finalization
 
@@ -333,7 +337,7 @@ Không đưa secret, dữ liệu cá nhân, Context Pack tạm thời hoặc bư
 - **Artifact references:** [`../vault/06-technical/story-specs/US-ADJ-001.md`](../vault/06-technical/story-specs/US-ADJ-001.md), [`../vault/08-decisions/decision-log.md`](../vault/08-decisions/decision-log.md), [`../vault/02-requirements/open-questions.md`](../vault/02-requirements/open-questions.md), [`06-technical/story-specs-index.md`](06-technical/story-specs-index.md), [`TRACEABILITY.md`](TRACEABILITY.md).
 - **Human review:** Human approved H1–H12 and requested docs-only synchronization. Implementation still requires normal code diff review and fresh verification. No commit or push was performed.
 
-### AI-USE-029 — US-ADJ-001 worktree implementation
+### AI-USE-029 — US-ADJ-001 implementation (subsequently merged)
 
 - **Task:** Implement the human-approved `US-ADJ-001` Staff Adjust-request contract across persistence, API, exact-context frontend, automated tests, Playwright fixtures and traceability without commit, push or deployment.
 - **AI support:** AI added the minimum constrained `adjust_requests` model and Alembic revision; exact recheck/Audit source query; backend-derived snapshots and signed change; Staff-only context/create routes; two-unique atomic claim and historical replay; normalized reason validation; `/adjustments/{audit_recheck_id}` direct page; attempt-scoped frontend idempotency; cleanup/no-effect snapshots; and component, migration, PostgreSQL-only concurrency and browser scenarios.
@@ -341,7 +345,9 @@ Không đưa secret, dữ liệu cá nhân, Context Pack tạm thời hoặc bư
 - **Scope guard:** No `StockBalance` import/query/mutation in the Adjust service, stale/negative-stock create validation, Manager read/approve/reject/apply behavior, attachment field/I/O/provider, Staff list/history/generic detail, upstream CTA, React Router, generic idempotency/workflow framework, scanner/device, notification, AI, CI workflow edit, deployment, commit or push was added.
 - **Verification boundary:** Fresh local evidence: backend Ruff lint/format PASS; pytest `211 passed, 21 PostgreSQL-only skipped`; frontend ESLint/TypeScript PASS, Vitest `73 passed`, production build PASS; Playwright discovery lists 28 tests including three US-ADJ-001 scenarios. SQLite migration upgrade/downgrade/re-upgrade passes. PostgreSQL 17/18 migration/concurrency and real Chromium/PostgreSQL execution are `NOT VERIFIED` because no local `TEST_DATABASE_URL` is available.
 - **Artifact references:** [`../vault/06-technical/story-specs/US-ADJ-001.md`](../vault/06-technical/story-specs/US-ADJ-001.md), [`06-technical/story-specs-index.md`](06-technical/story-specs-index.md), [`TRACEABILITY.md`](TRACEABILITY.md), application files under `../apps/`.
-- **Human review:** Implementation diff, exact-context page visual quality and PostgreSQL/browser evidence await human review. No commit, push or deployment was performed.
+- **Repository reconciliation:** The implementation was subsequently merged at
+  `c34b4b1`. Exact GitHub workflow URL/job results are not recorded locally; no
+  deployment is claimed.
 
 ### AI-USE-030 — US-ADJ-002 Technical Story Spec human-review finalization
 
@@ -354,7 +360,7 @@ Không đưa secret, dữ liệu cá nhân, Context Pack tạm thời hoặc bư
 - **Artifact references:** [`../vault/06-technical/story-specs/US-ADJ-002.md`](../vault/06-technical/story-specs/US-ADJ-002.md), [`../vault/08-decisions/decision-log.md`](../vault/08-decisions/decision-log.md), [`../vault/02-requirements/open-questions.md`](../vault/02-requirements/open-questions.md), [`06-technical/story-specs-index.md`](06-technical/story-specs-index.md), [`06-technical/API.md`](06-technical/API.md), [`06-technical/data-model.md`](06-technical/data-model.md), [`TRACEABILITY.md`](TRACEABILITY.md).
 - **Human review:** Documentation diff awaits human review. No application file was changed and no commit, push or deployment was performed.
 
-### AI-USE-031 — US-ADJ-002 worktree implementation
+### AI-USE-031 — US-ADJ-002 implementation (subsequently merged)
 
 - **Date:** 2026-09-28.
 - **Task:** Implement the human-approved `US-ADJ-002` Manager decision/apply contract across migration/model, API, transactional stock behavior, decision idempotency, Staff compatibility, frontend, automated tests, Playwright fixtures and traceability without commit, push or deployment.
@@ -363,4 +369,27 @@ Không đưa secret, dữ liệu cá nhân, Context Pack tạm thời hoặc bư
 - **Scope guard:** No history/search/pagination, current-stock preview, quantity edit, partial approval, attachment, reopen, generic workflow/locking/ledger framework, speculative index, deployment, commit or push was added. DEC-043 semantics and the remaining `OQ-012/013/022` boundaries were not reopened.
 - **Verification boundary:** Fresh local evidence: backend Ruff lint PASS and format check PASS after final formatting; pytest `227 passed, 32 PostgreSQL-only skipped`; frontend ESLint/TypeScript PASS, Vitest `77 passed`, production build PASS; Playwright discovery lists 31 tests including three US-ADJ-002 scenarios. SQLite migration upgrade/downgrade/re-upgrade and terminal-row downgrade refusal pass. PostgreSQL 17/18 migration/concurrency and real Chromium/PostgreSQL execution are `NOT VERIFIED` because `TEST_DATABASE_URL` is unset and Docker CLI is unavailable.
 - **Artifact references:** [`../vault/06-technical/story-specs/US-ADJ-002.md`](../vault/06-technical/story-specs/US-ADJ-002.md), [`06-technical/story-specs-index.md`](06-technical/story-specs-index.md), [`06-technical/API.md`](06-technical/API.md), [`06-technical/data-model.md`](06-technical/data-model.md), [`TRACEABILITY.md`](TRACEABILITY.md), application files under `../apps/`.
-- **Human review:** Implementation diff, Manager master/detail visual quality, PostgreSQL 17/18 evidence and real browser execution await human review. No commit, push or deployment was performed.
+- **Repository reconciliation:** The implementation was subsequently merged at
+  `af72ba7`. Exact GitHub workflow URL, PostgreSQL 17/18 job results and Chromium
+  result are not recorded locally; no deployment is claimed.
+
+### AI-USE-032 — Audit + Adjust final integration hardening
+
+- **Date:** 2026-09-29.
+- **Task:** Harden the merged `US-AUD-001/002` and `US-ADJ-001/002` integration
+  without changing `DEC-040/041/042/043`, committing or pushing.
+- **AI support:** Added a PostgreSQL-backed Chromium stale-approval scenario using
+  the real Transfer API for the intervening stock change and the real Adjust decision
+  API; added Staff APPLIED/REJECTED exact-route reload coverage; made Staff copy
+  status-aware; reconciled canonical/report status, API routes, migrations `0006`–
+  `0009`, DEC-043 lifecycle wording, downgrade risk, traceability and external CI gaps.
+- **Verification:** Fresh backend Ruff lint/format PASS and pytest `227 passed, 32
+  PostgreSQL-only skipped`; frontend ESLint/typecheck PASS, Vitest `80 passed`, build
+  PASS; Playwright discovery lists `32` Chromium tests; `git diff --check` PASS.
+  Focused PostgreSQL/Chromium execution is `NOT VERIFIED LOCALLY` because
+  `TEST_DATABASE_URL` is unset, Docker is unavailable and no local browser cache was
+  detected.
+- **Evidence boundary:** Merge commits are inspectable in local history, but exact
+  GitHub workflow run URL and job results are absent. A human must add the integration
+  commit SHA, workflow URL, frontend job, PostgreSQL 17 job, PostgreSQL 18 job and
+  Chromium Playwright result. No CI PASS or deployment is inferred.

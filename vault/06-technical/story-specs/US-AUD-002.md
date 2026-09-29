@@ -2,7 +2,7 @@
 
 ## Status and authority
 
-`IMPLEMENTED IN WORKTREE — LOCAL COMPONENT VERIFIED — HUMAN REVIEW PENDING`
+`IMPLEMENTED / MERGED`
 
 Canonical product wording and Acceptance Criteria remain authoritative at
 [`../../04-product/stories/US-AUD-002.md`](../../04-product/stories/US-AUD-002.md).
@@ -23,13 +23,14 @@ Audit close/resolve/correction aspects of `OQ-013`, or `OQ-022`.
 | Open boundaries | `OQ-012`, remaining `OQ-013`, `OQ-022`; Adjust creation/application remains `US-ADJ-001/002` |
 
 `DEC-041` is a HUMAN APPROVED TECHNICAL IMPLEMENTATION SPEC, not verified research
-evidence. The worktree implementation follows that contract. Fresh local evidence on
+evidence. The merged implementation follows that contract. Fresh local evidence on
 2026-09-26: backend Ruff lint/format PASS and pytest `191 passed, 18 PostgreSQL-only
 skipped`; frontend ESLint/TypeScript PASS, Vitest `66 passed`, and production build
 PASS; Playwright discovery lists 25 tests including five US-AUD-002 scenarios. SQLite
 migration upgrade/downgrade/re-upgrade passes. PostgreSQL 17/18 migration/concurrency
-execution and real Chromium/PostgreSQL execution remain pending because no local
-`TEST_DATABASE_URL` is available.
+execution and real Chromium/PostgreSQL execution were not verified by that local run.
+Repository history records the implementation merge at `0b0ff17`; external GitHub CI
+evidence must be recorded manually with the commit SHA, workflow run URL and job results.
 
 ## Goal
 

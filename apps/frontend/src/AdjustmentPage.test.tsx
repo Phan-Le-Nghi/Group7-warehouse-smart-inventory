@@ -90,7 +90,7 @@ describe('US-ADJ-001 Warehouse Staff Adjust page', () => {
     expect(screen.getByText('MANAGER RECHECK')).toBeVisible()
     expect(screen.getByTestId('requested-change')).toHaveTextContent('-2')
     expect(screen.queryByLabelText(/quantity/i)).toBeNull()
-    expect(screen.getByText(/Stock remains unchanged/)).toBeVisible()
+    expect(screen.getByText(/Creating this request will not change stock/)).toBeVisible()
   })
 
   it('validates normalized reason and renders success', async () => {
@@ -126,7 +126,9 @@ describe('US-ADJ-001 Warehouse Staff Adjust page', () => {
       audit_recheck_id: recheckId,
       reason: 'Count confirmed',
     })
-    expect(screen.getByText(/Stock was not changed/)).toBeVisible()
+    expect(
+      screen.getByText(/Creating this request did not change stock/),
+    ).toBeVisible()
   })
 
   it('reuses a key for an unchanged retry and invalidates it after editing', async () => {
@@ -274,5 +276,42 @@ describe('US-ADJ-001 Warehouse Staff Adjust page', () => {
       />,
     )
     await waitFor(() => expect(onUnauthorized).toHaveBeenCalled())
+  })
+
+  it.each([
+    [
+      'PENDING_MANAGER_DECISION',
+      'Creating this request did not change stock. It is waiting for a Manager decision.',
+    ],
+    ['APPLIED', 'A Manager approved and applied this request to stock.'],
+    [
+      'REJECTED',
+      'A Manager rejected this request. No adjustment was applied from this request.',
+    ],
+  ] as const)('renders status-aware Staff copy for %s', async (status, copy) => {
+    vi.spyOn(globalThis, 'fetch').mockReturnValue(
+      jsonResponse({
+        ...context,
+        existing_adjustment: {
+          adjustment_id: result.adjustment_id,
+          reason: result.reason,
+          requested_change: result.requested_change,
+          status,
+          requested_by: result.requested_by,
+          requested_at: result.requested_at,
+        },
+      }),
+    )
+    render(
+      <AdjustmentPage
+        auditRecheckId={recheckId}
+        onUnauthorized={() => undefined}
+      />,
+    )
+    expect(await screen.findByRole('heading', { name: status })).toBeVisible()
+    expect(screen.getByText(copy)).toBeVisible()
+    if (status === 'APPLIED') {
+      expect(screen.queryByText(/stock.*not changed/i)).toBeNull()
+    }
   })
 })
