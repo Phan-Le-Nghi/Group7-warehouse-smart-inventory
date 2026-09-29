@@ -25,6 +25,16 @@ function formatSigned(value: number) {
   return value > 0 ? `+${value}` : String(value)
 }
 
+function statusMessage(status: AdjustmentResult['status']) {
+  if (status === 'APPLIED') {
+    return 'A Manager approved and applied this request to stock.'
+  }
+  if (status === 'REJECTED') {
+    return 'A Manager rejected this request. No adjustment was applied from this request.'
+  }
+  return 'Creating this request did not change stock. It is waiting for a Manager decision.'
+}
+
 export default function AdjustmentPage({
   auditRecheckId,
   onUnauthorized,
@@ -246,40 +256,41 @@ export default function AdjustmentPage({
             </section>
           </div>
 
-          <p className="review-required">
-            Stock remains unchanged. A Manager decision and apply step are required
-            before any stock quantity can change.
-          </p>
-
           {persisted ? (
             <section className="success-panel" aria-live="polite">
               <p className="eyebrow">Adjust request recorded</p>
               <h2>{persisted.status}</h2>
               <p>{persisted.reason}</p>
               <p>Requested change: {formatSigned(persisted.requested_change)}</p>
-              <p>Stock was not changed by this request.</p>
+              <p>{statusMessage(persisted.status)}</p>
             </section>
           ) : (
-            <form onSubmit={handleSubmit}>
-              <label htmlFor="adjustment-reason">Reason</label>
-              <textarea
-                id="adjustment-reason"
-                value={reason}
-                disabled={submitting}
-                onChange={(event) => changeReason(event.target.value)}
-              />
-              <p className="field-help">
-                Required free text, up to 500 characters after trimming.
+            <>
+              <p className="review-required">
+                Creating this request will not change stock. A Manager decision and
+                apply step are required before any stock quantity can change.
               </p>
-              {error && (
-                <div className="error-panel" role="alert">
-                  <p>{error}</p>
-                </div>
-              )}
-              <button type="submit" disabled={submitting}>
-                {submitting ? 'Submitting request…' : 'Create Adjust request'}
-              </button>
-            </form>
+              <form onSubmit={handleSubmit}>
+                <label htmlFor="adjustment-reason">Reason</label>
+                <textarea
+                  id="adjustment-reason"
+                  value={reason}
+                  disabled={submitting}
+                  onChange={(event) => changeReason(event.target.value)}
+                />
+                <p className="field-help">
+                  Required free text, up to 500 characters after trimming.
+                </p>
+                {error && (
+                  <div className="error-panel" role="alert">
+                    <p>{error}</p>
+                  </div>
+                )}
+                <button type="submit" disabled={submitting}>
+                  {submitting ? 'Submitting request…' : 'Create Adjust request'}
+                </button>
+              </form>
+            </>
           )}
         </>
       )}

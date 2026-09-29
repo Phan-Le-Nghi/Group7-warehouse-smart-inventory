@@ -2,7 +2,7 @@
 
 ## Status and authority
 
-`IMPLEMENTATION-READY — HUMAN APPROVED`
+`IMPLEMENTED / MERGED`
 
 Canonical product wording and Acceptance Criteria remain authoritative at
 [`../../04-product/stories/US-ADJ-002.md`](../../04-product/stories/US-ADJ-002.md).
@@ -24,14 +24,15 @@ or device/integration behavior at `OQ-022`.
 | Open boundaries | `OQ-012`; broader Audit correction/reversal aspects of `OQ-013`; `OQ-022`; attachment storage/provider/policy |
 
 `DEC-043` is a HUMAN APPROVED TECHNICAL IMPLEMENTATION SPEC, not verified
-research evidence. The worktree now contains an implementation candidate. Fresh
+research evidence. The merged implementation follows this contract. Fresh
 local evidence on 2026-09-28: backend Ruff lint PASS and pytest `227 passed, 32
 PostgreSQL-only skipped`; frontend ESLint/TypeScript PASS, Vitest `77 passed`,
 and production build PASS; Playwright discovery lists 31 tests including three
 US-ADJ-002 scenarios. SQLite migration upgrade/downgrade/re-upgrade and explicit
 terminal-row downgrade refusal pass. PostgreSQL 17/18 migration/concurrency and
-real Chromium/PostgreSQL execution remain pending because no local
-`TEST_DATABASE_URL` or Docker CLI is available.
+real Chromium/PostgreSQL execution were not verified by that local run. Repository
+history records the implementation merge at `af72ba7`; external GitHub CI evidence
+must be recorded manually with the commit SHA, workflow run URL and job results.
 
 ## Goal
 

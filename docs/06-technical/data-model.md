@@ -2,7 +2,7 @@
 
 ## Trạng thái
 
-`HUMAN APPROVED TECHNICAL FOUNDATION — DOCUMENTATION ONLY`
+`IMPLEMENTED MODEL THROUGH MIGRATION 20260927_0009`
 
 Canonical detail: [`../../vault/06-technical/data-model.md`](../../vault/06-technical/data-model.md).
 
@@ -15,18 +15,18 @@ Canonical detail: [`../../vault/06-technical/data-model.md`](../../vault/06-tech
 - Application và PostgreSQL đều bảo vệ `quantity >= 0`.
 - Quantity dùng integer unit trong Round 1 vertical slice như technical simplification; UOM/decimal/conversion/precision tại `OQ-012` vẫn OPEN.
 
-## Conceptual MVP model
+## Implemented MVP model
 
 | Area | Proposed persistence | Mức chi tiết hiện tại |
 |---|---|---|
-| SKU/Warehouse/Location | `skus`, `warehouses`, `internal_locations` | Conceptual foundation |
-| Stock | `stock_balances`, unique theo SKU/location | Approved foundation |
+| SKU/Warehouse/Location | `skus`, `warehouses`, `internal_locations` | Implemented foundation |
+| Stock | `stock_balances`, unique theo SKU/location | Implemented foundation |
 | Receive | `receives`, `receive_lines` | US-REC-001 recording context implemented; final completion/handoff remains open |
 | Putaway | `putaway_allocations` | First vertical-slice model |
-| Pick | request + source allocations | Conceptual; schema chi tiết deferred |
-| Transfer | minimum confirmed Transfer record | Conceptual; canonical fields đã duyệt |
-| Audit | session + comparison lines + discrepancy/re-check persistence khi cần | Conceptual; lifecycle còn OPEN |
-| Adjust | `adjust_requests` with immutable request intent plus terminal decision/apply evidence | US-ADJ-001/002 worktree implementation candidate through migration `20260927_0009`; attachment storage TBD |
+| Pick | `pick_requests`, `pick_allocations` | Implemented current slice |
+| Transfer | `transfers` immutable confirmed record | Implemented current slice |
+| Audit | `audit_sessions`, `audit_lines`, `audit_rechecks` | Implemented through migrations `20260926_0006`–`0007`; broader lifecycle remains open |
+| Adjust | `adjust_requests` with immutable request intent plus terminal decision/apply evidence | Implemented through migrations `20260927_0008`–`0009`; attachment storage TBD |
 | User | `users`: normalized unique login identity, Argon2id password hash, current role, active state | Exact schema approved tại `DEC-033`; implementation merged và CI verified |
 | Auth Session | `auth_sessions`: SHA-256 session digest, user link, created/expiry/revocation timestamps | Exact schema approved tại `DEC-033`; implementation merged và CI verified |
 
@@ -87,6 +87,29 @@ then locks/re-reads it before snapshot-match and non-negative validation. The
 balance change and terminal decision evidence share one transaction. Reject does
 not read, create, lock or mutate stock. No `adjustment_applications`, generic
 Movement, Warehouse total or duplicated applied-change field is introduced.
+
+## Audit and Adjust migration chain
+
+- `20260926_0006` creates `audit_sessions` and `audit_lines`, including scope,
+  result/status, submit idempotency, unique Audit pair, quantity/discrepancy/result
+  consistency and source foreign keys.
+- `20260926_0007` creates exactly-one-per-line `audit_rechecks`, current-stock and
+  physical snapshots, result consistency, performer/time and recheck idempotency.
+- `20260927_0008` creates exactly-one-per-recheck `adjust_requests`, immutable source
+  snapshots, signed non-zero requested change, normalized reason, requester/time and
+  creation idempotency in initial `PENDING_MANAGER_DECISION` state.
+- `20260927_0009` extends that table with terminal `APPLIED`/`REJECTED` state,
+  Manager/time, reject or apply evidence and separate decision idempotency. It refuses
+  downgrade while terminal rows exist.
+
+## Operational downgrade warning
+
+Downgrades across migrations `0006`–`0008` drop Audit/Adjust business tables and can
+destroy their data. Treat those downgrades as development/test operations unless data
+loss is explicitly accepted. Production rollback should prefer a forward fix or a
+verified backup/restore strategy unless an approved migration-specific rollback plan
+exists. The `0009` terminal-row refusal is an additional guard; it does not make the
+earlier destructive downgrades safe.
 
 ## Không thuộc model này
 

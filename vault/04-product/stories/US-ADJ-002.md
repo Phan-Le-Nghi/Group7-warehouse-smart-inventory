@@ -12,7 +12,9 @@ Là Manager, tôi muốn approve hoặc reject Adjust request, để chỉ appro
 
 ## Business value và scope
 
-Story cover Manager decision, approved apply effect và no-change branches. Story không xác định rejected-case final closure.
+Story cover Manager decision, approved apply effect và no-change branches. Theo
+`DEC-043`, `APPLIED` và `REJECTED` là terminal trong current slice; stale hoặc
+insufficient failed approval giữ request ở `PENDING_MANAGER_DECISION`.
 
 ## Traceability
 
@@ -43,5 +45,7 @@ Given một approved Adjust sẽ làm `system stock quantity` tại affected int
 
 ## Remaining gaps và scope guards
 
-- Rejected-case final closure vẫn `TBD / OQ-013`.
-- Retry/cancel lifecycle sau failed validation chưa được quyết định.
+- `DEC-043` supersedes các gap cũ cho current slice: rejected request không reopen
+  hoặc recreate từ cùng recheck; stale/insufficient failed approval vẫn pending.
+- Broader Audit correction/reversal và lifecycle ngoài current Adjust slice tiếp tục
+  `PARTIALLY DECIDED / OPEN` tại `OQ-013`.

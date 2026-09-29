@@ -2,12 +2,12 @@
 
 ## Status and authority
 
-`IMPLEMENTED IN WORKTREE — LOCAL COMPONENT VERIFIED — HUMAN REVIEW PENDING`
+`IMPLEMENTED / MERGED`
 
 Canonical product wording and Acceptance Criteria remain authoritative at
 [`../../04-product/stories/US-AUD-001.md`](../../04-product/stories/US-AUD-001.md).
-Human review approved the implementation contract below at `DEC-040`; the worktree
-implementation now follows that contract. This spec does not change the canonical
+Human review approved the implementation contract below at `DEC-040`; the merged
+implementation follows that contract. This spec does not change the canonical
 Acceptance Criteria and does not close `OQ-012`, the broader
 Audit lifecycle/recheck/correction aspects of `OQ-013`, or `OQ-022`.
 
@@ -15,7 +15,8 @@ Fresh local evidence on 2026-09-26: backend Ruff lint/format PASS and pytest
 `164 passed, 13 PostgreSQL-only skipped`; frontend ESLint/TypeScript PASS, Vitest
 `56 passed`, and production build PASS; Playwright discovery lists 20 tests including
 six Audit scenarios. PostgreSQL 17/18 concurrency/migration evidence and real browser
-execution remain pending CI because no local `TEST_DATABASE_URL` or Docker CLI exists.
+execution were not verified by that local run. External GitHub CI evidence for the
+merge must be recorded manually with the commit SHA, workflow run URL and job results.
 
 | Field | Value |
 |---|---|
@@ -30,7 +31,7 @@ execution remain pending CI because no local `TEST_DATABASE_URL` or Docker CLI e
 | Open boundaries | `OQ-012`, broader `OQ-013`, `OQ-022`; Manager review/recheck remains `US-AUD-002` |
 
 `DEC-040` is a HUMAN APPROVED TECHNICAL IMPLEMENTATION SPEC, not verified research
-evidence. No application code or migration was created while finalizing this document.
+evidence. Repository history records the implementation merge at `66d4e5c`.
 
 ## Goal
 
