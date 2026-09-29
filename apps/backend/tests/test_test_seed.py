@@ -27,6 +27,7 @@ def test_audit_reset_removes_its_transfer_and_restores_balances(
     actor = user_factory()
     other_sku_id = UUID("00000000-0000-0000-0000-000000000503")
     db_session.add(Warehouse(id=WAREHOUSE_ID, code="MAIN"))
+    db_session.flush()
     db_session.add_all(
         [
             InternalLocation(

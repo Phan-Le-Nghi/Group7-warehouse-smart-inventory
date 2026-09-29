@@ -191,15 +191,20 @@ async function createPendingAdjustment(page: Page) {
   )
   const adjustmentId = (await context.json()).existing_adjustment
     .adjustment_id as string
+  return { adjustmentId, recheckId }
+}
+
+async function openAsManager(page: Page) {
   await page.getByRole('button', { name: 'Sign out' }).click()
   await signIn(page, '/adjustment-decisions', 'demo.manager')
-  return { adjustmentId, recheckId }
+  await expect(page.getByRole('heading', { name: 'Adjust decisions' })).toBeVisible()
 }
 
 test('TEST-ADJ2-E2E-001 Manager approves once and reloads APPLIED', async ({
   page,
 }) => {
   const { adjustmentId, recheckId } = await createPendingAdjustment(page)
+  await openAsManager(page)
   await page.getByRole('button', { name: /Review AUDIT-SKU-MISSING-BALANCE/ }).click()
   await page.getByRole('button', { name: 'Approve' }).click()
   let intercepted = false
@@ -240,6 +245,7 @@ test('TEST-ADJ2-E2E-001 Manager approves once and reloads APPLIED', async ({
 
 test('TEST-ADJ2-E2E-002 Manager rejects without changing stock', async ({ page }) => {
   const { recheckId } = await createPendingAdjustment(page)
+  await openAsManager(page)
   await page.getByRole('button', { name: /Review AUDIT-SKU-MISSING-BALANCE/ }).click()
   await page.getByRole('button', { name: 'Reject' }).click()
   await page.getByLabel('Rejection reason').fill('Evidence is not accepted')
@@ -268,8 +274,11 @@ test('TEST-ADJ2-E2E-004 stale approval stays pending without decision evidence',
 }) => {
   const { adjustmentId } = await createPendingAdjustment(page)
 
-  await page.getByRole('button', { name: 'Sign out' }).click()
-  await signIn(page, '/audits/new', 'demo.warehouse_staff')
+  const actorResponse = await page.request.get(
+    'http://127.0.0.1:8000/api/v1/auth/me',
+  )
+  expect(actorResponse.status()).toBe(200)
+  expect(await actorResponse.json()).toMatchObject({ role: 'WAREHOUSE_STAFF' })
   const transfer = await page.request.post(
     'http://127.0.0.1:8000/api/v1/transfers',
     {
@@ -296,8 +305,7 @@ test('TEST-ADJ2-E2E-004 stale approval stays pending without decision evidence',
     },
   })
   const beforeApproval = snapshot()
-  await page.getByRole('button', { name: 'Sign out' }).click()
-  await signIn(page, '/adjustment-decisions', 'demo.manager')
+  await openAsManager(page)
   await page.getByRole('button', { name: /Review AUDIT-SKU-MISSING-BALANCE/ }).click()
 
   await page.getByRole('button', { name: 'Approve' }).click()
