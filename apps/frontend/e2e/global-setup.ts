@@ -28,6 +28,7 @@ async function globalSetup() {
 
   const uv = process.platform === 'win32' ? 'uv.exe' : 'uv'
   const testUserPassword = randomBytes(32).toString('base64url')
+  process.env.APP_ENV = 'test'
   const backendEnvironment = {
     ...process.env,
     DATABASE_URL: databaseUrl,

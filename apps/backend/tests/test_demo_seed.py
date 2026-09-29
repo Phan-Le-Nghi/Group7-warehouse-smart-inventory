@@ -1,8 +1,9 @@
+import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from warehouse_api.auth_service import verify_password
-from warehouse_api.demo_seed import DEMO_USERS, seed_demo_users
+from warehouse_api.demo_seed import DEMO_USERS, main, seed_demo_users
 from warehouse_api.models import User
 
 
@@ -39,3 +40,11 @@ def test_demo_seed_does_not_print_password(db_session: Session, capsys) -> None:
     captured = capsys.readouterr()
     assert password not in captured.out
     assert password not in captured.err
+
+
+def test_demo_seed_is_disabled_in_production(monkeypatch) -> None:
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("DEMO_USER_PASSWORD", "must-not-be-used")
+
+    with pytest.raises(RuntimeError, match="disabled"):
+        main()

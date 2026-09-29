@@ -67,6 +67,15 @@ TRANSFER_FIXTURES = {
 }
 
 
+def _get_test_database_url() -> str:
+    if getenv("APP_ENV") != "test":
+        raise RuntimeError("APP_ENV=test is required for destructive test fixtures")
+    test_database_url = getenv("TEST_DATABASE_URL")
+    if not test_database_url:
+        raise RuntimeError("TEST_DATABASE_URL is required for test fixtures")
+    return test_database_url
+
+
 def _reset_audit_fixture(session: Session) -> None:
     session.execute(delete(AdjustRequest))
     session.execute(delete(AuditRecheck))
@@ -244,9 +253,7 @@ def _reset_receive_fixtures(session: Session) -> None:
 
 
 def seed_test_fixture() -> None:
-    test_database_url = getenv("TEST_DATABASE_URL")
-    if not test_database_url:
-        raise RuntimeError("TEST_DATABASE_URL is required for the test-only seed")
+    test_database_url = _get_test_database_url()
 
     engine = create_engine(test_database_url)
     with Session(engine) as session, session.begin():
@@ -304,9 +311,7 @@ def seed_test_fixture() -> None:
 
 
 def reset_receive_fixtures() -> None:
-    test_database_url = getenv("TEST_DATABASE_URL")
-    if not test_database_url:
-        raise RuntimeError("TEST_DATABASE_URL is required for the test-only seed")
+    test_database_url = _get_test_database_url()
     engine = create_engine(test_database_url)
     with Session(engine) as session, session.begin():
         _reset_receive_fixtures(session)
@@ -314,9 +319,7 @@ def reset_receive_fixtures() -> None:
 
 
 def receive_effect_snapshot(receive_id: UUID) -> dict[str, int]:
-    test_database_url = getenv("TEST_DATABASE_URL")
-    if not test_database_url:
-        raise RuntimeError("TEST_DATABASE_URL is required for the test-only snapshot")
+    test_database_url = _get_test_database_url()
     engine = create_engine(test_database_url)
     with Session(engine) as session:
         line_ids = select(ReceiveLine.id).where(ReceiveLine.receive_id == receive_id)
@@ -344,9 +347,7 @@ def receive_effect_snapshot(receive_id: UUID) -> dict[str, int]:
 
 
 def reset_pick_fixture(pick_id: UUID) -> None:
-    test_database_url = getenv("TEST_DATABASE_URL")
-    if not test_database_url:
-        raise RuntimeError("TEST_DATABASE_URL is required for the test-only seed")
+    test_database_url = _get_test_database_url()
     engine = create_engine(test_database_url)
     with Session(engine) as session, session.begin():
         _reset_pick_fixture(session, pick_id)
@@ -354,9 +355,7 @@ def reset_pick_fixture(pick_id: UUID) -> None:
 
 
 def deplete_pick_source(pick_id: UUID) -> None:
-    test_database_url = getenv("TEST_DATABASE_URL")
-    if not test_database_url:
-        raise RuntimeError("TEST_DATABASE_URL is required for the test-only seed")
+    test_database_url = _get_test_database_url()
     try:
         sku_id = PICK_FIXTURES[pick_id][0]
     except KeyError as error:
@@ -376,9 +375,7 @@ def deplete_pick_source(pick_id: UUID) -> None:
 
 
 def pick_effect_snapshot(pick_id: UUID) -> dict[str, object]:
-    test_database_url = getenv("TEST_DATABASE_URL")
-    if not test_database_url:
-        raise RuntimeError("TEST_DATABASE_URL is required for the test-only snapshot")
+    test_database_url = _get_test_database_url()
     try:
         sku_id = PICK_FIXTURES[pick_id][0]
     except KeyError as error:
@@ -412,9 +409,7 @@ def pick_effect_snapshot(pick_id: UUID) -> dict[str, object]:
 
 
 def reset_transfer_fixture(sku_id: UUID) -> None:
-    test_database_url = getenv("TEST_DATABASE_URL")
-    if not test_database_url:
-        raise RuntimeError("TEST_DATABASE_URL is required for the test-only seed")
+    test_database_url = _get_test_database_url()
     engine = create_engine(test_database_url)
     with Session(engine) as session, session.begin():
         _reset_transfer_fixture(session, sku_id)
@@ -422,9 +417,7 @@ def reset_transfer_fixture(sku_id: UUID) -> None:
 
 
 def deplete_transfer_source(sku_id: UUID) -> None:
-    test_database_url = getenv("TEST_DATABASE_URL")
-    if not test_database_url:
-        raise RuntimeError("TEST_DATABASE_URL is required for the test-only seed")
+    test_database_url = _get_test_database_url()
     if sku_id not in TRANSFER_FIXTURES:
         raise RuntimeError("Unknown Transfer test fixture")
     engine = create_engine(test_database_url)
@@ -442,9 +435,7 @@ def deplete_transfer_source(sku_id: UUID) -> None:
 
 
 def transfer_effect_snapshot(sku_id: UUID) -> dict[str, object]:
-    test_database_url = getenv("TEST_DATABASE_URL")
-    if not test_database_url:
-        raise RuntimeError("TEST_DATABASE_URL is required for the test-only seed")
+    test_database_url = _get_test_database_url()
     if sku_id not in TRANSFER_FIXTURES:
         raise RuntimeError("Unknown Transfer test fixture")
     engine = create_engine(test_database_url)
@@ -471,9 +462,7 @@ def transfer_effect_snapshot(sku_id: UUID) -> dict[str, object]:
 
 
 def reset_transfer_history(with_rows: bool) -> None:
-    test_database_url = getenv("TEST_DATABASE_URL")
-    if not test_database_url:
-        raise RuntimeError("TEST_DATABASE_URL is required for the test-only seed")
+    test_database_url = _get_test_database_url()
     engine = create_engine(test_database_url)
     with Session(engine) as session, session.begin():
         session.execute(delete(Transfer))
@@ -515,9 +504,7 @@ def reset_transfer_history(with_rows: bool) -> None:
 
 
 def transfer_history_effect_snapshot() -> dict[str, object]:
-    test_database_url = getenv("TEST_DATABASE_URL")
-    if not test_database_url:
-        raise RuntimeError("TEST_DATABASE_URL is required for the test-only snapshot")
+    test_database_url = _get_test_database_url()
     engine = create_engine(test_database_url)
     with Session(engine) as session:
         state = {
@@ -595,9 +582,7 @@ def transfer_history_effect_snapshot() -> dict[str, object]:
 
 
 def reset_audit_fixture() -> None:
-    test_database_url = getenv("TEST_DATABASE_URL")
-    if not test_database_url:
-        raise RuntimeError("TEST_DATABASE_URL is required for the test-only seed")
+    test_database_url = _get_test_database_url()
     engine = create_engine(test_database_url)
     with Session(engine) as session, session.begin():
         _reset_audit_fixture(session)
@@ -605,9 +590,7 @@ def reset_audit_fixture() -> None:
 
 
 def set_audit_scope_change(present: bool) -> None:
-    test_database_url = getenv("TEST_DATABASE_URL")
-    if not test_database_url:
-        raise RuntimeError("TEST_DATABASE_URL is required for the test-only seed")
+    test_database_url = _get_test_database_url()
     engine = create_engine(test_database_url)
     with Session(engine) as session, session.begin():
         sku = session.get(Sku, AUDIT_SCOPE_CHANGE_SKU_ID)
@@ -619,9 +602,7 @@ def set_audit_scope_change(present: bool) -> None:
 
 
 def audit_effect_snapshot() -> dict[str, object]:
-    test_database_url = getenv("TEST_DATABASE_URL")
-    if not test_database_url:
-        raise RuntimeError("TEST_DATABASE_URL is required for the test-only snapshot")
+    test_database_url = _get_test_database_url()
     engine = create_engine(test_database_url)
     with Session(engine) as session:
         business_state = {

@@ -1,13 +1,16 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
 from warehouse_api.adjustment_routes import router as adjustment_router
 from warehouse_api.audit_discrepancy_routes import router as audit_discrepancy_router
 from warehouse_api.audit_routes import router as audit_router
 from warehouse_api.auth_routes import router as auth_router
 from warehouse_api.config import get_settings
+from warehouse_api.db import get_engine
 from warehouse_api.errors import ApiError
 from warehouse_api.pick_routes import router as pick_router
 from warehouse_api.receive_routes import router as receive_router
@@ -144,3 +147,20 @@ def handle_validation_error(
 @app.get("/health", tags=["technical"])
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+def check_database_ready() -> None:
+    with get_engine().connect() as connection:
+        connection.execute(text("SELECT 1"))
+
+
+@app.get("/ready", tags=["technical"])
+def ready() -> JSONResponse:
+    try:
+        check_database_ready()
+    except SQLAlchemyError:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"status": "unavailable"},
+        )
+    return JSONResponse(content={"status": "ready"})
