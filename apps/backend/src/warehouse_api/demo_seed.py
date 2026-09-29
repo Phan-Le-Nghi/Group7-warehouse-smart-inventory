@@ -63,6 +63,8 @@ def seed_demo_users(session: Session, password: str) -> SeedResult:
 
 
 def main() -> None:
+    if getenv("APP_ENV", "development").strip().lower() == "production":
+        raise RuntimeError("Demo seed is disabled when APP_ENV=production")
     password = getenv("DEMO_USER_PASSWORD")
     if not password:
         raise RuntimeError("DEMO_USER_PASSWORD is required")

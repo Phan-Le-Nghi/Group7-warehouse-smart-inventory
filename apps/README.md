@@ -44,13 +44,11 @@ after seeding. Expired or revoked sessions older than seven days can be removed
 explicitly with `uv run --env-file ../.env python -m warehouse_api.auth_service`;
 the application does not schedule cleanup automatically.
 
-Local HTTP uses `COOKIE_SECURE=false` and `COOKIE_SAMESITE=lax`. Staging and
-production must set `COOKIE_SECURE=true`; `COOKIE_SAMESITE` and `CORS_ORIGINS`
-must match the approved deployment topology. `COOKIE_SAMESITE=none` is rejected
-unless Secure is enabled and activates strict Origin plus JSON mutation checks.
-The staging smoke/release checklist must inspect the issued session cookie and
-verify the `Secure` attribute; the application does not infer the environment
-or automatically promote `COOKIE_SECURE` for staging.
+`APP_ENV` defaults to `development`, where local HTTP uses
+`COOKIE_SECURE=false` and `COOKIE_SAMESITE=lax`. Staging and production fail
+startup unless `DATABASE_URL`, `CORS_ORIGINS`, `COOKIE_SECURE=true`, and
+`COOKIE_SAMESITE=lax` satisfy the approved topology; their PostgreSQL URL must
+include `sslmode=require`. The production environment refuses the demo seed.
 
 The API is available at `http://localhost:8000`. Importing the application does
 not create tables or run migrations.
@@ -101,6 +99,18 @@ $env:TEST_DATABASE_URL = "postgresql+psycopg://warehouse_dev:warehouse_dev_only@
 npm run test:e2e
 ```
 
+The Playwright setup supplies `APP_ENV=test` to its child backend processes.
+Do not invoke `warehouse_api.test_seed` against shared staging or production
+data.
+
+## Deployment foundation
+
+The approved staging/demo foundation is documented in
+[`../docs/06-technical/DEPLOYMENT.md`](../docs/06-technical/DEPLOYMENT.md), with
+the complete variable matrix in
+[`../docs/06-technical/ENVIRONMENT.md`](../docs/06-technical/ENVIRONMENT.md).
+These are setup instructions only; no cloud deployment is claimed.
+
 ## Scope boundary
 
 Authentication and `US-PUT-001` are merged implementation baselines. `US-REC-001`
@@ -113,8 +123,9 @@ No local PostgreSQL, Docker, or browser E2E pass is claimed for the Pick slice.
 
 `DEC-034/035` approve a staging/demo design with a Vercel React/Vite frontend,
 a same-origin `/api/*` rewrite to the Render FastAPI backend, and Supabase
-PostgreSQL 17. That deployment has not been implemented or verified. Staging
-HTTPS cookie behavior and PostgreSQL 17 release evidence remain pending;
+PostgreSQL 17. The deployment foundation is implemented in the worktree pending
+human review, but no deployment has been performed. Staging HTTPS cookie
+behavior and PostgreSQL 17 release evidence remain pending;
 long-term production deployment remains `TBD`. `OQ-012`, `OQ-013`, and
 `OQ-014` remain open.
 

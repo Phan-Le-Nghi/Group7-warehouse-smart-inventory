@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
+import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -16,8 +17,19 @@ from warehouse_api.test_seed import (
     BACKROOM_ID,
     SALES_SHELF_ID,
     WAREHOUSE_ID,
+    _get_test_database_url,
     _reset_audit_fixture,
 )
+
+
+def test_runtime_test_seed_requires_explicit_test_environment(monkeypatch) -> None:
+    monkeypatch.setenv("APP_ENV", "staging")
+    monkeypatch.setenv(
+        "TEST_DATABASE_URL", "postgresql+psycopg://example.invalid/warehouse"
+    )
+
+    with pytest.raises(RuntimeError, match="APP_ENV=test"):
+        _get_test_database_url()
 
 
 def test_audit_reset_removes_its_transfer_and_restores_balances(
