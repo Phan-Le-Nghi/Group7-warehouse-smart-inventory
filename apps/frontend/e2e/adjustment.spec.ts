@@ -97,7 +97,9 @@ test('TEST-ADJ1-E2E-001 Staff creates and reloads an immutable Adjust request', 
   await expect(
     page.getByRole('heading', { name: 'PENDING_MANAGER_DECISION' }),
   ).toBeVisible()
-  await expect(page.getByText(/Stock was not changed/)).toBeVisible()
+  await expect(
+    page.getByText(/Creating this request did not change stock/),
+  ).toBeVisible()
 
   await page.reload()
   await expect(
@@ -280,7 +282,19 @@ test('TEST-ADJ2-E2E-004 stale approval stays pending without decision evidence',
       },
     },
   )
-  expect(transfer.status()).toBe(201)
+  const transferBody = await transfer.json()
+  expect(transfer.status(), JSON.stringify(transferBody)).toBe(201)
+  expect(transferBody).toMatchObject({
+    sku_id: '00000000-0000-0000-0000-000000000502',
+    source_location_id: '00000000-0000-0000-0000-000000000005',
+    destination_location_id: '00000000-0000-0000-0000-000000000006',
+    quantity: 1,
+    stock: {
+      source_quantity: 6,
+      destination_quantity: 1,
+      warehouse_total: 7,
+    },
+  })
   const beforeApproval = snapshot()
   await page.getByRole('button', { name: 'Sign out' }).click()
   await signIn(page, '/adjustment-decisions', 'demo.manager')
