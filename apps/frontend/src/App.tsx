@@ -103,7 +103,9 @@ function App({
       .then((loaded) => {
         if (active) {
           setContext(loaded)
-          setDestinationId(loaded.locations[0]?.id ?? '')
+          setDestinationId(
+            loaded.eligible_quantity > 0 ? (loaded.locations[0]?.id ?? '') : '',
+          )
         }
       })
       .catch((loadError: unknown) => {
@@ -139,7 +141,13 @@ function App({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!context || !destinationId || submitting) return
+    if (
+      !context ||
+      context.eligible_quantity <= 0 ||
+      !destinationId ||
+      submitting
+    )
+      return
 
     setSubmitting(true)
     setError('')
@@ -246,39 +254,50 @@ function App({
               </div>
             </dl>
 
-            <fieldset>
-              <legend>Destination location</legend>
-              <p className="field-help">Choose one internal location.</p>
-              <div className="location-grid">
-                {context.locations.map((location) => (
-                  <label className="location-option" key={location.id}>
-                    <input
-                      type="radio"
-                      name="destination"
-                      value={location.id}
-                      checked={destinationId === location.id}
-                      onChange={() => setDestinationId(location.id)}
-                    />
-                    <span>
-                      <strong>
-                        {locationLabels[location.code] ?? location.code}
-                      </strong>
-                      <small>{location.code}</small>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-
-            {error && (
-              <p className="error-panel" role="alert">
-                {error}
+            {context.eligible_quantity <= 0 ? (
+              <p className="status-panel" role="status">
+                This receive line has been fully put away.
               </p>
-            )}
+            ) : (
+              <>
+                <fieldset>
+                  <legend>Destination location</legend>
+                  <p className="field-help">Choose one internal location.</p>
+                  <div className="location-grid">
+                    {context.locations.map((location) => (
+                      <label className="location-option" key={location.id}>
+                        <input
+                          type="radio"
+                          name="destination"
+                          value={location.id}
+                          checked={destinationId === location.id}
+                          onChange={() => setDestinationId(location.id)}
+                        />
+                        <span>
+                          <strong>
+                            {locationLabels[location.code] ?? location.code}
+                          </strong>
+                          <small>{location.code}</small>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
 
-            <button type="submit" disabled={!destinationId || submitting}>
-              {submitting ? 'Confirming…' : 'Confirm Putaway'}
-            </button>
+                {error && (
+                  <p className="error-panel" role="alert">
+                    {error}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={!destinationId || submitting}
+                >
+                  {submitting ? 'Confirming…' : 'Confirm Putaway'}
+                </button>
+              </>
+            )}
           </form>
         )}
 

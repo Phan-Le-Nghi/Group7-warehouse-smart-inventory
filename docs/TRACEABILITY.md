@@ -84,6 +84,8 @@ Thứ tự này giữ Transfer execution trước Transfer history và Audit tr�
 
 Local evidence on 2026-09-05 remains: Ruff lint and format-check pass; pytest `8 passed` on the SQLite component database; frontend ESLint, TypeScript, Vitest `3 passed`, and Vite build pass; Alembic upgrade/downgrade smoke pass on a temporary SQLite database. Post-merge GitHub Actions evidence confirms successful push and pull-request runs: `backend-checks` passed migration and backend tests on PostgreSQL 18, `frontend-checks` passed lint/typecheck/test/build, and `putaway-e2e` passed the real-browser React → FastAPI → PostgreSQL 18 slice. These CI results are not presented as local Docker execution.
 
+Fresh local evidence on 2026-10-01 for the fully-put-away UI guard: when Putaway context reports `eligible_quantity <= 0`, the frontend shows a completed-state message and exposes neither destination selection nor the confirmation action; the submit handler also rejects that state. Frontend ESLint, TypeScript, Vitest (`81 passed`), and the Vite production build pass. The backend contract and Putaway business logic are unchanged; this candidate remains pending human diff review.
+
 ## US-TRF-001 implementation candidate
 
 | Requirement / Story / decision trace | Implementation artifact | Fresh local evidence | Scope boundary / pending evidence |
