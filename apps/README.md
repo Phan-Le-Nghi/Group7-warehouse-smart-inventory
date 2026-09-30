@@ -34,15 +34,20 @@ Set-Location ../backend
 uv sync --locked
 uv run --env-file ../.env alembic upgrade head
 $env:DEMO_USER_PASSWORD = Read-Host -AsSecureString | ConvertFrom-SecureString -AsPlainText
-uv run --env-file ../.env python -m warehouse_api.demo_seed
+uv run --env-file ../.env python -m warehouse_api.demo_data_seed
 uv run --env-file ../.env uvicorn warehouse_api.main:app --reload
 ```
 
-The demo seed is idempotent and creates `demo.warehouse_staff`, `demo.manager`,
-`demo.purchasing`, and `demo.admin`. Clear `DEMO_USER_PASSWORD` from the shell
-after seeding. Expired or revoked sessions older than seven days can be removed
-explicitly with `uv run --env-file ../.env python -m warehouse_api.auth_service`;
-the application does not schedule cleanup automatically.
+The demo data seed is idempotent and creates the four demo users, the canonical
+`MAIN` Warehouse, `BACKROOM` and `SALES_SHELF`, `DEMO-SKU-001`, and one recorded
+Receive line ready for Putaway. It creates no initial stock; Putaway performs
+the initial location posting. The seed validates existing canonical rows and
+fails instead of overwriting conflicts or resetting operational effects. Clear
+`DEMO_USER_PASSWORD` from the shell after seeding. The older
+`warehouse_api.demo_seed` command remains the users-only seed. Expired or
+revoked sessions older than seven days can be removed explicitly with
+`uv run --env-file ../.env python -m warehouse_api.auth_service`; the
+application does not schedule cleanup automatically.
 
 `APP_ENV` defaults to `development`, where local HTTP uses
 `COOKIE_SECURE=false` and `COOKIE_SAMESITE=lax`. Staging and production fail
@@ -70,6 +75,12 @@ Set that variable to a real PostgreSQL test database for PostgreSQL evidence.
 the explicit Putaway context at `/`; `VITE_RECEIVE_ID` supplies the prepared
 Receive context at `/receive`. The two screens remain separate and neither
 creates an automatic Receive-to-Putaway handoff.
+
+For the canonical demo dataset, set
+`VITE_RECEIVE_LINE_ID=daf594b9-9c1e-51ec-adf0-0055cb3a8ff3` and
+`VITE_RECEIVE_ID=435cd10b-4cfe-53a4-bbcf-f63735a8292e` at Vercel build time.
+The seeded Receive is already recorded so the root Putaway screen is the
+actionable demo flow.
 
 Prepared Pick requests are opened at `/pick/{pick_id}`. The Pick ID comes from
 the URL; the application does not create Pick requests. Partial Picks require
