@@ -100,9 +100,13 @@ require `/ready` before a rehearsal; this is not production-availability proof.
 
 ## 4. Controlled demo seed
 
-The existing demo seed is idempotent for the four approved role accounts and
-uses one externally supplied password. It creates or reconciles those user
-records; it does not reset operational data.
+The demo data seed is idempotent and uses one externally supplied password. It
+creates or reconciles the four approved role accounts, then creates or validates
+the canonical Warehouse, two tracked locations, demo SKU, and recorded Receive
+line. It creates no stock: Receive records actual quantity and Putaway performs
+the initial location posting. Existing canonical conflicts fail the whole
+transaction instead of being overwritten, and reruns do not change Putaway or
+stock effects.
 
 After migrations, a named operator may run from `apps/backend`:
 
@@ -110,14 +114,16 @@ After migrations, a named operator may run from `apps/backend`:
 $env:APP_ENV = "staging"
 $demoPassword = Read-Host -AsSecureString "Temporary demo password"
 $env:DEMO_USER_PASSWORD = [System.Net.NetworkCredential]::new("", $demoPassword).Password
-uv run --no-sync python -m warehouse_api.demo_seed
+uv run --no-sync python -m warehouse_api.demo_data_seed
 Remove-Item Env:DEMO_USER_PASSWORD
 Remove-Variable demoPassword
 ```
 
 Do not invent or document a default password. Do not run this command
 automatically at web startup. `APP_ENV=production` explicitly rejects the demo
-seed.
+seed. The users-only `warehouse_api.demo_seed` command remains available when
+operational demo data is intentionally not required. Never use
+`warehouse_api.test_seed` for staging/demo data.
 
 ## 5. Vercel React/Vite project
 
@@ -129,6 +135,10 @@ Create the project only after human approval, with:
 - Build command: `npm run build`
 - Output directory: `dist`
 - Environment variable: `RENDER_API_ORIGIN=https://<render-service-host>`
+- Environment variable:
+  `VITE_RECEIVE_LINE_ID=daf594b9-9c1e-51ec-adf0-0055cb3a8ff3`
+- Environment variable:
+  `VITE_RECEIVE_ID=435cd10b-4cfe-53a4-bbcf-f63735a8292e`
 - `VITE_API_BASE_URL`: unset
 
 `frontend/vercel.mjs` validates `RENDER_API_ORIGIN` and generates routes in this
