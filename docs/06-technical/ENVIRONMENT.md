@@ -17,7 +17,7 @@ claimed.
 | `RENDER_API_ORIGIN` | Only for Vercel config validation | Yes on Vercel | Depends on any future approved topology | No | None | `https://service-name.onrender.com` | HTTPS origin only: no path, query, fragment, or embedded credentials. Used at Vercel config/build time; not exposed through `VITE_*`. |
 | `VITE_API_BASE_URL` | No | No | No | No | Empty (same origin) | `http://localhost:8000` | Local development override. Leave unset for Vercel so browser calls stay relative `/api/...`. |
 | `VITE_RECEIVE_LINE_ID` | Per local/demo context | Per demo context | TBD | No | None | `daf594b9-9c1e-51ec-adf0-0055cb3a8ff3` | Canonical demo Putaway context created by `warehouse_api.demo_data_seed`; set at Vercel build time. |
-| `VITE_RECEIVE_ID` | Per local/demo context | Per demo context | TBD | No | None | `435cd10b-4cfe-53a4-bbcf-f63735a8292e` | Canonical recorded demo Receive context; set at Vercel build time. |
+| `VITE_RECEIVE_ID` | Per local/demo context | Per demo context | TBD | No | None | `e34f5e8e-4b3a-55a1-9485-d411a1ede3a8` | Prepared, unrecorded staging Receive smoke context; set this temporary value at Vercel build time. The canonical Putaway fixture remains separate. |
 | `PORT` | No | Injected by Render | Provider-specific | No | None | `10000` | Render supplies this. Do not commit or hardcode it. |
 
 The session absolute lifetime remains the approved fixed eight hours

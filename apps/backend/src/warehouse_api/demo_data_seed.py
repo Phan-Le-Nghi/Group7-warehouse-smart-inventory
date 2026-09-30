@@ -24,10 +24,15 @@ DEMO_SALES_SHELF_ID = UUID("236456ff-fd86-5df1-9829-a781892dacfe")
 DEMO_SKU_ID = UUID("ba633e2e-57f2-5011-b710-1614ef29f629")
 DEMO_RECEIVE_ID = UUID("435cd10b-4cfe-53a4-bbcf-f63735a8292e")
 DEMO_RECEIVE_LINE_ID = UUID("daf594b9-9c1e-51ec-adf0-0055cb3a8ff3")
+RECEIVE_SMOKE_SKU_ID = UUID("a759b6c3-0b45-5914-9a41-f95add39a816")
+RECEIVE_SMOKE_ID = UUID("e34f5e8e-4b3a-55a1-9485-d411a1ede3a8")
+RECEIVE_SMOKE_LINE_ID = UUID("e60fab3e-b0b4-549c-a53d-289e6456c2d4")
 
 DEMO_RECORDED_AT = datetime(2026, 9, 30, 12, 0, tzinfo=UTC)
 DEMO_REFERENCE = "DEMO-RECEIVE-001"
 DEMO_QUANTITY = 16
+RECEIVE_SMOKE_REFERENCE = "DEMO-RECEIVE-SMOKE-001"
+RECEIVE_SMOKE_QUANTITY = 12
 
 
 @dataclass(frozen=True, slots=True)
@@ -147,6 +152,14 @@ def seed_demo_data(session: Session) -> DemoDataSeedResult:
     )
     created += _ensure_row(
         session,
+        Sku,
+        RECEIVE_SMOKE_SKU_ID,
+        {"code": "DEMO-SKU-RECEIVE-SMOKE-001"},
+        "SKU DEMO-SKU-RECEIVE-SMOKE-001",
+        Sku.code == "DEMO-SKU-RECEIVE-SMOKE-001",
+    )
+    created += _ensure_row(
+        session,
         Receive,
         DEMO_RECEIVE_ID,
         {
@@ -174,8 +187,31 @@ def seed_demo_data(session: Session) -> DemoDataSeedResult:
         },
         "Receive line DEMO-RECEIVE-001/DEMO-SKU-001",
     )
+    # Only expected context is seed-owned for the smoke Receive. Recording fields
+    # are intentionally omitted so a later seed run preserves real user input.
+    created += _ensure_row(
+        session,
+        Receive,
+        RECEIVE_SMOKE_ID,
+        {
+            "warehouse_id": DEMO_WAREHOUSE_ID,
+            "expected_reference": RECEIVE_SMOKE_REFERENCE,
+        },
+        "Receive DEMO-RECEIVE-SMOKE-001",
+    )
+    created += _ensure_row(
+        session,
+        ReceiveLine,
+        RECEIVE_SMOKE_LINE_ID,
+        {
+            "receive_id": RECEIVE_SMOKE_ID,
+            "sku_id": RECEIVE_SMOKE_SKU_ID,
+            "expected_quantity": RECEIVE_SMOKE_QUANTITY,
+        },
+        "Receive line DEMO-RECEIVE-SMOKE-001/DEMO-SKU-RECEIVE-SMOKE-001",
+    )
     session.flush()
-    return DemoDataSeedResult(created=created, unchanged=6 - created)
+    return DemoDataSeedResult(created=created, unchanged=9 - created)
 
 
 def seed_demo_dataset(session: Session, password: str) -> DemoDatasetSeedResult:
@@ -200,7 +236,9 @@ def main() -> None:
         f"data_created={result.data.created}, "
         f"data_unchanged={result.data.unchanged}; "
         f"receive_id={DEMO_RECEIVE_ID}; "
-        f"receive_line_id={DEMO_RECEIVE_LINE_ID}"
+        f"receive_line_id={DEMO_RECEIVE_LINE_ID}; "
+        f"receive_smoke_id={RECEIVE_SMOKE_ID}; "
+        f"receive_smoke_line_id={RECEIVE_SMOKE_LINE_ID}"
     )
 
 

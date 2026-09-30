@@ -78,9 +78,10 @@ creates an automatic Receive-to-Putaway handoff.
 
 For the canonical demo dataset, set
 `VITE_RECEIVE_LINE_ID=daf594b9-9c1e-51ec-adf0-0055cb3a8ff3` and
-`VITE_RECEIVE_ID=435cd10b-4cfe-53a4-bbcf-f63735a8292e` at Vercel build time.
-The seeded Receive is already recorded so the root Putaway screen is the
-actionable demo flow.
+`VITE_RECEIVE_ID=e34f5e8e-4b3a-55a1-9485-d411a1ede3a8` at Vercel build time.
+The Receive ID is the separate prepared, unrecorded staging smoke context. The
+Putaway line still belongs to the original recorded demo Receive, so Receive
+smoke recording cannot change the existing Putaway evidence.
 
 Prepared Pick requests are opened at `/pick/{pick_id}`. The Pick ID comes from
 the URL; the application does not create Pick requests. Partial Picks require
