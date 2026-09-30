@@ -11,9 +11,11 @@ from warehouse_api.db import session_scope
 from warehouse_api.demo_seed import SeedResult, seed_demo_users
 from warehouse_api.models import (
     InternalLocation,
+    PickRequest,
     Receive,
     ReceiveLine,
     Sku,
+    StockBalance,
     User,
     Warehouse,
 )
@@ -27,12 +29,19 @@ DEMO_RECEIVE_LINE_ID = UUID("daf594b9-9c1e-51ec-adf0-0055cb3a8ff3")
 RECEIVE_SMOKE_SKU_ID = UUID("a759b6c3-0b45-5914-9a41-f95add39a816")
 RECEIVE_SMOKE_ID = UUID("e34f5e8e-4b3a-55a1-9485-d411a1ede3a8")
 RECEIVE_SMOKE_LINE_ID = UUID("e60fab3e-b0b4-549c-a53d-289e6456c2d4")
+PICK_SMOKE_ID = UUID("d88066ff-46b8-5722-ba29-b11cfa01816d")
+PICK_SMOKE_SKU_ID = UUID("82a38c49-10fb-5168-bdcb-0359f606ee3f")
+PICK_SMOKE_BACKROOM_STOCK_ID = UUID("8b37bd4e-6a61-59fb-8809-5ac87d9f4128")
+PICK_SMOKE_SALES_SHELF_STOCK_ID = UUID("c0f35328-197b-5494-932e-5b7f619e3e27")
 
 DEMO_RECORDED_AT = datetime(2026, 9, 30, 12, 0, tzinfo=UTC)
 DEMO_REFERENCE = "DEMO-RECEIVE-001"
 DEMO_QUANTITY = 16
 RECEIVE_SMOKE_REFERENCE = "DEMO-RECEIVE-SMOKE-001"
 RECEIVE_SMOKE_QUANTITY = 12
+PICK_SMOKE_REQUESTED_QUANTITY = 10
+PICK_SMOKE_BACKROOM_QUANTITY = 6
+PICK_SMOKE_SALES_SHELF_QUANTITY = 4
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,6 +80,7 @@ def _ensure_row(
     values: dict[str, object],
     label: str,
     natural_key_clause=None,
+    preserved_fields: frozenset[str] = frozenset(),
 ) -> bool:
     by_id = session.get(model, row_id)
     by_natural_key = (
@@ -97,6 +107,7 @@ def _ensure_row(
     conflicts = [
         field
         for field, expected in values.items()
+        if field not in preserved_fields
         if not _values_match(getattr(row, field), expected)
     ]
     if conflicts:
@@ -160,6 +171,14 @@ def seed_demo_data(session: Session) -> DemoDataSeedResult:
     )
     created += _ensure_row(
         session,
+        Sku,
+        PICK_SMOKE_SKU_ID,
+        {"code": "DEMO-SKU-PICK-SMOKE-001"},
+        "SKU DEMO-SKU-PICK-SMOKE-001",
+        Sku.code == "DEMO-SKU-PICK-SMOKE-001",
+    )
+    created += _ensure_row(
+        session,
         Receive,
         DEMO_RECEIVE_ID,
         {
@@ -210,8 +229,53 @@ def seed_demo_data(session: Session) -> DemoDataSeedResult:
         },
         "Receive line DEMO-RECEIVE-SMOKE-001/DEMO-SKU-RECEIVE-SMOKE-001",
     )
+    # Confirmation fields and stock quantities become user-owned operational
+    # state. They are initial values only and must never be reset by a rerun.
+    created += _ensure_row(
+        session,
+        PickRequest,
+        PICK_SMOKE_ID,
+        {
+            "warehouse_id": DEMO_WAREHOUSE_ID,
+            "sku_id": PICK_SMOKE_SKU_ID,
+            "requested_quantity": PICK_SMOKE_REQUESTED_QUANTITY,
+            "outcome": None,
+            "confirmed_by_user_id": None,
+            "confirmed_at": None,
+        },
+        "Pick DEMO-PICK-SMOKE-001",
+        preserved_fields=frozenset({"outcome", "confirmed_by_user_id", "confirmed_at"}),
+    )
+    created += _ensure_row(
+        session,
+        StockBalance,
+        PICK_SMOKE_BACKROOM_STOCK_ID,
+        {
+            "sku_id": PICK_SMOKE_SKU_ID,
+            "location_id": DEMO_BACKROOM_ID,
+            "quantity": PICK_SMOKE_BACKROOM_QUANTITY,
+        },
+        "Pick smoke stock MAIN/BACKROOM",
+        (StockBalance.sku_id == PICK_SMOKE_SKU_ID)
+        & (StockBalance.location_id == DEMO_BACKROOM_ID),
+        preserved_fields=frozenset({"quantity"}),
+    )
+    created += _ensure_row(
+        session,
+        StockBalance,
+        PICK_SMOKE_SALES_SHELF_STOCK_ID,
+        {
+            "sku_id": PICK_SMOKE_SKU_ID,
+            "location_id": DEMO_SALES_SHELF_ID,
+            "quantity": PICK_SMOKE_SALES_SHELF_QUANTITY,
+        },
+        "Pick smoke stock MAIN/SALES_SHELF",
+        (StockBalance.sku_id == PICK_SMOKE_SKU_ID)
+        & (StockBalance.location_id == DEMO_SALES_SHELF_ID),
+        preserved_fields=frozenset({"quantity"}),
+    )
     session.flush()
-    return DemoDataSeedResult(created=created, unchanged=9 - created)
+    return DemoDataSeedResult(created=created, unchanged=13 - created)
 
 
 def seed_demo_dataset(session: Session, password: str) -> DemoDatasetSeedResult:
@@ -238,7 +302,8 @@ def main() -> None:
         f"receive_id={DEMO_RECEIVE_ID}; "
         f"receive_line_id={DEMO_RECEIVE_LINE_ID}; "
         f"receive_smoke_id={RECEIVE_SMOKE_ID}; "
-        f"receive_smoke_line_id={RECEIVE_SMOKE_LINE_ID}"
+        f"receive_smoke_line_id={RECEIVE_SMOKE_LINE_ID}; "
+        f"pick_smoke_id={PICK_SMOKE_ID}"
     )
 
 

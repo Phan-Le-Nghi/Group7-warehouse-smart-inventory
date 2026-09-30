@@ -102,11 +102,13 @@ require `/ready` before a rehearsal; this is not production-availability proof.
 
 The demo data seed is idempotent and uses one externally supplied password. It
 creates or reconciles the four approved role accounts, then creates or validates
-the canonical Warehouse, two tracked locations, demo SKU, and recorded Receive
-line. It creates no stock: Receive records actual quantity and Putaway performs
-the initial location posting. Existing canonical conflicts fail the whole
-transaction instead of being overwritten, and reruns do not change Putaway or
-stock effects.
+the canonical Warehouse, two tracked locations, and separate Receive, Putaway,
+and Pick smoke data. Receive creates no stock: Receive records actual quantity
+and Putaway performs the initial location posting. The dedicated Pick smoke SKU
+starts with 6 units in `BACKROOM` and 4 in `SALES_SHELF` for a request of 10.
+Existing canonical conflicts fail the whole transaction instead of being
+overwritten. Reruns do not change Putaway effects or a Pick's confirmation,
+allocations, or current stock quantities.
 
 After migrations, a named operator may run from `apps/backend`:
 
@@ -142,6 +144,9 @@ Create the project only after human approval, with:
   unrecorded Receive smoke context)
 - `VITE_API_BASE_URL`: unset
 
+Use this staging deep link for the dedicated Pick smoke fixture:
+`/pick/d88066ff-46b8-5722-ba29-b11cfa01816d`.
+
 `frontend/vercel.mjs` validates `RENDER_API_ORIGIN` and generates routes in this
 order:
 
@@ -174,6 +179,8 @@ No item below is currently claimed as passed:
 - [ ] Confirm the request URL is Vercel `/api/v1/auth/login`, not direct Render.
 - [ ] Inspect `warehouse_session`: `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, no `Domain`.
 - [ ] Verify `GET /api/v1/auth/me`, a representative `401`, and role-based `403`.
+- [ ] Complete the multi-location Pick at
+      `/pick/d88066ff-46b8-5722-ba29-b11cfa01816d`.
 - [ ] Refresh `/audits/new`, `/audit-discrepancies`, `/adjustment-decisions`,
       `/transfers/history`, and representative `/pick/...`, `/transfer/...`,
       `/adjustments/...` deep links; expect the SPA rather than 404.
