@@ -10,8 +10,16 @@ from warehouse_api.demo_data_seed import (
     DEMO_QUANTITY,
     DEMO_RECEIVE_ID,
     DEMO_RECEIVE_LINE_ID,
+    DEMO_SALES_SHELF_ID,
     DEMO_SKU_ID,
     DEMO_WAREHOUSE_ID,
+    PICK_SMOKE_BACKROOM_QUANTITY,
+    PICK_SMOKE_BACKROOM_STOCK_ID,
+    PICK_SMOKE_ID,
+    PICK_SMOKE_REQUESTED_QUANTITY,
+    PICK_SMOKE_SALES_SHELF_QUANTITY,
+    PICK_SMOKE_SALES_SHELF_STOCK_ID,
+    PICK_SMOKE_SKU_ID,
     RECEIVE_SMOKE_ID,
     RECEIVE_SMOKE_LINE_ID,
     RECEIVE_SMOKE_QUANTITY,
@@ -23,6 +31,8 @@ from warehouse_api.demo_data_seed import (
 )
 from warehouse_api.models import (
     InternalLocation,
+    PickAllocation,
+    PickRequest,
     PutawayAllocation,
     Receive,
     ReceiveLine,
@@ -31,7 +41,9 @@ from warehouse_api.models import (
     User,
     Warehouse,
 )
+from warehouse_api.pick import confirm_pick
 from warehouse_api.receive import record_receive
+from warehouse_api.schemas import PickRequest as PickCommand
 from warehouse_api.schemas import ReceiveRecordRequest
 
 
@@ -42,8 +54,8 @@ def test_demo_dataset_is_idempotent_and_preserves_putaway_effects(
 
     first = seed_demo_dataset(db_session, password)
     assert first.users.created == 4
-    assert first.data.created == 9
-    assert db_session.scalar(select(func.count(StockBalance.id))) == 0
+    assert first.data.created == 13
+    assert db_session.scalar(select(func.count(StockBalance.id))) == 2
     assert db_session.scalar(select(func.count(PutawayAllocation.id))) == 0
 
     allocation_id = uuid4()
@@ -71,13 +83,14 @@ def test_demo_dataset_is_idempotent_and_preserves_putaway_effects(
 
     assert second.users.unchanged == 4
     assert second.data.created == 0
-    assert second.data.unchanged == 9
+    assert second.data.unchanged == 13
     assert db_session.scalar(select(func.count(Warehouse.id))) == 1
     assert db_session.scalar(select(func.count(InternalLocation.id))) == 2
-    assert db_session.scalar(select(func.count(Sku.id))) == 2
+    assert db_session.scalar(select(func.count(Sku.id))) == 3
     assert db_session.scalar(select(func.count(Receive.id))) == 2
     assert db_session.scalar(select(func.count(ReceiveLine.id))) == 2
     assert db_session.scalar(select(func.count(PutawayAllocation.id))) == 1
+    assert db_session.scalar(select(func.count(StockBalance.id))) == 3
     assert db_session.get(PutawayAllocation, allocation_id).quantity == 5
     balance = db_session.scalar(
         select(StockBalance).where(
@@ -152,7 +165,14 @@ def test_demo_receive_is_recorded_but_has_no_initial_stock(
     assert receive.recorded_at is not None
     assert line.actual_quantity == DEMO_QUANTITY
     assert line.quantity_discrepancy == 0
-    assert db_session.scalar(select(func.count(StockBalance.id))) == 0
+    assert (
+        db_session.scalar(
+            select(func.count(StockBalance.id)).where(
+                StockBalance.sku_id == DEMO_SKU_ID
+            )
+        )
+        == 0
+    )
 
 
 def test_receive_smoke_context_is_prepared_but_unrecorded(
@@ -165,7 +185,7 @@ def test_receive_smoke_context_is_prepared_but_unrecorded(
     line = db_session.get(ReceiveLine, RECEIVE_SMOKE_LINE_ID)
 
     assert rerun.data.created == 0
-    assert rerun.data.unchanged == 9
+    assert rerun.data.unchanged == 13
     assert receive is not None
     assert line is not None
     assert receive.warehouse_id == DEMO_WAREHOUSE_ID
@@ -214,7 +234,7 @@ def test_demo_seed_preserves_user_recorded_receive_smoke_facts(
     result = seed_demo_dataset(db_session, "test-only-demo-password")
 
     assert result.data.created == 0
-    assert result.data.unchanged == 9
+    assert result.data.unchanged == 13
     receive = db_session.get(Receive, RECEIVE_SMOKE_ID)
     line = db_session.get(ReceiveLine, RECEIVE_SMOKE_LINE_ID)
     assert receive is not None
@@ -225,3 +245,128 @@ def test_demo_seed_preserves_user_recorded_receive_smoke_facts(
     assert receive.recorded_at == recorded_at
     assert line.actual_quantity == 10
     assert line.quantity_discrepancy == 10 - RECEIVE_SMOKE_QUANTITY
+
+
+def test_pick_smoke_fixture_is_created_unconfirmed_with_multi_location_stock(
+    db_session: Session,
+) -> None:
+    seed_demo_dataset(db_session, "test-only-demo-password")
+
+    pick = db_session.get(PickRequest, PICK_SMOKE_ID)
+    sku = db_session.get(Sku, PICK_SMOKE_SKU_ID)
+    backroom = db_session.get(StockBalance, PICK_SMOKE_BACKROOM_STOCK_ID)
+    sales_shelf = db_session.get(StockBalance, PICK_SMOKE_SALES_SHELF_STOCK_ID)
+
+    assert pick is not None
+    assert sku is not None
+    assert backroom is not None
+    assert sales_shelf is not None
+    assert sku.code == "DEMO-SKU-PICK-SMOKE-001"
+    assert pick.warehouse_id == DEMO_WAREHOUSE_ID
+    assert pick.sku_id == PICK_SMOKE_SKU_ID
+    assert pick.requested_quantity == PICK_SMOKE_REQUESTED_QUANTITY
+    assert pick.outcome is None
+    assert pick.confirmed_by_user_id is None
+    assert pick.confirmed_at is None
+    assert backroom.sku_id == PICK_SMOKE_SKU_ID
+    assert backroom.location_id == DEMO_BACKROOM_ID
+    assert backroom.quantity == PICK_SMOKE_BACKROOM_QUANTITY
+    assert sales_shelf.sku_id == PICK_SMOKE_SKU_ID
+    assert sales_shelf.location_id == DEMO_SALES_SHELF_ID
+    assert sales_shelf.quantity == PICK_SMOKE_SALES_SHELF_QUANTITY
+    assert (
+        db_session.scalar(
+            select(func.count(PickAllocation.id)).where(
+                PickAllocation.pick_id == PICK_SMOKE_ID
+            )
+        )
+        == 0
+    )
+
+
+def test_pick_smoke_fixture_second_seed_does_not_duplicate_rows(
+    db_session: Session,
+) -> None:
+    seed_demo_dataset(db_session, "test-only-demo-password")
+    result = seed_demo_dataset(db_session, "test-only-demo-password")
+
+    assert result.data.created == 0
+    assert result.data.unchanged == 13
+    assert (
+        db_session.scalar(
+            select(func.count(PickRequest.id)).where(PickRequest.id == PICK_SMOKE_ID)
+        )
+        == 1
+    )
+    assert (
+        db_session.scalar(
+            select(func.count(StockBalance.id)).where(
+                StockBalance.sku_id == PICK_SMOKE_SKU_ID
+            )
+        )
+        == 2
+    )
+
+
+def test_demo_seed_preserves_confirmed_pick_allocations_and_reduced_stock(
+    db_session: Session,
+) -> None:
+    seed_demo_dataset(db_session, "test-only-demo-password")
+    staff = db_session.scalar(
+        select(User).where(User.login_identifier == "demo.warehouse_staff")
+    )
+    assert staff is not None
+
+    confirm_pick(
+        db_session,
+        PickCommand.model_validate(
+            {
+                "pick_id": PICK_SMOKE_ID,
+                "allocations": [
+                    {
+                        "source_location_id": DEMO_BACKROOM_ID,
+                        "quantity": PICK_SMOKE_BACKROOM_QUANTITY,
+                    },
+                    {
+                        "source_location_id": DEMO_SALES_SHELF_ID,
+                        "quantity": PICK_SMOKE_SALES_SHELF_QUANTITY,
+                    },
+                ],
+            }
+        ),
+        Actor(staff.id, staff.login_identifier, Role.WAREHOUSE_STAFF),
+    )
+    db_session.expire_all()
+    confirmed_pick = db_session.get(PickRequest, PICK_SMOKE_ID)
+    assert confirmed_pick is not None
+    confirmed_at = confirmed_pick.confirmed_at
+    allocation_ids = tuple(
+        db_session.scalars(
+            select(PickAllocation.id)
+            .where(PickAllocation.pick_id == PICK_SMOKE_ID)
+            .order_by(PickAllocation.id)
+        )
+    )
+
+    result = seed_demo_dataset(db_session, "test-only-demo-password")
+
+    assert result.data.created == 0
+    assert result.data.unchanged == 13
+    pick = db_session.get(PickRequest, PICK_SMOKE_ID)
+    assert pick is not None
+    assert pick.outcome == "FULLY_COMPLETED"
+    assert pick.confirmed_by_user_id == staff.id
+    assert pick.confirmed_at == confirmed_at
+    assert (
+        tuple(
+            db_session.scalars(
+                select(PickAllocation.id)
+                .where(PickAllocation.pick_id == PICK_SMOKE_ID)
+                .order_by(PickAllocation.id)
+            )
+        )
+        == allocation_ids
+    )
+    assert len(allocation_ids) == 2
+    assert db_session.get(StockBalance, PICK_SMOKE_BACKROOM_STOCK_ID).quantity == 0
+    assert db_session.get(StockBalance, PICK_SMOKE_SALES_SHELF_STOCK_ID).quantity == 0
