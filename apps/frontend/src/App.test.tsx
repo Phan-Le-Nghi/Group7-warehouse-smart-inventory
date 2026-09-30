@@ -66,6 +66,26 @@ describe('US-PUT-001 Putaway', () => {
     expect(screen.getByText('16')).toBeInTheDocument()
   })
 
+  it('does not allow another putaway when the receive line is fully put away', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockReturnValue(
+      jsonResponse({
+        ...context,
+        confirmed_quantity: 16,
+        eligible_quantity: 0,
+      }),
+    )
+    renderApp()
+
+    expect(
+      await screen.findByText('This receive line has been fully put away.'),
+    ).toHaveAttribute('role', 'status')
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Confirm Putaway' }),
+    ).not.toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   it('submits the allocation and shows the committed result', async () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
