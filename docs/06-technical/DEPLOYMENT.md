@@ -138,7 +138,8 @@ Create the project only after human approval, with:
 - Environment variable:
   `VITE_RECEIVE_LINE_ID=daf594b9-9c1e-51ec-adf0-0055cb3a8ff3`
 - Environment variable:
-  `VITE_RECEIVE_ID=435cd10b-4cfe-53a4-bbcf-f63735a8292e`
+  `VITE_RECEIVE_ID=e34f5e8e-4b3a-55a1-9485-d411a1ede3a8` (temporary prepared,
+  unrecorded Receive smoke context)
 - `VITE_API_BASE_URL`: unset
 
 `frontend/vercel.mjs` validates `RENDER_API_ORIGIN` and generates routes in this
