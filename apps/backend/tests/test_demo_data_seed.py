@@ -4,8 +4,12 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from warehouse_api.audit import create_audit, get_audit_context
 from warehouse_api.auth import Actor, Role
 from warehouse_api.demo_data_seed import (
+    AUDIT_SMOKE_BACKROOM_QUANTITY,
+    AUDIT_SMOKE_BACKROOM_STOCK_ID,
+    AUDIT_SMOKE_SKU_ID,
     DEMO_BACKROOM_ID,
     DEMO_QUANTITY,
     DEMO_RECEIVE_ID,
@@ -36,6 +40,8 @@ from warehouse_api.demo_data_seed import (
     seed_demo_dataset,
 )
 from warehouse_api.models import (
+    AuditLine,
+    AuditSession,
     InternalLocation,
     PickAllocation,
     PickRequest,
@@ -50,8 +56,8 @@ from warehouse_api.models import (
 )
 from warehouse_api.pick import confirm_pick
 from warehouse_api.receive import record_receive
+from warehouse_api.schemas import AuditRequest, ReceiveRecordRequest, TransferRequest
 from warehouse_api.schemas import PickRequest as PickCommand
-from warehouse_api.schemas import ReceiveRecordRequest, TransferRequest
 from warehouse_api.transfer import confirm_transfer
 
 
@@ -62,8 +68,8 @@ def test_demo_dataset_is_idempotent_and_preserves_putaway_effects(
 
     first = seed_demo_dataset(db_session, password)
     assert first.users.created == 4
-    assert first.data.created == 16
-    assert db_session.scalar(select(func.count(StockBalance.id))) == 4
+    assert first.data.created == 18
+    assert db_session.scalar(select(func.count(StockBalance.id))) == 5
     assert db_session.scalar(select(func.count(PutawayAllocation.id))) == 0
 
     allocation_id = uuid4()
@@ -91,14 +97,14 @@ def test_demo_dataset_is_idempotent_and_preserves_putaway_effects(
 
     assert second.users.unchanged == 4
     assert second.data.created == 0
-    assert second.data.unchanged == 16
+    assert second.data.unchanged == 18
     assert db_session.scalar(select(func.count(Warehouse.id))) == 1
     assert db_session.scalar(select(func.count(InternalLocation.id))) == 2
-    assert db_session.scalar(select(func.count(Sku.id))) == 4
+    assert db_session.scalar(select(func.count(Sku.id))) == 5
     assert db_session.scalar(select(func.count(Receive.id))) == 2
     assert db_session.scalar(select(func.count(ReceiveLine.id))) == 2
     assert db_session.scalar(select(func.count(PutawayAllocation.id))) == 1
-    assert db_session.scalar(select(func.count(StockBalance.id))) == 5
+    assert db_session.scalar(select(func.count(StockBalance.id))) == 6
     assert db_session.get(PutawayAllocation, allocation_id).quantity == 5
     balance = db_session.scalar(
         select(StockBalance).where(
@@ -193,7 +199,7 @@ def test_receive_smoke_context_is_prepared_but_unrecorded(
     line = db_session.get(ReceiveLine, RECEIVE_SMOKE_LINE_ID)
 
     assert rerun.data.created == 0
-    assert rerun.data.unchanged == 16
+    assert rerun.data.unchanged == 18
     assert receive is not None
     assert line is not None
     assert receive.warehouse_id == DEMO_WAREHOUSE_ID
@@ -242,7 +248,7 @@ def test_demo_seed_preserves_user_recorded_receive_smoke_facts(
     result = seed_demo_dataset(db_session, "test-only-demo-password")
 
     assert result.data.created == 0
-    assert result.data.unchanged == 16
+    assert result.data.unchanged == 18
     receive = db_session.get(Receive, RECEIVE_SMOKE_ID)
     line = db_session.get(ReceiveLine, RECEIVE_SMOKE_LINE_ID)
     assert receive is not None
@@ -299,7 +305,7 @@ def test_pick_smoke_fixture_second_seed_does_not_duplicate_rows(
     result = seed_demo_dataset(db_session, "test-only-demo-password")
 
     assert result.data.created == 0
-    assert result.data.unchanged == 16
+    assert result.data.unchanged == 18
     assert (
         db_session.scalar(
             select(func.count(PickRequest.id)).where(PickRequest.id == PICK_SMOKE_ID)
@@ -359,7 +365,7 @@ def test_demo_seed_preserves_confirmed_pick_allocations_and_reduced_stock(
     result = seed_demo_dataset(db_session, "test-only-demo-password")
 
     assert result.data.created == 0
-    assert result.data.unchanged == 16
+    assert result.data.unchanged == 18
     pick = db_session.get(PickRequest, PICK_SMOKE_ID)
     assert pick is not None
     assert pick.outcome == "FULLY_COMPLETED"
@@ -416,7 +422,7 @@ def test_transfer_smoke_fixture_second_seed_does_not_duplicate_rows(
     result = seed_demo_dataset(db_session, "test-only-demo-password")
 
     assert result.data.created == 0
-    assert result.data.unchanged == 16
+    assert result.data.unchanged == 18
     assert (
         db_session.scalar(
             select(func.count(Sku.id)).where(Sku.id == TRANSFER_SMOKE_SKU_ID)
@@ -460,7 +466,7 @@ def test_demo_seed_preserves_completed_transfer_and_changed_stock(
     result = seed_demo_dataset(db_session, "test-only-demo-password")
 
     assert result.data.created == 0
-    assert result.data.unchanged == 16
+    assert result.data.unchanged == 18
     transfer = db_session.get(Transfer, transfer_id)
     assert transfer is not None
     assert transfer.sku_id == TRANSFER_SMOKE_SKU_ID
@@ -483,3 +489,121 @@ def test_demo_seed_preserves_completed_transfer_and_changed_stock(
         )
         == 1
     )
+
+
+def test_audit_smoke_fixture_is_created_without_audit_records(
+    db_session: Session,
+) -> None:
+    seed_demo_dataset(db_session, "test-only-demo-password")
+
+    sku = db_session.get(Sku, AUDIT_SMOKE_SKU_ID)
+    backroom = db_session.get(StockBalance, AUDIT_SMOKE_BACKROOM_STOCK_ID)
+
+    assert sku is not None
+    assert backroom is not None
+    assert sku.code == "DEMO-SKU-AUDIT-SMOKE-001"
+    assert backroom.sku_id == AUDIT_SMOKE_SKU_ID
+    assert backroom.location_id == DEMO_BACKROOM_ID
+    assert backroom.quantity == AUDIT_SMOKE_BACKROOM_QUANTITY
+    assert (
+        db_session.scalar(
+            select(func.count(StockBalance.id)).where(
+                StockBalance.sku_id == AUDIT_SMOKE_SKU_ID,
+                StockBalance.location_id == DEMO_SALES_SHELF_ID,
+            )
+        )
+        == 0
+    )
+    assert db_session.scalar(select(func.count(AuditSession.id))) == 0
+    assert db_session.scalar(select(func.count(AuditLine.id))) == 0
+    context_pairs = {
+        (pair.sku_id, pair.location_id): pair.preview_system_quantity
+        for pair in get_audit_context(db_session).pairs
+        if pair.sku_id == AUDIT_SMOKE_SKU_ID
+    }
+    assert context_pairs == {
+        (AUDIT_SMOKE_SKU_ID, DEMO_BACKROOM_ID): AUDIT_SMOKE_BACKROOM_QUANTITY,
+        (AUDIT_SMOKE_SKU_ID, DEMO_SALES_SHELF_ID): 0,
+    }
+
+
+def test_audit_smoke_fixture_second_seed_does_not_duplicate_rows(
+    db_session: Session,
+) -> None:
+    seed_demo_dataset(db_session, "test-only-demo-password")
+    result = seed_demo_dataset(db_session, "test-only-demo-password")
+
+    assert result.data.created == 0
+    assert result.data.unchanged == 18
+    assert (
+        db_session.scalar(
+            select(func.count(Sku.id)).where(Sku.id == AUDIT_SMOKE_SKU_ID)
+        )
+        == 1
+    )
+    assert (
+        db_session.scalar(
+            select(func.count(StockBalance.id)).where(
+                StockBalance.sku_id == AUDIT_SMOKE_SKU_ID
+            )
+        )
+        == 1
+    )
+    assert db_session.scalar(select(func.count(AuditSession.id))) == 0
+    assert db_session.scalar(select(func.count(AuditLine.id))) == 0
+
+
+def test_demo_seed_preserves_real_audit_and_later_stock_state(
+    db_session: Session,
+) -> None:
+    seed_demo_dataset(db_session, "test-only-demo-password")
+    staff = db_session.scalar(
+        select(User).where(User.login_identifier == "demo.warehouse_staff")
+    )
+    assert staff is not None
+
+    audit_result = create_audit(
+        db_session,
+        AuditRequest.model_validate(
+            {
+                "scope_type": "SELECTED_PAIRS",
+                "lines": [
+                    {
+                        "sku_id": AUDIT_SMOKE_SKU_ID,
+                        "location_id": DEMO_BACKROOM_ID,
+                        "physical_quantity": 6,
+                    }
+                ],
+            }
+        ),
+        Actor(staff.id, staff.login_identifier, Role.WAREHOUSE_STAFF),
+        "demo-audit-smoke-preservation-test",
+    )
+    audit_id = audit_result.response.audit_id
+    audit_line = db_session.scalar(
+        select(AuditLine).where(AuditLine.audit_id == audit_id)
+    )
+    assert audit_line is not None
+    audit_line_id = audit_line.id
+    balance = db_session.get(StockBalance, AUDIT_SMOKE_BACKROOM_STOCK_ID)
+    assert balance is not None
+    balance.quantity = 5
+    db_session.flush()
+
+    result = seed_demo_dataset(db_session, "test-only-demo-password")
+
+    assert result.data.created == 0
+    assert result.data.unchanged == 18
+    audit = db_session.get(AuditSession, audit_id)
+    preserved_line = db_session.get(AuditLine, audit_line_id)
+    assert audit is not None
+    assert preserved_line is not None
+    assert audit.result == "MISMATCH"
+    assert audit.status == "MISMATCH_RECORDED"
+    assert preserved_line.system_quantity == AUDIT_SMOKE_BACKROOM_QUANTITY
+    assert preserved_line.physical_quantity == 6
+    assert preserved_line.quantity_discrepancy == -2
+    assert preserved_line.result == "MISMATCH"
+    assert db_session.get(StockBalance, AUDIT_SMOKE_BACKROOM_STOCK_ID).quantity == 5
+    assert db_session.scalar(select(func.count(AuditSession.id))) == 1
+    assert db_session.scalar(select(func.count(AuditLine.id))) == 1
