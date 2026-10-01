@@ -36,6 +36,8 @@ PICK_SMOKE_SALES_SHELF_STOCK_ID = UUID("c0f35328-197b-5494-932e-5b7f619e3e27")
 TRANSFER_SMOKE_SKU_ID = UUID("e3008bde-52db-5009-86d1-9dc3ec7cddcd")
 TRANSFER_SMOKE_BACKROOM_STOCK_ID = UUID("28f91941-c1e2-593d-a6f7-82b3535a8551")
 TRANSFER_SMOKE_SALES_SHELF_STOCK_ID = UUID("294299a3-4a25-5ba7-bd7d-ca69dcb6fe10")
+AUDIT_SMOKE_SKU_ID = UUID("7a567266-308e-5b91-b988-a3f3d8399a3c")
+AUDIT_SMOKE_BACKROOM_STOCK_ID = UUID("85fd787a-3f26-50de-a04d-f96458939cd5")
 
 DEMO_RECORDED_AT = datetime(2026, 9, 30, 12, 0, tzinfo=UTC)
 DEMO_REFERENCE = "DEMO-RECEIVE-001"
@@ -48,6 +50,7 @@ PICK_SMOKE_SALES_SHELF_QUANTITY = 4
 TRANSFER_SMOKE_BACKROOM_QUANTITY = 12
 TRANSFER_SMOKE_SALES_SHELF_QUANTITY = 6
 TRANSFER_SMOKE_QUANTITY = 4
+AUDIT_SMOKE_BACKROOM_QUANTITY = 8
 
 
 @dataclass(frozen=True, slots=True)
@@ -193,6 +196,14 @@ def seed_demo_data(session: Session) -> DemoDataSeedResult:
     )
     created += _ensure_row(
         session,
+        Sku,
+        AUDIT_SMOKE_SKU_ID,
+        {"code": "DEMO-SKU-AUDIT-SMOKE-001"},
+        "SKU DEMO-SKU-AUDIT-SMOKE-001",
+        Sku.code == "DEMO-SKU-AUDIT-SMOKE-001",
+    )
+    created += _ensure_row(
+        session,
         Receive,
         DEMO_RECEIVE_ID,
         {
@@ -318,8 +329,24 @@ def seed_demo_data(session: Session) -> DemoDataSeedResult:
         & (StockBalance.location_id == DEMO_SALES_SHELF_ID),
         preserved_fields=frozenset({"quantity"}),
     )
+    # Audit stock is staging state only. Audit records are intentionally not
+    # seeded, and reruns preserve stock changed by later operational activity.
+    created += _ensure_row(
+        session,
+        StockBalance,
+        AUDIT_SMOKE_BACKROOM_STOCK_ID,
+        {
+            "sku_id": AUDIT_SMOKE_SKU_ID,
+            "location_id": DEMO_BACKROOM_ID,
+            "quantity": AUDIT_SMOKE_BACKROOM_QUANTITY,
+        },
+        "Audit smoke stock MAIN/BACKROOM",
+        (StockBalance.sku_id == AUDIT_SMOKE_SKU_ID)
+        & (StockBalance.location_id == DEMO_BACKROOM_ID),
+        preserved_fields=frozenset({"quantity"}),
+    )
     session.flush()
-    return DemoDataSeedResult(created=created, unchanged=16 - created)
+    return DemoDataSeedResult(created=created, unchanged=18 - created)
 
 
 def seed_demo_dataset(session: Session, password: str) -> DemoDatasetSeedResult:
@@ -348,7 +375,8 @@ def main() -> None:
         f"receive_smoke_id={RECEIVE_SMOKE_ID}; "
         f"receive_smoke_line_id={RECEIVE_SMOKE_LINE_ID}; "
         f"pick_smoke_id={PICK_SMOKE_ID}; "
-        f"transfer_smoke_sku_id={TRANSFER_SMOKE_SKU_ID}"
+        f"transfer_smoke_sku_id={TRANSFER_SMOKE_SKU_ID}; "
+        f"audit_smoke_sku_id={AUDIT_SMOKE_SKU_ID}"
     )
 
 
