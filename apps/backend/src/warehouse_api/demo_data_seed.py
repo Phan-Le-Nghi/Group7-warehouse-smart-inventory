@@ -33,6 +33,9 @@ PICK_SMOKE_ID = UUID("d88066ff-46b8-5722-ba29-b11cfa01816d")
 PICK_SMOKE_SKU_ID = UUID("82a38c49-10fb-5168-bdcb-0359f606ee3f")
 PICK_SMOKE_BACKROOM_STOCK_ID = UUID("8b37bd4e-6a61-59fb-8809-5ac87d9f4128")
 PICK_SMOKE_SALES_SHELF_STOCK_ID = UUID("c0f35328-197b-5494-932e-5b7f619e3e27")
+TRANSFER_SMOKE_SKU_ID = UUID("e3008bde-52db-5009-86d1-9dc3ec7cddcd")
+TRANSFER_SMOKE_BACKROOM_STOCK_ID = UUID("28f91941-c1e2-593d-a6f7-82b3535a8551")
+TRANSFER_SMOKE_SALES_SHELF_STOCK_ID = UUID("294299a3-4a25-5ba7-bd7d-ca69dcb6fe10")
 
 DEMO_RECORDED_AT = datetime(2026, 9, 30, 12, 0, tzinfo=UTC)
 DEMO_REFERENCE = "DEMO-RECEIVE-001"
@@ -42,6 +45,9 @@ RECEIVE_SMOKE_QUANTITY = 12
 PICK_SMOKE_REQUESTED_QUANTITY = 10
 PICK_SMOKE_BACKROOM_QUANTITY = 6
 PICK_SMOKE_SALES_SHELF_QUANTITY = 4
+TRANSFER_SMOKE_BACKROOM_QUANTITY = 12
+TRANSFER_SMOKE_SALES_SHELF_QUANTITY = 6
+TRANSFER_SMOKE_QUANTITY = 4
 
 
 @dataclass(frozen=True, slots=True)
@@ -179,6 +185,14 @@ def seed_demo_data(session: Session) -> DemoDataSeedResult:
     )
     created += _ensure_row(
         session,
+        Sku,
+        TRANSFER_SMOKE_SKU_ID,
+        {"code": "DEMO-SKU-TRANSFER-SMOKE-001"},
+        "SKU DEMO-SKU-TRANSFER-SMOKE-001",
+        Sku.code == "DEMO-SKU-TRANSFER-SMOKE-001",
+    )
+    created += _ensure_row(
+        session,
         Receive,
         DEMO_RECEIVE_ID,
         {
@@ -274,8 +288,38 @@ def seed_demo_data(session: Session) -> DemoDataSeedResult:
         & (StockBalance.location_id == DEMO_SALES_SHELF_ID),
         preserved_fields=frozenset({"quantity"}),
     )
+    # Transfer stock is staging state only. Once a real Transfer changes these
+    # quantities, subsequent seed runs must preserve that operational state.
+    created += _ensure_row(
+        session,
+        StockBalance,
+        TRANSFER_SMOKE_BACKROOM_STOCK_ID,
+        {
+            "sku_id": TRANSFER_SMOKE_SKU_ID,
+            "location_id": DEMO_BACKROOM_ID,
+            "quantity": TRANSFER_SMOKE_BACKROOM_QUANTITY,
+        },
+        "Transfer smoke stock MAIN/BACKROOM",
+        (StockBalance.sku_id == TRANSFER_SMOKE_SKU_ID)
+        & (StockBalance.location_id == DEMO_BACKROOM_ID),
+        preserved_fields=frozenset({"quantity"}),
+    )
+    created += _ensure_row(
+        session,
+        StockBalance,
+        TRANSFER_SMOKE_SALES_SHELF_STOCK_ID,
+        {
+            "sku_id": TRANSFER_SMOKE_SKU_ID,
+            "location_id": DEMO_SALES_SHELF_ID,
+            "quantity": TRANSFER_SMOKE_SALES_SHELF_QUANTITY,
+        },
+        "Transfer smoke stock MAIN/SALES_SHELF",
+        (StockBalance.sku_id == TRANSFER_SMOKE_SKU_ID)
+        & (StockBalance.location_id == DEMO_SALES_SHELF_ID),
+        preserved_fields=frozenset({"quantity"}),
+    )
     session.flush()
-    return DemoDataSeedResult(created=created, unchanged=13 - created)
+    return DemoDataSeedResult(created=created, unchanged=16 - created)
 
 
 def seed_demo_dataset(session: Session, password: str) -> DemoDatasetSeedResult:
@@ -303,7 +347,8 @@ def main() -> None:
         f"receive_line_id={DEMO_RECEIVE_LINE_ID}; "
         f"receive_smoke_id={RECEIVE_SMOKE_ID}; "
         f"receive_smoke_line_id={RECEIVE_SMOKE_LINE_ID}; "
-        f"pick_smoke_id={PICK_SMOKE_ID}"
+        f"pick_smoke_id={PICK_SMOKE_ID}; "
+        f"transfer_smoke_sku_id={TRANSFER_SMOKE_SKU_ID}"
     )
 
 

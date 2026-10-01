@@ -25,6 +25,12 @@ from warehouse_api.demo_data_seed import (
     RECEIVE_SMOKE_QUANTITY,
     RECEIVE_SMOKE_REFERENCE,
     RECEIVE_SMOKE_SKU_ID,
+    TRANSFER_SMOKE_BACKROOM_QUANTITY,
+    TRANSFER_SMOKE_BACKROOM_STOCK_ID,
+    TRANSFER_SMOKE_QUANTITY,
+    TRANSFER_SMOKE_SALES_SHELF_QUANTITY,
+    TRANSFER_SMOKE_SALES_SHELF_STOCK_ID,
+    TRANSFER_SMOKE_SKU_ID,
     main,
     seed_demo_data,
     seed_demo_dataset,
@@ -38,13 +44,15 @@ from warehouse_api.models import (
     ReceiveLine,
     Sku,
     StockBalance,
+    Transfer,
     User,
     Warehouse,
 )
 from warehouse_api.pick import confirm_pick
 from warehouse_api.receive import record_receive
 from warehouse_api.schemas import PickRequest as PickCommand
-from warehouse_api.schemas import ReceiveRecordRequest
+from warehouse_api.schemas import ReceiveRecordRequest, TransferRequest
+from warehouse_api.transfer import confirm_transfer
 
 
 def test_demo_dataset_is_idempotent_and_preserves_putaway_effects(
@@ -54,8 +62,8 @@ def test_demo_dataset_is_idempotent_and_preserves_putaway_effects(
 
     first = seed_demo_dataset(db_session, password)
     assert first.users.created == 4
-    assert first.data.created == 13
-    assert db_session.scalar(select(func.count(StockBalance.id))) == 2
+    assert first.data.created == 16
+    assert db_session.scalar(select(func.count(StockBalance.id))) == 4
     assert db_session.scalar(select(func.count(PutawayAllocation.id))) == 0
 
     allocation_id = uuid4()
@@ -83,14 +91,14 @@ def test_demo_dataset_is_idempotent_and_preserves_putaway_effects(
 
     assert second.users.unchanged == 4
     assert second.data.created == 0
-    assert second.data.unchanged == 13
+    assert second.data.unchanged == 16
     assert db_session.scalar(select(func.count(Warehouse.id))) == 1
     assert db_session.scalar(select(func.count(InternalLocation.id))) == 2
-    assert db_session.scalar(select(func.count(Sku.id))) == 3
+    assert db_session.scalar(select(func.count(Sku.id))) == 4
     assert db_session.scalar(select(func.count(Receive.id))) == 2
     assert db_session.scalar(select(func.count(ReceiveLine.id))) == 2
     assert db_session.scalar(select(func.count(PutawayAllocation.id))) == 1
-    assert db_session.scalar(select(func.count(StockBalance.id))) == 3
+    assert db_session.scalar(select(func.count(StockBalance.id))) == 5
     assert db_session.get(PutawayAllocation, allocation_id).quantity == 5
     balance = db_session.scalar(
         select(StockBalance).where(
@@ -185,7 +193,7 @@ def test_receive_smoke_context_is_prepared_but_unrecorded(
     line = db_session.get(ReceiveLine, RECEIVE_SMOKE_LINE_ID)
 
     assert rerun.data.created == 0
-    assert rerun.data.unchanged == 13
+    assert rerun.data.unchanged == 16
     assert receive is not None
     assert line is not None
     assert receive.warehouse_id == DEMO_WAREHOUSE_ID
@@ -234,7 +242,7 @@ def test_demo_seed_preserves_user_recorded_receive_smoke_facts(
     result = seed_demo_dataset(db_session, "test-only-demo-password")
 
     assert result.data.created == 0
-    assert result.data.unchanged == 13
+    assert result.data.unchanged == 16
     receive = db_session.get(Receive, RECEIVE_SMOKE_ID)
     line = db_session.get(ReceiveLine, RECEIVE_SMOKE_LINE_ID)
     assert receive is not None
@@ -291,7 +299,7 @@ def test_pick_smoke_fixture_second_seed_does_not_duplicate_rows(
     result = seed_demo_dataset(db_session, "test-only-demo-password")
 
     assert result.data.created == 0
-    assert result.data.unchanged == 13
+    assert result.data.unchanged == 16
     assert (
         db_session.scalar(
             select(func.count(PickRequest.id)).where(PickRequest.id == PICK_SMOKE_ID)
@@ -351,7 +359,7 @@ def test_demo_seed_preserves_confirmed_pick_allocations_and_reduced_stock(
     result = seed_demo_dataset(db_session, "test-only-demo-password")
 
     assert result.data.created == 0
-    assert result.data.unchanged == 13
+    assert result.data.unchanged == 16
     pick = db_session.get(PickRequest, PICK_SMOKE_ID)
     assert pick is not None
     assert pick.outcome == "FULLY_COMPLETED"
@@ -370,3 +378,108 @@ def test_demo_seed_preserves_confirmed_pick_allocations_and_reduced_stock(
     assert len(allocation_ids) == 2
     assert db_session.get(StockBalance, PICK_SMOKE_BACKROOM_STOCK_ID).quantity == 0
     assert db_session.get(StockBalance, PICK_SMOKE_SALES_SHELF_STOCK_ID).quantity == 0
+
+
+def test_transfer_smoke_fixture_is_created_without_a_transfer(
+    db_session: Session,
+) -> None:
+    seed_demo_dataset(db_session, "test-only-demo-password")
+
+    sku = db_session.get(Sku, TRANSFER_SMOKE_SKU_ID)
+    backroom = db_session.get(StockBalance, TRANSFER_SMOKE_BACKROOM_STOCK_ID)
+    sales_shelf = db_session.get(StockBalance, TRANSFER_SMOKE_SALES_SHELF_STOCK_ID)
+
+    assert sku is not None
+    assert backroom is not None
+    assert sales_shelf is not None
+    assert sku.code == "DEMO-SKU-TRANSFER-SMOKE-001"
+    assert backroom.sku_id == TRANSFER_SMOKE_SKU_ID
+    assert backroom.location_id == DEMO_BACKROOM_ID
+    assert backroom.quantity == TRANSFER_SMOKE_BACKROOM_QUANTITY
+    assert sales_shelf.sku_id == TRANSFER_SMOKE_SKU_ID
+    assert sales_shelf.location_id == DEMO_SALES_SHELF_ID
+    assert sales_shelf.quantity == TRANSFER_SMOKE_SALES_SHELF_QUANTITY
+    assert (
+        db_session.scalar(
+            select(func.count(Transfer.id)).where(
+                Transfer.sku_id == TRANSFER_SMOKE_SKU_ID
+            )
+        )
+        == 0
+    )
+
+
+def test_transfer_smoke_fixture_second_seed_does_not_duplicate_rows(
+    db_session: Session,
+) -> None:
+    seed_demo_dataset(db_session, "test-only-demo-password")
+    result = seed_demo_dataset(db_session, "test-only-demo-password")
+
+    assert result.data.created == 0
+    assert result.data.unchanged == 16
+    assert (
+        db_session.scalar(
+            select(func.count(Sku.id)).where(Sku.id == TRANSFER_SMOKE_SKU_ID)
+        )
+        == 1
+    )
+    assert (
+        db_session.scalar(
+            select(func.count(StockBalance.id)).where(
+                StockBalance.sku_id == TRANSFER_SMOKE_SKU_ID
+            )
+        )
+        == 2
+    )
+
+
+def test_demo_seed_preserves_completed_transfer_and_changed_stock(
+    db_session: Session,
+) -> None:
+    seed_demo_dataset(db_session, "test-only-demo-password")
+    staff = db_session.scalar(
+        select(User).where(User.login_identifier == "demo.warehouse_staff")
+    )
+    assert staff is not None
+
+    transfer_result = confirm_transfer(
+        db_session,
+        TransferRequest.model_validate(
+            {
+                "sku_id": TRANSFER_SMOKE_SKU_ID,
+                "source_location_id": DEMO_BACKROOM_ID,
+                "destination_location_id": DEMO_SALES_SHELF_ID,
+                "quantity": TRANSFER_SMOKE_QUANTITY,
+            }
+        ),
+        Actor(staff.id, staff.login_identifier, Role.WAREHOUSE_STAFF),
+        "demo-transfer-smoke-preservation-test",
+    )
+    transfer_id = transfer_result.response.transfer_id
+
+    result = seed_demo_dataset(db_session, "test-only-demo-password")
+
+    assert result.data.created == 0
+    assert result.data.unchanged == 16
+    transfer = db_session.get(Transfer, transfer_id)
+    assert transfer is not None
+    assert transfer.sku_id == TRANSFER_SMOKE_SKU_ID
+    assert transfer.quantity == TRANSFER_SMOKE_QUANTITY
+    assert transfer.source_location_id == DEMO_BACKROOM_ID
+    assert transfer.destination_location_id == DEMO_SALES_SHELF_ID
+    assert (
+        db_session.get(StockBalance, TRANSFER_SMOKE_BACKROOM_STOCK_ID).quantity
+        == TRANSFER_SMOKE_BACKROOM_QUANTITY - TRANSFER_SMOKE_QUANTITY
+    )
+    assert (
+        db_session.get(StockBalance, TRANSFER_SMOKE_SALES_SHELF_STOCK_ID).quantity
+        == TRANSFER_SMOKE_SALES_SHELF_QUANTITY + TRANSFER_SMOKE_QUANTITY
+    )
+    assert (
+        db_session.scalar(
+            select(func.count(Transfer.id)).where(
+                Transfer.sku_id == TRANSFER_SMOKE_SKU_ID
+            )
+        )
+        == 1
+    )
