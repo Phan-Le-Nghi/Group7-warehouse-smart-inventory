@@ -5,6 +5,13 @@
 - Yêu cầu sản phẩm là canonical tại [`vault/02-requirements/requirements.md`](../vault/02-requirements/requirements.md).
 - Mục lục này theo dõi deliverable môn học/báo cáo và không gán ID yêu cầu sản phẩm cho chúng.
 
+## Staging/demo release hiện tại
+
+| Artifact | Release | Trạng thái |
+|---|---|---|
+| [`07-release/STAGING-DEMO-RELEASE-CHECKLIST.md`](07-release/STAGING-DEMO-RELEASE-CHECKLIST.md) | Commit `664d207`; Vercel → Render → Supabase | Human staging smoke PASS; exact CI run cho commit này NOT RECORDED; không claim production-grade |
+| [`07-release/STAGING-DEMO-RELEASE-NOTES.md`](07-release/STAGING-DEMO-RELEASE-NOTES.md) | 9 canonical Must stories | Included scope, verification summary và known limitations |
+
 ## Group Round 1 Report
 
 | Deliverable | Artifact | Trạng thái |
@@ -35,11 +42,11 @@
 | User Stories + AC | [`04-backlog/user-stories.md`](04-backlog/user-stories.md) | `vault/04-product/stories/` | Product/BA + Story owner | 9 canonical User Stories — HUMAN APPROVED; đạt mục tiêu 8–12 |
 | Taiga Backlog | [`04-backlog/taiga-backlog.md`](04-backlog/taiga-backlog.md) | Story ID đã review + Taiga | QA/Release — Thảo Ngân | 6 Epic, 9 User Story và 27 Task refs đã đồng bộ; quyền truy cập/người phụ trách công cụ vẫn TBD |
 | Figma + Design System | [`05-design/design-system.md`](05-design/design-system.md), [Figma prototype](https://www.figma.com/design/d5XrKKZGoeVefVGqVVTwlu/Warehouse---Smart-Inventory-Management?node-id=0-1) | Canonical stories/flow + downstream Figma artifact | UX/UI — Nghĩa | PARTIAL overall — browser access và 8 pages human verified; foundations PASS; components PASS/PARTIAL; High Fidelity và Dev Handoff chưa hoàn thành; exact hotspot count chưa verify |
-| Architecture + ADR | [`06-technical/architecture.md`](06-technical/architecture.md) | [`vault/06-technical/`](../vault/06-technical/) | Engineering — Nghi | Technical Foundation + 3 ADR; auth implementation merged/CI verified; `DEC-034/035` Vercel → Render → Supabase PostgreSQL 17 deployment remains design-only |
+| Architecture + ADR | [`06-technical/architecture.md`](06-technical/architecture.md) | [`vault/06-technical/`](../vault/06-technical/) | Engineering — Nghi | Technical Foundation + 3 ADR; 9 Must stories/auth merged; Vercel → Render → Supabase deployed và human-smoke verified cho staging/demo |
 | Repo Scaffold + CI Baseline | [`../apps/README.md`](../apps/README.md), [`../.github/workflows/ci.yml`](../.github/workflows/ci.yml) | `DEC-020` và technical foundation đã duyệt | Engineering — Nghi | Completed; first vertical slice `US-PUT-001` completed and verified by GitHub Actions (`backend-checks`, `frontend-checks`, `putaway-e2e`) |
-| ERD / Data Model | [`06-technical/data-model.md`](06-technical/data-model.md) | [`vault/06-technical/data-model.md`](../vault/06-technical/data-model.md) | Engineering — Nghi | Conceptual MVP model + implemented `US-PUT-001` and auth schema/migrations; PostgreSQL 17 staging verification remains pending |
-| API Contract | [`06-technical/API.md`](06-technical/API.md) | [`vault/06-technical/api-contract.md`](../vault/06-technical/api-contract.md) | Engineering — Nghi | Auth route/401/403 contract approved and implementation merged/CI verified; staging HTTPS behavior remains unverified; other MVP route map proposed; Putaway contract documented |
-| Story Specs + Traceability | [`06-technical/story-specs-index.md`](06-technical/story-specs-index.md), [`TRACEABILITY.md`](TRACEABILITY.md) | Canonical stories + [`vault/06-technical/story-specs/`](../vault/06-technical/story-specs/) | Tất cả Story owner; QA điều phối | `US-PUT-001` completed; backend verified on PostgreSQL 18, frontend checks passed, and React → FastAPI → PostgreSQL 18 Playwright E2E passed in GitHub Actions |
+| ERD / Data Model | [`06-technical/data-model.md`](06-technical/data-model.md) | [`vault/06-technical/data-model.md`](../vault/06-technical/data-model.md) | Engineering — Nghi | Implemented schema/migrations through `US-ADJ-002`; staging `/ready` and persisted story smoke PASS; exact DB version query/migration transcript not recorded |
+| API Contract | [`06-technical/API.md`](06-technical/API.md) | [`vault/06-technical/api-contract.md`](../vault/06-technical/api-contract.md) | Engineering — Nghi | Implemented route inventory through `US-ADJ-002`; human staging auth/session and story smoke PASS; exact release CI run/cookie-attribute inspection not recorded |
+| Story Specs + Traceability | [`06-technical/story-specs-index.md`](06-technical/story-specs-index.md), [`TRACEABILITY.md`](TRACEABILITY.md) | Canonical stories + [`vault/06-technical/story-specs/`](../vault/06-technical/story-specs/) | Tất cả Story owner; QA điều phối | All 9 Must stories merged at `664d207` and human staging smoke PASS; OQ boundaries preserved |
 
 ## First vertical slice evidence
 
