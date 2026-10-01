@@ -2,9 +2,9 @@
 
 ## Trạng thái
 
-`HUMAN APPROVED TECHNICAL FOUNDATION — DOCUMENTATION ONLY`
+`IMPLEMENTED — STAGING/DEMO DEPLOYED AND HUMAN-VERIFIED`
 
-Canonical technical source: [`../../vault/06-technical/architecture.md`](../../vault/06-technical/architecture.md). Technical Foundation được ghi tại `DEC-020` đến `DEC-023`; authentication/authorization design/spec tại `DEC-031/033`; revised staging/demo topology và PostgreSQL compatibility tại `DEC-034/035`. Auth implementation đã merge; human-confirmed merged-PR evidence ghi nhận backend, frontend và Playwright E2E CI checks `PASS`. Staging HTTPS cookie behavior và Vercel/Render/Supabase deployment chưa được verify.
+Canonical technical source: [`../../vault/06-technical/architecture.md`](../../vault/06-technical/architecture.md). Technical Foundation được ghi tại `DEC-020` đến `DEC-023`; authentication/authorization design/spec tại `DEC-031/033`; revised staging/demo topology và PostgreSQL compatibility tại `DEC-034/035`. Cả 9 Must stories và auth đã merged tại release candidate `664d207`. Vercel/Render/Supabase staging/demo đã deploy; human staging smoke xác minh runtime, DB readiness, SPA refresh và auth/session/logout. Exact CI run của commit này và cookie-attribute inspection riêng không được ghi nhận.
 
 ## Kiến trúc được duyệt
 
@@ -25,7 +25,7 @@ React frontend
   -> PostgreSQL 17+
 ```
 
-Frontend không sở hữu authoritative stock. Application service giữ use-case và transaction boundary; persistence thực hiện query/lock/write; PostgreSQL giữ constraints. Production authentication baseline dùng server-side session trong PostgreSQL: cookie → session record → active user → current database role. Frontend không phải role source-of-truth. Protected routes dùng reusable authorization dependency/policy; test actor injection chỉ dành cho automated tests. Design/spec đã được approve tại `DEC-031/033`; implementation đã merge và CI pass, nhưng staging HTTPS cookie behavior chưa verify.
+Frontend không sở hữu authoritative stock. Application service giữ use-case và transaction boundary; persistence thực hiện query/lock/write; PostgreSQL giữ constraints. Production authentication baseline dùng server-side session trong PostgreSQL: cookie → session record → active user → current database role. Frontend không phải role source-of-truth. Protected routes dùng reusable authorization dependency/policy; test actor injection chỉ dành cho automated tests. Design/spec đã được approve tại `DEC-031/033`; implementation đã merge. Human staging smoke xác minh login, session persistence và logout, nhưng không thay thế exact cookie-attribute inspection.
 
 ## Authentication/authorization design đã duyệt
 
@@ -56,9 +56,9 @@ Supabase chỉ là hosted PostgreSQL; không dùng Supabase Auth, browser SDK l�
 
 Alembic tiếp tục là migration source-of-truth; mỗi release chỉ có một migration runner. Future preference là protected GitHub Actions `workflow_dispatch`; khi chưa có workflow, named human operator được phép chạy thủ công. Không chạy `alembic upgrade head` trong mọi application startup.
 
-`/health` tiếp tục là liveness. Future `/ready` phải thực hiện ít nhất `SELECT 1` và hiện chưa implemented. Future production-safe idempotent demo seed được phép create missing records/reconcile deterministic references khi an toàn, nhưng không reset toàn bộ operational state, tùy tiện delete staging records hoặc reuse destructive `test_seed.py` behavior. Exact demo IDs/data thuộc implementation task riêng.
+`/health` là liveness. `/ready` đã implemented, thực hiện `SELECT 1` và trả generic unavailable response khi database không reachable; cả hai endpoint đều PASS trong human staging smoke. Production-safe idempotent `demo_data_seed.py` đã implemented và được dùng cho staging fixtures; nó create/reconcile deterministic records an toàn và không reuse destructive `test_seed.py` behavior.
 
-Release smoke phải verify frontend HTTPS, backend health, database readiness, login, cookie flags, `/auth/me`, `401`, `403`, Putaway, idempotency, logout và secrets không leak. Các yêu cầu retained từ `DEC-032` gồm staging/demo-only, public HTTPS, secrets ngoài repository, migration/readiness/seed/smoke và no-`--reload`. Render Free được phép, nhưng phải warm-up/rehearse trước demo và không được claim production-grade availability. Topology vẫn `DESIGN / NOT DEPLOYED`; long-term production target vẫn `TBD`.
+Human release smoke tại `664d207` đã PASS frontend HTTPS, backend health/readiness, SPA refresh, login/session/logout và 9 Must story flows. Cookie flags, representative global `401/403`, secret-log inspection và exact CI run của release commit chưa được ghi nhận riêng. Các yêu cầu retained từ `DEC-032` gồm staging/demo-only, public HTTPS, secrets ngoài repository, migration/readiness/seed/smoke và no-`--reload`. Render Free được phép, nhưng phải warm-up/rehearse trước demo và không được claim production-grade availability. Long-term production target vẫn `TBD`.
 
 ## ADR
 
@@ -70,10 +70,10 @@ Release smoke phải verify frontend HTTPS, backend health, database readiness, 
 
 ## Vẫn TBD / OPEN
 
-- Staging HTTPS cookie behavior, Supabase PostgreSQL 17 release evidence, `/ready`, safe demo-data seed, migration workflow và smoke automation chưa implemented/verified.
+- Exact cookie-attribute inspection, direct PostgreSQL version query, `alembic current` transcript, protected migration workflow, smoke automation và exact CI run cho `664d207` chưa được ghi nhận/hoàn thiện.
 - Long-term production deployment target; Vercel/Render/Supabase chỉ được approve cho staging/demo.
 - Adjust dùng target quantity hay signed delta; attachment storage.
 - Advanced pagination/filtering và quantitative NFR tại `OQ-033`.
 - `OQ-012`, `OQ-013` và `OQ-014` không bị đóng bởi Technical Foundation.
 
-Technical application scaffold, `US-PUT-001` vertical slice và auth implementation đã merge; CI evidence được theo dõi tại [`../TRACEABILITY.md`](../TRACEABILITY.md). Không claim local Docker pass, staging deployment hoặc public HTTPS verification.
+Technical application, cả 9 Must stories và auth đã merge; release evidence được theo dõi tại [`../TRACEABILITY.md`](../TRACEABILITY.md) và [`../07-release/STAGING-DEMO-RELEASE-CHECKLIST.md`](../07-release/STAGING-DEMO-RELEASE-CHECKLIST.md). Không claim production-grade readiness hoặc CI PASS cho `664d207`.

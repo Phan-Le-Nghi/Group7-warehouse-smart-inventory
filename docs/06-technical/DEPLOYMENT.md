@@ -1,7 +1,11 @@
 # Staging/Demo Deployment Guide
 
-Status: implementation guide only. No Supabase project, Render service, Vercel
-project, release, or live deployment has been created or verified.
+Status: **DEPLOYED AND HUMAN-VERIFIED FOR STAGING/DEMO** at commit `664d207`.
+This guide does not claim production readiness or production-grade availability.
+
+- Frontend: <https://group7-warehouse-smart-inventory.vercel.app>
+- Backend: <https://group7-warehouse-smart-inventory.onrender.com>
+- Release evidence: [`../07-release/STAGING-DEMO-RELEASE-CHECKLIST.md`](../07-release/STAGING-DEMO-RELEASE-CHECKLIST.md)
 
 This guide implements the approved `DEC-034/035` topology:
 
@@ -30,8 +34,10 @@ fail-closed safety boundary, not approval of these providers for production.
 
 The application uses ordinary SQLAlchemy 2 + psycopg connections and Alembic.
 It does not use Supabase Auth, browser SDK, Data API, anon key, or service-role
-key. Compatibility with the exact Supabase host and connection mode remains
-**NOT VERIFIED LOCALLY** until a real project exists.
+key. The deployed `/ready` PASS and persisted staging workflow results verify
+database reachability and application persistence through the real staging
+topology. The exact Supabase host/connection mode, a direct PostgreSQL version
+query transcript and credentials are intentionally not documented.
 
 Do not run `warehouse_api.test_seed` against Supabase staging. It is destructive,
 requires both `APP_ENV=test` and `TEST_DATABASE_URL`, and is for disposable test
@@ -39,8 +45,11 @@ databases only.
 
 ## 2. Single Alembic release runner
 
-Current migration head: `20260927_0009` (`adjustment_decision`). Alembic is the
-only migration source-of-truth.
+Current repository migration head: `20260927_0009` (`adjustment_decision`).
+Alembic is the only migration source-of-truth. The staging runtime and database
+were usable for the verified workflows, but an exact `alembic current`
+transcript and named migration-runner record were not supplied for this pass;
+they remain **NOT RECORDED**, not inferred.
 
 Until protected `workflow_dispatch` automation is separately approved and
 implemented, use one named human Release Operator:
@@ -127,6 +136,11 @@ seed. The users-only `warehouse_api.demo_seed` command remains available when
 operational demo data is intentionally not required. Never use
 `warehouse_api.test_seed` for staging/demo data.
 
+The release-candidate staging fixtures were created with
+`warehouse_api.demo_data_seed`. Human confirmation explicitly records that
+`warehouse_api.test_seed` was not used. This is operational evidence for this
+staging/demo release, not authorization to seed production.
+
 ## 5. Vercel React/Vite project
 
 Create the project only after human approval, with:
@@ -171,22 +185,27 @@ review of the approved topology and CSRF boundary.
 
 ## 7. Post-deploy smoke checklist
 
-No item below is currently claimed as passed:
+Checked items below are **human-performed staging smoke evidence** for commit
+`664d207`; they are not automated CI results. The exact GitHub Actions run
+URL/results for this commit are **NOT RECORDED**.
 
-- [ ] Warm `GET <render-origin>/health`; expect `200` without DB dependency.
-- [ ] Call `GET <render-origin>/ready`; expect `200` only after migration and DB access.
-- [ ] Load the Vercel HTTPS frontend and log in with a controlled demo account.
+- [x] Warm `GET https://group7-warehouse-smart-inventory.onrender.com/health` — PASS.
+- [x] Call `GET https://group7-warehouse-smart-inventory.onrender.com/ready` — PASS.
+- [x] Load the Vercel HTTPS frontend and complete login, session persistence and logout — PASS.
 - [ ] Confirm the request URL is Vercel `/api/v1/auth/login`, not direct Render.
 - [ ] Inspect `warehouse_session`: `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, no `Domain`.
 - [ ] Verify `GET /api/v1/auth/me`, a representative `401`, and role-based `403`.
-- [ ] Complete the multi-location Pick at
-      `/pick/d88066ff-46b8-5722-ba29-b11cfa01816d`.
-- [ ] Refresh `/audits/new`, `/audit-discrepancies`, `/adjustment-decisions`,
-      `/transfers/history`, and representative `/pick/...`, `/transfer/...`,
-      `/adjustments/...` deep links; expect the SPA rather than 404.
-- [ ] Verify one approved Staff flow and one Manager review flow through `/api/*`.
-- [ ] Verify a repeated idempotent operation does not duplicate its effect.
+- [x] Complete the multi-location Pick: Backroom 6 + Sales Shelf 4, picked 10/10,
+      Warehouse total 0 — PASS.
+- [x] Refresh representative Vercel SPA/deep links; the SPA remains available — PASS.
+- [x] Verify Staff flows for Receive, Putaway, Pick, Transfer, Audit and Adjust request — PASS.
+- [x] Verify Manager Transfer History, Audit recheck and Adjust approve/apply flows — PASS.
+- [x] Reload Transfer History without stock mutation or duplicate Transfer — PASS.
+- [x] Reload an applied Adjust without applying it twice — PASS.
 - [ ] Confirm logs and responses contain no database URL, password, or cookie token.
+
+The full quantities, statuses and no-effect checks are recorded in the release
+checklist rather than duplicated in this operational runbook.
 
 ## 8. Rollback
 

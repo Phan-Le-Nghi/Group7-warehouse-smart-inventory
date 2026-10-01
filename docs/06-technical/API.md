@@ -4,7 +4,7 @@
 
 `IMPLEMENTED ROUTE INVENTORY THROUGH US-ADJ-002`
 
-Canonical technical proposal: [`../../vault/06-technical/api-contract.md`](../../vault/06-technical/api-contract.md). Exact route và JSON shape là technical contract, không phải product requirement.
+Canonical technical contract: [`../../vault/06-technical/api-contract.md`](../../vault/06-technical/api-contract.md). Exact route và JSON shape là technical contract, không phải product requirement.
 
 ## Auth API baseline đã duyệt
 
@@ -41,10 +41,10 @@ Session cookie là host-only `warehouse_session`, `HttpOnly`, `Path=/`, absolute
 | `GET /api/v1/adjustments/{id}` | Manager exact pending or terminal detail | `US-ADJ-002`; `PENDING_MANAGER_DECISION`, `APPLIED`, `REJECTED` |
 | `POST /api/v1/adjustments/{id}/decision` | Manager approve/reject with separate required idempotency | `US-ADJ-002`; first commit/replay `200` |
 
-Routes through `US-ADJ-002` above are implemented and merged. This inventory was
-verified against the FastAPI route modules; it does not claim deployment. Exact
-successful GitHub CI URLs and job results are not available locally and must be
-recorded manually.
+Routes through `US-ADJ-002` above are implemented and merged at release candidate
+`664d207`. Human-performed staging smoke exercised the nine story flows through
+the deployed Vercel → Render → Supabase topology. Exact successful GitHub CI URLs
+and job results for `664d207` are **NOT RECORDED** and are not inferred.
 
 ## US-REC-001 Receive contract
 
@@ -132,6 +132,6 @@ contract is in
 
 ## Contract boundaries
 
-- Actor/auth dependency phải giữ canonical permission theo `DEC-017/031/033`; implementation đã merge, nhưng exact external CI run URL/job evidence và staging HTTPS cookie behavior không có trong repository để verify.
-- Adjust Manager decision/apply is approved at `DEC-043`; attachment storage, advanced pagination/filtering, long-term production deployment và unresolved NFR còn TBD. Render chỉ được approve cho staging/demo tại `DEC-032`.
+- Actor/auth dependency phải giữ canonical permission theo `DEC-017/031/033`; implementation đã merge. Human staging smoke verified login/session/logout và Manager-only Transfer History, nhưng exact external CI run URL/job evidence và cookie-attribute inspection riêng cho `664d207` không được ghi nhận.
+- Adjust Manager decision/apply is approved at `DEC-043`; attachment storage, advanced pagination/filtering, long-term production deployment và unresolved NFR còn TBD. Vercel → Render → Supabase đã deploy cho staging/demo only.
 - `OQ-012`, `OQ-013` và `OQ-014` vẫn OPEN.

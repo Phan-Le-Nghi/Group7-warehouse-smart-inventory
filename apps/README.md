@@ -1,7 +1,9 @@
-# Warehouse & Smart Inventory Management — Implemented Vertical Slices
+# Warehouse & Smart Inventory Management — Staging/Demo Application
 
-This directory contains the runnable `US-PUT-001`, `US-REC-001`, and
-`US-PICK-001` worktree slices from React through FastAPI persistence.
+This directory contains the runnable implementation of all nine canonical Must
+stories from React through FastAPI and PostgreSQL persistence. Commit `664d207`
+is the current staging/demo release candidate; this is not a production-grade
+release claim.
 
 ## Prerequisites
 
@@ -121,24 +123,28 @@ The approved staging/demo foundation is documented in
 [`../docs/06-technical/DEPLOYMENT.md`](../docs/06-technical/DEPLOYMENT.md), with
 the complete variable matrix in
 [`../docs/06-technical/ENVIRONMENT.md`](../docs/06-technical/ENVIRONMENT.md).
-These are setup instructions only; no cloud deployment is claimed.
+The current staging/demo deployment uses Vercel → Render → Supabase. Deployment
+status and the human-performed smoke evidence are recorded in
+[`../docs/07-release/STAGING-DEMO-RELEASE-CHECKLIST.md`](../docs/07-release/STAGING-DEMO-RELEASE-CHECKLIST.md).
 
 ## Scope boundary
 
-Authentication and `US-PUT-001` are merged implementation baselines. `US-REC-001`
-and `US-PICK-001` are implemented in the worktree pending human diff review and
-CI evidence. Test actor
+All nine canonical Must stories and authentication are merged at release
+candidate `664d207`. Test actor
 injection exists only through FastAPI dependency overrides in automated tests;
 there is no runtime actor environment switch. Human-confirmed merged-PR evidence
 records backend, frontend, and browser E2E CI checks as `PASS` on PostgreSQL 18.
-No local PostgreSQL, Docker, or browser E2E pass is claimed for the Pick slice.
+Those earlier CI results are historical evidence; exact GitHub Actions run
+URL/results for `664d207` are **NOT RECORDED** and are not inferred.
 
 `DEC-034/035` approve a staging/demo design with a Vercel React/Vite frontend,
 a same-origin `/api/*` rewrite to the Render FastAPI backend, and Supabase
-PostgreSQL 17. The deployment foundation is implemented in the worktree pending
-human review, but no deployment has been performed. Staging HTTPS cookie
-behavior and PostgreSQL 17 release evidence remain pending;
-long-term production deployment remains `TBD`. `OQ-012`, `OQ-013`, and
+PostgreSQL 17. The topology is deployed for staging/demo at the URLs documented
+in the release checklist. Human-performed smoke verified `/health`, `/ready`,
+SPA deep-link refresh, authentication/session/logout and the nine-story workflow
+evidence. Exact CI runs for `664d207`, a separate cookie-attribute inspection,
+and an `alembic current` transcript are not recorded. Long-term production
+deployment remains `TBD`; `OQ-012`, the unresolved parts of `OQ-013`, and
 `OQ-014` remain open.
 
 Auth evidence status:
@@ -146,5 +152,7 @@ Auth evidence status:
 - `APPROVED DESIGN`: `DEC-031` and exact implementation spec `DEC-033`.
 - `MERGED / CI VERIFIED`: backend, frontend, and browser E2E checks passed on
   the merged PR according to human-confirmed evidence.
-- `NOT YET VERIFIED`: public staging HTTPS cookie behavior and Supabase
-  PostgreSQL 17 compatibility in the release environment.
+- `HUMAN STAGING SMOKE PASS`: login, session persistence and logout through the
+  Vercel same-origin `/api/*` path; `/ready` confirmed database reachability.
+- `NOT RECORDED`: exact cookie-attribute inspection, exact PostgreSQL version
+  query output and GitHub Actions run URL/results for `664d207`.
