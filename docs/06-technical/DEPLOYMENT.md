@@ -161,6 +161,13 @@ Create the project only after human approval, with:
 Use this staging deep link for the dedicated Pick smoke fixture:
 `/pick/d88066ff-46b8-5722-ba29-b11cfa01816d`.
 
+Authenticated frontend navigation starts at the role-based Dashboard on `/`.
+The prepared Putaway smoke context is opened explicitly at `/putaway`; Receive
+remains `/receive`. Manager master pages are `/transfers/history`,
+`/audit-discrepancies`, and `/adjustment-decisions`. Exact-context Pick,
+Transfer execution, and Staff Adjust routes keep their existing path IDs and
+are not exposed as generic Dashboard actions.
+
 `frontend/vercel.mjs` validates `RENDER_API_ORIGIN` and generates routes in this
 order:
 
@@ -195,6 +202,15 @@ URL/results for this commit are **NOT RECORDED**.
 - [ ] Confirm the request URL is Vercel `/api/v1/auth/login`, not direct Render.
 - [ ] Inspect `warehouse_session`: `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, no `Domain`.
 - [ ] Verify `GET /api/v1/auth/me`, a representative `401`, and role-based `403`.
+- [ ] Verify `/` loads the role-based Dashboard for all four demo roles without
+      loading or mutating business context.
+- [ ] Verify Warehouse Staff sees only configured Receive/Putaway and New Audit
+      actions; Manager sees only Transfer History, Audit Discrepancies, and
+      Adjust Decisions; Purchasing/Admin show the neutral current-MVP state.
+- [ ] Refresh `/`, `/putaway`, and representative Manager/exact-context deep
+      links; verify an unknown frontend path renders Page not found.
+- [ ] Verify Manager direct `/putaway` and `/audits/new` navigation receives the
+      backend-authoritative `403`, without issuing a mutation request.
 - [x] Complete the multi-location Pick: Backroom 6 + Sales Shelf 4, picked 10/10,
       Warehouse total 0 — PASS.
 - [x] Refresh representative Vercel SPA/deep links; the SPA remains available — PASS.

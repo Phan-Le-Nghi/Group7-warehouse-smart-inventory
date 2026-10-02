@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
 
 const originalRenderOrigin = process.env.RENDER_API_ORIGIN
+let importSequence = 0
 
 afterEach(() => {
   if (originalRenderOrigin === undefined) {
@@ -12,33 +13,53 @@ afterEach(() => {
 })
 
 function importFresh(label) {
-  return import(`./vercel.mjs?${label}-${Date.now()}`)
+  importSequence += 1
+  return import(`./vercel.mjs?${label}-${importSequence}`)
 }
 
-test('creates API-first and SPA fallback rewrites from the Render origin', async () => {
-  process.env.RENDER_API_ORIGIN = 'https://render-service.example.com'
+test('declares the deployment environment API rewrite before the SPA fallback', async () => {
+  const { config } = await importFresh('route-contract')
 
-  const { config } = await importFresh('valid')
+  const apiRewrite = {
+    source: '/api/:path*',
+    destination: '$RENDER_API_ORIGIN/api/:path*',
+    env: ['RENDER_API_ORIGIN'],
+  }
+  const spaFallback = { source: '/(.*)', destination: '/index.html' }
 
   assert.equal(config.framework, 'vite')
   assert.equal(config.outputDirectory, 'dist')
-  assert.deepEqual(config.rewrites, [
-    {
-      source: '/api/:path*',
-      destination: 'https://render-service.example.com/api/:path*',
-    },
-    { source: '/(.*)', destination: '/index.html' },
-  ])
+  assert.deepEqual(config.rewrites, [apiRewrite, spaFallback])
+  assert.deepEqual(config.rewrites[0], apiRewrite)
+  assert.deepEqual(config.rewrites[1], spaFallback)
 })
 
-test('fails when the Render origin is missing', async () => {
-  delete process.env.RENDER_API_ORIGIN
+test('references RENDER_API_ORIGIN without hard-coding a Render origin', async () => {
+  const { config } = await importFresh('environment-reference')
+  const apiRewrite = config.rewrites[0]
 
-  await assert.rejects(importFresh('missing'), /RENDER_API_ORIGIN is required/)
+  assert.equal(apiRewrite.destination, '$RENDER_API_ORIGIN/api/:path*')
+  assert.deepEqual(apiRewrite.env, ['RENDER_API_ORIGIN'])
+  assert.doesNotMatch(apiRewrite.destination, /^https?:\/\//)
+  assert.doesNotMatch(JSON.stringify(config), /\.onrender\.com/i)
 })
 
-test('rejects an insecure Render origin or a path', async () => {
-  process.env.RENDER_API_ORIGIN = 'http://render-service.example.com/api'
+for (const [label, localValue] of [
+  ['missing', undefined],
+  ['set locally', 'https://local-only.example.com/api'],
+]) {
+  test(`does not inline RENDER_API_ORIGIN when the local value is ${label}`, async () => {
+    if (localValue === undefined) {
+      delete process.env.RENDER_API_ORIGIN
+    } else {
+      process.env.RENDER_API_ORIGIN = localValue
+    }
 
-  await assert.rejects(importFresh('invalid'), /must be an HTTPS origin/)
-})
+    const { config } = await importFresh(`local-environment-${label}`)
+    const apiRewrite = config.rewrites[0]
+
+    assert.equal(apiRewrite.destination, '$RENDER_API_ORIGIN/api/:path*')
+    assert.deepEqual(apiRewrite.env, ['RENDER_API_ORIGIN'])
+    assert.equal(JSON.stringify(config).includes(String(localValue)), false)
+  })
+}

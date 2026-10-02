@@ -30,6 +30,8 @@ jobs:
         run: npm run typecheck
       - name: Test
         run: npm run test
+      - name: Test Vercel config
+        run: npm run test:vercel-config
       - name: Build
         run: npm run build
 

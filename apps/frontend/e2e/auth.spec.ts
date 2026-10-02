@@ -8,6 +8,9 @@ test('session login, current actor, and logout work in the browser', async ({
   await page.getByLabel('Password').fill(process.env.E2E_USER_PASSWORD ?? '')
   await page.getByRole('button', { name: 'Sign in' }).click()
 
+  await expect(
+    page.getByRole('heading', { name: 'Warehouse Dashboard' }),
+  ).toBeVisible()
   await expect(page.getByText('Warehouse Staff')).toBeVisible()
   await page.getByRole('button', { name: 'Sign out' }).click()
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible()

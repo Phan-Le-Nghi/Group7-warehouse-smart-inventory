@@ -40,6 +40,14 @@ textarea {
   margin-bottom: clamp(2rem, 7vw, 5rem);
 }
 
+.brand-link {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  color: inherit;
+  text-decoration: none;
+}
+
 .brand-mark {
   display: grid;
   width: 2.75rem;
@@ -61,13 +69,24 @@ textarea {
 }
 
 .brand-name {
+  display: block;
   margin: 0.15rem 0 0;
   font-weight: 750;
 }
 
+.app-navigation {
+  margin-left: auto;
+}
+
+.app-navigation a {
+  color: #28543b;
+  font-size: 0.88rem;
+  font-weight: 750;
+  text-underline-offset: 0.25rem;
+}
+
 .role-chip,
 .step-badge {
-  margin-left: auto;
   border: 1px solid #c8d9cd;
   border-radius: 999px;
   padding: 0.45rem 0.75rem;
@@ -83,6 +102,15 @@ textarea {
   padding: 0.55rem 0.8rem;
   background: #334b3d;
   font-size: 0.78rem;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid #d19a20;
+  outline-offset: 3px;
 }
 
 .auth-shell {
@@ -159,6 +187,86 @@ textarea {
   border-radius: 1.5rem;
   background: rgb(255 255 255 / 96%);
   box-shadow: 0 1.5rem 4rem rgb(36 75 51 / 10%);
+}
+
+.dashboard {
+  width: min(64rem, 100%);
+  margin: 0 auto;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.dashboard-action {
+  display: flex;
+  min-height: 13rem;
+  flex-direction: column;
+  padding: 1.5rem;
+  border: 1px solid #d4dfd7;
+  border-radius: 1.25rem;
+  color: #14251d;
+  background: rgb(255 255 255 / 96%);
+  box-shadow: 0 1rem 2.5rem rgb(36 75 51 / 8%);
+  text-decoration: none;
+}
+
+.dashboard-action:hover {
+  border-color: #85aa91;
+  background: #f8fcf9;
+}
+
+.dashboard-action h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.dashboard-action p {
+  color: #5c6d63;
+  line-height: 1.5;
+}
+
+.dashboard-action span {
+  margin-top: auto;
+  color: #17663b;
+  font-weight: 800;
+}
+
+.dashboard-action-unavailable {
+  border-style: dashed;
+  box-shadow: none;
+  opacity: 0.72;
+}
+
+.dashboard-action-unavailable:hover {
+  border-color: #d4dfd7;
+  background: rgb(255 255 255 / 96%);
+}
+
+.dashboard-action-unavailable span {
+  color: #68796f;
+}
+
+.dashboard-empty-state {
+  max-width: 42rem;
+}
+
+.primary-link {
+  display: inline-block;
+  margin-top: 1.5rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.8rem;
+  color: #fff;
+  background: #17663b;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.primary-link:hover {
+  background: #0f512e;
 }
 
 .transfer-history-card {
@@ -653,6 +761,7 @@ button:disabled {
   }
 
   .item-summary,
+  .dashboard-grid,
   .location-grid,
   .pick-location,
   .pick-summary,
@@ -665,5 +774,15 @@ button:disabled {
 
   .receive-line {
     grid-template-columns: 1fr;
+  }
+
+  .app-header {
+    flex-wrap: wrap;
+  }
+
+  .app-navigation {
+    order: 3;
+    width: 100%;
+    margin-left: 0;
   }
 }

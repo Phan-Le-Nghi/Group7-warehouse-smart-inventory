@@ -39,6 +39,11 @@ function renderApp() {
   )
 }
 
+function renderPutawayApp() {
+  window.history.pushState({}, '', '/putaway')
+  return renderApp()
+}
+
 function jsonResponse(body: object, status = 200) {
   return Promise.resolve(
     new Response(JSON.stringify(body), {
@@ -57,7 +62,7 @@ afterEach(() => {
 describe('US-PUT-001 Putaway', () => {
   it('allows destination selection', async () => {
     vi.spyOn(globalThis, 'fetch').mockReturnValue(jsonResponse(context))
-    renderApp()
+    renderPutawayApp()
 
     const salesShelf = await screen.findByRole('radio', { name: /Sales Shelf/i })
     fireEvent.click(salesShelf)
@@ -74,7 +79,7 @@ describe('US-PUT-001 Putaway', () => {
         eligible_quantity: 0,
       }),
     )
-    renderApp()
+    renderPutawayApp()
 
     expect(
       await screen.findByText('This receive line has been fully put away.'),
@@ -105,7 +110,7 @@ describe('US-PUT-001 Putaway', () => {
           201,
         ),
       )
-    renderApp()
+    renderPutawayApp()
 
     fireEvent.click(
       await screen.findByRole('button', { name: 'Confirm Putaway' }),
@@ -135,7 +140,7 @@ describe('US-PUT-001 Putaway', () => {
           409,
         ),
       )
-    renderApp()
+    renderPutawayApp()
 
     fireEvent.click(
       await screen.findByRole('button', { name: 'Confirm Putaway' }),
@@ -146,6 +151,151 @@ describe('US-PUT-001 Putaway', () => {
         'Quantity exceeds the eligible remaining quantity.',
       )
     })
+  })
+})
+
+describe('role Dashboard routing', () => {
+  it('renders Staff actions at / without loading business context', () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+    renderApp()
+
+    expect(
+      screen.getByRole('heading', { name: 'Warehouse Dashboard' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Open Receive/ })).toHaveAttribute(
+      'href',
+      '/receive',
+    )
+    expect(screen.getByRole('link', { name: /Open Putaway/ })).toHaveAttribute(
+      'href',
+      '/putaway',
+    )
+    expect(screen.getByRole('link', { name: /Open New Audit/ })).toHaveAttribute(
+      'href',
+      '/audits/new',
+    )
+    expect(screen.queryByText('Transfer History')).not.toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('shows unavailable Staff cards instead of links without prepared context', () => {
+    render(
+      <App
+        actor={actor}
+        onLogout={() => undefined}
+        onUnauthorized={() => undefined}
+        receiveId=""
+        receiveLineId=""
+      />,
+    )
+
+    expect(screen.getAllByText('Requires prepared context.')).toHaveLength(2)
+    expect(screen.queryByRole('link', { name: /Open Receive/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Open Putaway/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Open New Audit/ })).toBeInTheDocument()
+  })
+
+  it('renders only Manager actions for a Manager', () => {
+    render(
+      <App
+        actor={{ ...actor, role: 'MANAGER' }}
+        onLogout={() => undefined}
+        onUnauthorized={() => undefined}
+        receiveId="receive-id"
+        receiveLineId={receiveLineId}
+      />,
+    )
+
+    expect(screen.getByRole('link', { name: /Open Transfer History/ })).toHaveAttribute(
+      'href',
+      '/transfers/history',
+    )
+    expect(screen.getByRole('link', { name: /Open Audit Discrepancies/ })).toHaveAttribute(
+      'href',
+      '/audit-discrepancies',
+    )
+    expect(screen.getByRole('link', { name: /Open Adjust Decisions/ })).toHaveAttribute(
+      'href',
+      '/adjustment-decisions',
+    )
+    expect(screen.queryByText('New Audit')).not.toBeInTheDocument()
+    expect(screen.queryByText('Putaway')).not.toBeInTheDocument()
+  })
+
+  it.each(['PURCHASING', 'ADMIN'] as const)(
+    'renders a neutral state without fake actions for %s',
+    (role) => {
+      render(
+        <App
+          actor={{ ...actor, role }}
+          onLogout={() => undefined}
+          onUnauthorized={() => undefined}
+          receiveId="receive-id"
+          receiveLineId={receiveLineId}
+        />,
+      )
+
+      expect(
+        screen.getByText(
+          'No dashboard actions are available for this role in the current MVP.',
+        ),
+      ).toBeInTheDocument()
+      expect(screen.queryByText('Receive')).not.toBeInTheDocument()
+      expect(screen.queryByText('Transfer History')).not.toBeInTheDocument()
+      cleanup()
+    },
+  )
+
+  it('renders Page not found instead of Putaway for an unknown route', () => {
+    window.history.pushState({}, '', '/unknown-route')
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+    renderApp()
+
+    expect(
+      screen.getByRole('heading', { name: 'This page is not available' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('heading', { name: 'Confirm Putaway' }),
+    ).not.toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('backend-authoritative Staff route authorization', () => {
+  it.each([
+    ['/putaway', '/api/v1/putaways/context/'],
+    ['/receive', '/api/v1/receives/context/'],
+    ['/pick/pick-id', '/api/v1/picks/context/pick-id'],
+    ['/transfer/sku-id', '/api/v1/transfers/context/sku-id'],
+  ])('requests the safe read endpoint for a Manager at %s', async (path, endpoint) => {
+    window.history.pushState({}, '', path)
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockReturnValue(
+      jsonResponse(
+        {
+          error: {
+            code: 'FORBIDDEN',
+            message: 'The authenticated actor does not have the required role.',
+          },
+        },
+        403,
+      ),
+    )
+
+    render(
+      <App
+        actor={{ ...actor, role: 'MANAGER' }}
+        onLogout={() => undefined}
+        onUnauthorized={() => undefined}
+        receiveId="receive-id"
+        receiveLineId={receiveLineId}
+      />,
+    )
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'The authenticated actor does not have the required role.',
+    )
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock.mock.calls[0][0]).toContain(endpoint)
   })
 })
 
@@ -287,9 +437,14 @@ describe('US-AUD-001 addressing', () => {
     expect(fetchMock.mock.calls[0][0]).toContain('/api/v1/audits/context')
   })
 
-  it('shows a presentation guard for a wrong role', () => {
+  it('requests context for a wrong role so the backend remains authoritative', async () => {
     window.history.pushState({}, '', '/audits/new')
-    const fetchMock = vi.spyOn(globalThis, 'fetch')
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockReturnValue(
+      jsonResponse(
+        { error: { code: 'FORBIDDEN', message: 'Warehouse Staff role required' } },
+        403,
+      ),
+    )
     render(
       <App
         actor={{ ...actor, role: 'MANAGER' }}
@@ -299,9 +454,10 @@ describe('US-AUD-001 addressing', () => {
       />,
     )
     expect(
-      screen.getByRole('heading', { name: 'Warehouse Staff role required' }),
+      await screen.findByRole('heading', { name: 'Warehouse Staff role required' }),
     ).toBeInTheDocument()
-    expect(fetchMock).not.toHaveBeenCalled()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock.mock.calls[0][0]).toContain('/api/v1/audits/context')
   })
 })
 
@@ -399,5 +555,30 @@ describe('US-ADJ-002 Manager addressing', () => {
     expect(fetchMock.mock.calls[0][0]).toContain(
       '/api/v1/adjustments?status=PENDING_MANAGER_DECISION',
     )
+  })
+
+  it('preserves the adjustment_id query deep link', () => {
+    window.history.pushState(
+      {},
+      '',
+      '/adjustment-decisions?adjustment_id=adjustment-id',
+    )
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      () => new Promise<Response>(() => undefined),
+    )
+
+    render(
+      <App
+        actor={{ ...actor, role: 'MANAGER' }}
+        onLogout={() => undefined}
+        onUnauthorized={() => undefined}
+        receiveLineId={receiveLineId}
+      />,
+    )
+
+    expect(
+      screen.getByRole('heading', { name: 'Adjust decisions' }),
+    ).toBeInTheDocument()
+    expect(window.location.search).toBe('?adjustment_id=adjustment-id')
   })
 })

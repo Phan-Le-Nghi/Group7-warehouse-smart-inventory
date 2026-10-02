@@ -2,8 +2,6 @@ import { execFileSync } from 'node:child_process'
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
-const auditSkuId = '00000000-0000-0000-0000-000000000502'
-
 function backendCommand(...args: string[]) {
   const uv = process.platform === 'win32' ? 'uv.exe' : 'uv'
   return execFileSync(
@@ -144,26 +142,17 @@ test('TEST-AUD-E2E-005 reports Whole Warehouse scope change', async ({ page }) =
 
 test('TEST-AUD-E2E-006 wrong role receives a real backend 403', async ({ page }) => {
   backendCommand('--audit-reset')
-  await signIn(page, 'demo.manager')
+  await page.goto('/audits/new')
+  await page.getByLabel('Login identifier').fill('demo.manager')
+  await page.getByLabel('Password').fill(process.env.E2E_USER_PASSWORD ?? '')
+  const forbiddenResponse = page.waitForResponse(
+    (response) =>
+      response.url().endsWith('/api/v1/audits/context') &&
+      response.request().method() === 'GET',
+  )
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  expect((await forbiddenResponse).status()).toBe(403)
   await expect(
     page.getByRole('heading', { name: 'Warehouse Staff role required' }),
   ).toBeVisible()
-  const response = await page.request.post(
-    'http://127.0.0.1:8000/api/v1/audits',
-    {
-      headers: { 'Idempotency-Key': 'wrong-role' },
-      data: {
-        scope_type: 'SELECTED_PAIRS',
-        lines: [
-          {
-            sku_id: auditSkuId,
-            location_id: '00000000-0000-0000-0000-000000000005',
-            physical_quantity: 7,
-          },
-        ],
-      },
-    },
-  )
-  expect(response.status()).toBe(403)
-  expect((await response.json()).error.code).toBe('FORBIDDEN')
 })
