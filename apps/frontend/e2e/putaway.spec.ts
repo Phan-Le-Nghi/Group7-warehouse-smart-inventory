@@ -30,8 +30,16 @@ test('Manager direct Putaway route receives backend 403 from context GET', async
   )
   await page.getByRole('button', { name: 'Sign in' }).click()
 
-  expect((await forbiddenResponse).status()).toBe(403)
-  await expect(page.getByRole('alert')).toContainText(
-    'Warehouse Staff role required',
-  )
+  const response = await forbiddenResponse
+  expect(response.status()).toBe(403)
+  const errorBody = (await response.json()) as {
+    error: {
+      code: string
+      message: string
+      details: { required_roles: string[] }
+    }
+  }
+  expect(errorBody.error.code).toBe('FORBIDDEN')
+  expect(errorBody.error.details.required_roles).toEqual(['WAREHOUSE_STAFF'])
+  await expect(page.getByRole('alert')).toHaveText(errorBody.error.message)
 })

@@ -271,7 +271,12 @@ describe('backend-authoritative Staff route authorization', () => {
     window.history.pushState({}, '', path)
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockReturnValue(
       jsonResponse(
-        { error: { code: 'FORBIDDEN', message: 'Warehouse Staff role required' } },
+        {
+          error: {
+            code: 'FORBIDDEN',
+            message: 'The authenticated actor does not have the required role.',
+          },
+        },
         403,
       ),
     )
@@ -287,7 +292,7 @@ describe('backend-authoritative Staff route authorization', () => {
     )
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Warehouse Staff role required',
+      'The authenticated actor does not have the required role.',
     )
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(fetchMock.mock.calls[0][0]).toContain(endpoint)
