@@ -25,6 +25,7 @@ function jsonResponse(body: object, status = 200) {
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
+  window.history.pushState({}, '', '/')
 })
 
 it('shows login after an unauthenticated bootstrap and signs in', async () => {
@@ -54,13 +55,16 @@ it('shows login after an unauthenticated bootstrap and signs in', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
 
   expect(await screen.findByText('Warehouse Staff')).toBeInTheDocument()
+  expect(
+    screen.getByRole('heading', { name: 'Warehouse Dashboard' }),
+  ).toBeInTheDocument()
   expect(fetchMock.mock.calls[1][1]).toMatchObject({
     credentials: 'include',
     method: 'POST',
   })
 })
 
-it('keeps an authenticated wrong-role actor and shows forbidden', async () => {
+it('keeps an authenticated Manager actor and shows the role Dashboard', async () => {
   vi.spyOn(globalThis, 'fetch').mockReturnValue(
     jsonResponse({ ...actor, role: 'MANAGER' }),
   )
@@ -68,11 +72,11 @@ it('keeps an authenticated wrong-role actor and shows forbidden', async () => {
   render(<AuthGate />)
 
   expect(
-    await screen.findByRole('heading', {
-      name: 'Warehouse Staff role required',
-    }),
+    await screen.findByRole('heading', { name: 'Warehouse Dashboard' }),
   ).toBeInTheDocument()
   expect(screen.getByText('Manager')).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: /Open Transfer History/ })).toBeInTheDocument()
+  expect(screen.queryByText('Putaway')).not.toBeInTheDocument()
   expect(globalThis.fetch).toHaveBeenCalledTimes(1)
 })
 

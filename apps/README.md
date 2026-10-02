@@ -73,10 +73,20 @@ Set that variable to a real PostgreSQL test database for PostgreSQL evidence.
 
 ## Frontend
 
-`VITE_API_BASE_URL` selects the FastAPI origin. `VITE_RECEIVE_LINE_ID` supplies
-the explicit Putaway context at `/`; `VITE_RECEIVE_ID` supplies the prepared
-Receive context at `/receive`. The two screens remain separate and neither
+`VITE_API_BASE_URL` selects the FastAPI origin. Authenticated users enter the
+role-based Dashboard at `/`. `VITE_RECEIVE_LINE_ID` supplies the explicit
+Putaway context at `/putaway`; `VITE_RECEIVE_ID` supplies the prepared Receive
+context at `/receive`. The Dashboard exposes those Staff links only when their
+prepared context is configured. The two screens remain separate and neither
 creates an automatic Receive-to-Putaway handoff.
+
+The frontend keeps its small manual route matcher. Generic Staff entry points
+are `/receive`, `/putaway`, and `/audits/new`; Manager entry points are
+`/transfers/history`, `/audit-discrepancies`, and `/adjustment-decisions`.
+Pick, Transfer execution, and Staff Adjust requests remain exact-context deep
+links because the current MVP has no generic selector for their required IDs.
+Purchasing and Admin receive a neutral Dashboard state rather than invented
+actions. Unknown frontend routes render a Page not found state.
 
 For the canonical demo dataset, set
 `VITE_RECEIVE_LINE_ID=daf594b9-9c1e-51ec-adf0-0055cb3a8ff3` and

@@ -1,17 +1,11 @@
-import { FormEvent, useEffect, useState } from 'react'
-import {
-  ApiError,
-  loadPutawayContext,
-  PutawayContext,
-  PutawayResult,
-  submitPutaway,
-} from './api'
 import type { Actor } from './auth'
 import AdjustmentPage from './AdjustmentPage'
 import AdjustmentDecisionPage from './AdjustmentDecisionPage'
 import AuditDiscrepancyPage from './AuditDiscrepancyPage'
 import AuditPage from './AuditPage'
+import DashboardPage from './DashboardPage'
 import PickPage from './PickPage'
+import PutawayPage from './PutawayPage'
 import ReceivePage from './ReceivePage'
 import TransferHistoryPage from './TransferHistoryPage'
 import TransferPage from './TransferPage'
@@ -24,11 +18,6 @@ type AppProps = {
   receiveLineId?: string
 }
 
-const locationLabels: Record<string, string> = {
-  BACKROOM: 'Backroom',
-  SALES_SHELF: 'Sales Shelf',
-}
-
 const roleLabels: Record<Actor['role'], string> = {
   WAREHOUSE_STAFF: 'Warehouse Staff',
   MANAGER: 'Manager',
@@ -36,8 +25,19 @@ const roleLabels: Record<Actor['role'], string> = {
   ADMIN: 'Admin',
 }
 
-function createIdempotencyKey() {
-  return globalThis.crypto?.randomUUID?.() ?? `putaway-${Date.now()}`
+function NotFoundPage() {
+  return (
+    <section className="putaway-card not-found" aria-labelledby="not-found-title">
+      <p className="eyebrow">Page not found</p>
+      <h1 id="not-found-title">This page is not available</h1>
+      <p className="supporting-copy">
+        Check the address or return to the Dashboard.
+      </p>
+      <a className="primary-link" href="/">
+        Back to Dashboard
+      </a>
+    </section>
+  )
 }
 
 function App({
@@ -48,292 +48,84 @@ function App({
   receiveLineId = import.meta.env.VITE_RECEIVE_LINE_ID,
 }: AppProps) {
   const currentPath = window.location.pathname.replace(/\/+$/, '') || '/'
-  const isReceivePage = currentPath === '/receive'
-  const isTransferHistoryPage = currentPath === '/transfers/history'
-  const isAuditPage = currentPath === '/audits/new'
-  const isAuditDiscrepancyPage = currentPath === '/audit-discrepancies'
-  const isAdjustmentDecisionPage = currentPath === '/adjustment-decisions'
-  const pickPathMatch = window.location.pathname.match(/^\/pick\/([^/]+)\/?$/)
+  const pickPathMatch = currentPath.match(/^\/pick\/([^/]+)$/)
   const pickId = pickPathMatch ? decodeURIComponent(pickPathMatch[1]) : null
-  const transferPathMatch = window.location.pathname.match(/^\/transfer\/([^/]+)\/?$/)
+  const transferPathMatch = currentPath.match(/^\/transfer\/([^/]+)$/)
   const transferSkuId = transferPathMatch
     ? decodeURIComponent(transferPathMatch[1])
     : null
-  const adjustmentPathMatch = window.location.pathname.match(
-    /^\/adjustments\/([^/]+)\/?$/,
-  )
+  const adjustmentPathMatch = currentPath.match(/^\/adjustments\/([^/]+)$/)
   const adjustmentRecheckId = adjustmentPathMatch
     ? decodeURIComponent(adjustmentPathMatch[1])
     : null
-  const [context, setContext] = useState<PutawayContext | null>(null)
-  const [destinationId, setDestinationId] = useState('')
-  const [result, setResult] = useState<PutawayResult | null>(null)
-  const [error, setError] = useState(() =>
-    receiveLineId ||
-    isReceivePage ||
-    isTransferHistoryPage ||
-    isAuditPage ||
-    isAuditDiscrepancyPage ||
-    isAdjustmentDecisionPage ||
-    pickId ||
-    transferSkuId ||
-    adjustmentRecheckId
-      ? ''
-      : 'Putaway context is not configured.',
-  )
-  const [submitting, setSubmitting] = useState(false)
-  const [idempotencyKey] = useState(createIdempotencyKey)
 
-  useEffect(() => {
-    if (
-      isReceivePage ||
-      isTransferHistoryPage ||
-      isAuditPage ||
-      isAuditDiscrepancyPage ||
-      isAdjustmentDecisionPage ||
-      pickId ||
-      transferSkuId ||
-      adjustmentRecheckId ||
-      !receiveLineId ||
-      actor.role !== 'WAREHOUSE_STAFF'
-    ) return
-
-    let active = true
-    loadPutawayContext(receiveLineId)
-      .then((loaded) => {
-        if (active) {
-          setContext(loaded)
-          setDestinationId(
-            loaded.eligible_quantity > 0 ? (loaded.locations[0]?.id ?? '') : '',
-          )
-        }
-      })
-      .catch((loadError: unknown) => {
-        if (active) {
-          if (loadError instanceof ApiError && loadError.status === 401) {
-            onUnauthorized()
-            return
-          }
-          setError(
-            loadError instanceof Error
-              ? loadError.message
-              : 'Unable to load Putaway context.',
-          )
-        }
-      })
-
-    return () => {
-      active = false
-    }
-  }, [
-    actor.role,
-    isReceivePage,
-    isTransferHistoryPage,
-    isAuditPage,
-    isAuditDiscrepancyPage,
-    isAdjustmentDecisionPage,
-    onUnauthorized,
-    pickId,
-    receiveLineId,
-    transferSkuId,
-    adjustmentRecheckId,
-  ])
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (
-      !context ||
-      context.eligible_quantity <= 0 ||
-      !destinationId ||
-      submitting
+  let page
+  if (currentPath === '/') {
+    page = (
+      <DashboardPage
+        role={actor.role}
+        receiveContextAvailable={Boolean(receiveId)}
+        putawayContextAvailable={Boolean(receiveLineId)}
+      />
     )
-      return
-
-    setSubmitting(true)
-    setError('')
-    try {
-      setResult(await submitPutaway(context, destinationId, idempotencyKey))
-    } catch (submitError) {
-      if (submitError instanceof ApiError && submitError.status === 401) {
-        onUnauthorized()
-        return
-      }
-      setError(
-        submitError instanceof Error
-          ? submitError.message
-          : 'Unable to confirm Putaway.',
-      )
-    } finally {
-      setSubmitting(false)
-    }
+  } else if (currentPath === '/putaway') {
+    page = (
+      <PutawayPage
+        receiveLineId={receiveLineId}
+        onUnauthorized={onUnauthorized}
+      />
+    )
+  } else if (currentPath === '/receive') {
+    page = (
+      <ReceivePage receiveId={receiveId} onUnauthorized={onUnauthorized} />
+    )
+  } else if (currentPath === '/transfers/history') {
+    page = <TransferHistoryPage onUnauthorized={onUnauthorized} />
+  } else if (currentPath === '/audits/new') {
+    page = <AuditPage onUnauthorized={onUnauthorized} />
+  } else if (currentPath === '/audit-discrepancies') {
+    page = <AuditDiscrepancyPage onUnauthorized={onUnauthorized} />
+  } else if (currentPath === '/adjustment-decisions') {
+    page = <AdjustmentDecisionPage onUnauthorized={onUnauthorized} />
+  } else if (pickId) {
+    page = <PickPage pickId={pickId} onUnauthorized={onUnauthorized} />
+  } else if (transferSkuId) {
+    page = (
+      <TransferPage skuId={transferSkuId} onUnauthorized={onUnauthorized} />
+    )
+  } else if (adjustmentRecheckId) {
+    page = (
+      <AdjustmentPage
+        auditRecheckId={adjustmentRecheckId}
+        onUnauthorized={onUnauthorized}
+      />
+    )
+  } else {
+    page = <NotFoundPage />
   }
 
   return (
     <main className="page-shell">
       <header className="app-header">
-        <div className="brand-mark" aria-hidden="true">
-          W
-        </div>
-        <div>
-          <p className="eyebrow">MAIN warehouse</p>
-          <p className="brand-name">Smart Inventory</p>
-        </div>
+        <a className="brand-link" href="/" aria-label="Smart Inventory Dashboard">
+          <span className="brand-mark" aria-hidden="true">
+            W
+          </span>
+          <span>
+            <span className="eyebrow">MAIN warehouse</span>
+            <span className="brand-name">Smart Inventory</span>
+          </span>
+        </a>
+        <nav className="app-navigation" aria-label="Primary navigation">
+          <a href="/">Dashboard</a>
+        </nav>
         <span className="role-chip">{roleLabels[actor.role]}</span>
         <button className="logout-button" type="button" onClick={onLogout}>
           Sign out
         </button>
       </header>
 
-      {isAdjustmentDecisionPage ? (
-        <AdjustmentDecisionPage onUnauthorized={onUnauthorized} />
-      ) : adjustmentRecheckId ? (
-        <AdjustmentPage
-          auditRecheckId={adjustmentRecheckId}
-          onUnauthorized={onUnauthorized}
-        />
-      ) : isAuditDiscrepancyPage ? (
-        <AuditDiscrepancyPage onUnauthorized={onUnauthorized} />
-      ) : isAuditPage && actor.role === 'WAREHOUSE_STAFF' ? (
-        <AuditPage onUnauthorized={onUnauthorized} />
-      ) : isAuditPage ? (
-        <section className="putaway-card forbidden-panel">
-          <p className="eyebrow">Forbidden</p>
-          <h1>Warehouse Staff role required</h1>
-          <p>This Audit operation is not available for your current role.</p>
-        </section>
-      ) : isTransferHistoryPage ? (
-        <TransferHistoryPage onUnauthorized={onUnauthorized} />
-      ) : transferSkuId && actor.role === 'WAREHOUSE_STAFF' ? (
-        <TransferPage skuId={transferSkuId} onUnauthorized={onUnauthorized} />
-      ) : pickId && actor.role === 'WAREHOUSE_STAFF' ? (
-        <PickPage pickId={pickId} onUnauthorized={onUnauthorized} />
-      ) : isReceivePage && actor.role === 'WAREHOUSE_STAFF' ? (
-        <ReceivePage receiveId={receiveId} onUnauthorized={onUnauthorized} />
-      ) : (
-      <section className="putaway-card" aria-labelledby="putaway-title">
-        {actor.role !== 'WAREHOUSE_STAFF' ? (
-          <div className="forbidden-panel">
-            <p className="eyebrow">Forbidden</p>
-            <h1 id="putaway-title">Warehouse Staff role required</h1>
-            <p className="supporting-copy">
-              Your session is valid, but this operation is not available for
-              your current role.
-            </p>
-          </div>
-        ) : (
-          <>
-        <div className="title-row">
-          <div>
-            <p className="eyebrow">Initial placement</p>
-            <h1 id="putaway-title">Confirm Putaway</h1>
-            <p className="supporting-copy">
-              Select the tracked location that will receive this stock.
-            </p>
-          </div>
-          <span className="step-badge">PUTAWAY</span>
-        </div>
-
-        {!context && !error && (
-          <p className="status-panel" role="status">
-            Loading Putaway context…
-          </p>
-        )}
-
-        {context && !result && (
-          <form onSubmit={handleSubmit}>
-            <dl className="item-summary">
-              <div>
-                <dt>SKU</dt>
-                <dd>{context.sku}</dd>
-              </div>
-              <div>
-                <dt>Eligible quantity</dt>
-                <dd>
-                  <strong>{context.eligible_quantity}</strong> units
-                </dd>
-              </div>
-            </dl>
-
-            {context.eligible_quantity <= 0 ? (
-              <p className="status-panel" role="status">
-                This receive line has been fully put away.
-              </p>
-            ) : (
-              <>
-                <fieldset>
-                  <legend>Destination location</legend>
-                  <p className="field-help">Choose one internal location.</p>
-                  <div className="location-grid">
-                    {context.locations.map((location) => (
-                      <label className="location-option" key={location.id}>
-                        <input
-                          type="radio"
-                          name="destination"
-                          value={location.id}
-                          checked={destinationId === location.id}
-                          onChange={() => setDestinationId(location.id)}
-                        />
-                        <span>
-                          <strong>
-                            {locationLabels[location.code] ?? location.code}
-                          </strong>
-                          <small>{location.code}</small>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-
-                {error && (
-                  <p className="error-panel" role="alert">
-                    {error}
-                  </p>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={!destinationId || submitting}
-                >
-                  {submitting ? 'Confirming…' : 'Confirm Putaway'}
-                </button>
-              </>
-            )}
-          </form>
-        )}
-
-        {!context && error && (
-          <p className="error-panel" role="alert">
-            {error}
-          </p>
-        )}
-
-        {result && (
-          <section className="success-panel" aria-live="polite">
-            <span className="success-icon" aria-hidden="true">
-              ✓
-            </span>
-            <p className="eyebrow">Putaway confirmed</p>
-            <h2>
-              {result.quantity} units placed in{' '}
-              {locationLabels[result.destination_location] ??
-                result.destination_location}
-            </h2>
-            <dl>
-              <div>
-                <dt>Destination stock</dt>
-                <dd>{result.stock.destination_quantity}</dd>
-              </div>
-              <div>
-                <dt>Warehouse total</dt>
-                <dd>{result.stock.warehouse_total}</dd>
-              </div>
-            </dl>
-          </section>
-        )}
-          </>
-        )}
-      </section>
-      )}
+      {page}
     </main>
   )
 }

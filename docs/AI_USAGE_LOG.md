@@ -393,3 +393,40 @@ Không đưa secret, dữ liệu cá nhân, Context Pack tạm thời hoặc bư
   GitHub workflow run URL and job results are absent. A human must add the integration
   commit SHA, workflow URL, frontend job, PostgreSQL 17 job, PostgreSQL 18 job and
   Chromium Playwright result. No CI PASS or deployment is inferred.
+
+### AI-USE-033 — Role-based Dashboard and navigation
+
+- **Date:** 2026-10-02.
+- **Task:** Audit and implement the human-approved frontend-only role Dashboard,
+  explicit `/putaway` route, shared authenticated navigation and neutral unknown
+  route without changing the nine Must-story business contracts.
+- **AI support:** AI audited the manual pathname matcher, auth gate, backend role
+  dependencies, page mount requests, tests, Vercel SPA rewrite and relevant Vault
+  boundaries; extracted the existing Putaway UI without rewriting its behavior;
+  added role-filtered Dashboard actions, backend-authoritative safe-GET 403 paths,
+  component coverage and discoverable browser scenarios.
+- **Human decisions:** Human approved manual routing without a new dependency;
+  Staff generic actions only for configured Receive/Putaway context and New
+  Audit; Manager history/recheck/decision queues; neutral Purchasing/Admin state;
+  no generic Pick/Transfer/Staff-Adjust action; no fixture UUID in Dashboard;
+  and Page not found for unknown routes.
+- **Scope guard:** No backend, API contract, database schema/migration,
+  authentication/cookie behavior, stock semantics, seed, fixture, canonical
+  Acceptance Criterion, Figma inventory, commit, push, merge or deployment was
+  changed. Wrong-role mount authorization uses existing read/context GET only;
+  no mutation request is issued to demonstrate denial.
+- **Verification:** Fresh frontend ESLint PASS, TypeScript PASS, Vitest `92
+  passed`, Vite production build PASS, Playwright discovery `37 tests`, and
+  `git diff --check` PASS. Browser/PostgreSQL E2E execution is not claimed because
+  `TEST_DATABASE_URL` is unset. The separate unchanged Vercel-config test is
+  failing locally because the installed `@vercel/config` returns an environment
+  placeholder contract different from the existing test expectation; no
+  navigation code depends on that result.
+- **Artifact references:** [`../apps/frontend/src/App.tsx`](../apps/frontend/src/App.tsx),
+  [`../apps/frontend/src/DashboardPage.tsx`](../apps/frontend/src/DashboardPage.tsx),
+  [`../apps/frontend/src/PutawayPage.tsx`](../apps/frontend/src/PutawayPage.tsx),
+  [`../apps/README.md`](../apps/README.md),
+  [`06-technical/DEPLOYMENT.md`](06-technical/DEPLOYMENT.md), and
+  [`TRACEABILITY.md`](TRACEABILITY.md).
+- **Human review:** Implementation diff awaits human review. No commit, push,
+  merge or deployment was performed.
