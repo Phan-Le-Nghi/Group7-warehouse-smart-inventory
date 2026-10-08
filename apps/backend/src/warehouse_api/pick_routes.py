@@ -6,10 +6,23 @@ from sqlalchemy.orm import Session
 
 from warehouse_api.auth import Actor, require_warehouse_staff
 from warehouse_api.db import get_db_session
-from warehouse_api.pick import confirm_pick, get_pick_context
-from warehouse_api.schemas import PickContextResponse, PickRequest, PickResponse
+from warehouse_api.pick import confirm_pick, get_pick_context, list_actionable_picks
+from warehouse_api.schemas import (
+    PickContextResponse,
+    PickQueueResponse,
+    PickRequest,
+    PickResponse,
+)
 
 router = APIRouter(prefix="/api/v1/picks", tags=["pick"])
+
+
+@router.get("", response_model=PickQueueResponse)
+def read_actionable_picks(
+    session: Annotated[Session, Depends(get_db_session)],
+    _actor: Annotated[Actor, Depends(require_warehouse_staff)],
+) -> PickQueueResponse:
+    return list_actionable_picks(session)
 
 
 @router.get("/context/{pick_id}", response_model=PickContextResponse)

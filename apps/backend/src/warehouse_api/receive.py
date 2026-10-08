@@ -9,6 +9,9 @@ from warehouse_api.auth import Actor
 from warehouse_api.errors import ApiError
 from warehouse_api.models import Receive, ReceiveLine, Sku
 from warehouse_api.schemas import (
+    PreparedReceiveQueueItem,
+    PreparedReceiveQueueLine,
+    PreparedReceiveQueueResponse,
     ReceiveContextResponse,
     ReceiveLineState,
     ReceiveRecordRequest,
@@ -87,6 +90,41 @@ def _require_prepared(receive: Receive, rows: list[tuple[ReceiveLine, Sku]]) -> 
             "RECEIVE_CONTEXT_NOT_PREPARED",
             "The Receive expected context has not been prepared.",
         )
+
+
+def list_prepared_receives(session: Session) -> PreparedReceiveQueueResponse:
+    receives = session.scalars(
+        select(Receive).where(Receive.recorded_at.is_(None)).order_by(Receive.id)
+    ).all()
+    items: list[PreparedReceiveQueueItem] = []
+    for receive in receives:
+        rows = _receive_rows(session, receive.id)
+        if (
+            receive.expected_reference is None
+            or not receive.expected_reference.strip()
+            or not rows
+            or any(line.expected_quantity is None for line, _sku in rows)
+        ):
+            continue
+        items.append(
+            PreparedReceiveQueueItem(
+                receive_id=receive.id,
+                warehouse_id=receive.warehouse_id,
+                expected_reference=receive.expected_reference.strip(),
+                lines=[
+                    PreparedReceiveQueueLine(
+                        sku_id=sku.id,
+                        sku=sku.code,
+                        expected_quantity=line.expected_quantity,
+                    )
+                    for line, sku in sorted(
+                        rows, key=lambda row: (row[1].code, row[0].id)
+                    )
+                    if line.expected_quantity is not None
+                ],
+            )
+        )
+    return PreparedReceiveQueueResponse(items=items)
 
 
 def _context_response(

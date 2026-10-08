@@ -11,14 +11,24 @@ from warehouse_api.schemas import (
     TransferHistoryResponse,
     TransferRequest,
     TransferResponse,
+    TransferSelectorResponse,
 )
 from warehouse_api.transfer import (
     confirm_transfer,
     get_transfer_context,
     get_transfer_history,
+    list_transferable_skus,
 )
 
 router = APIRouter(prefix="/api/v1/transfers", tags=["transfer"])
+
+
+@router.get("/eligible-skus", response_model=TransferSelectorResponse)
+def read_transferable_skus(
+    session: Annotated[Session, Depends(get_db_session)],
+    _actor: Annotated[Actor, Depends(require_warehouse_staff)],
+) -> TransferSelectorResponse:
+    return list_transferable_skus(session)
 
 
 @router.get("", response_model=TransferHistoryResponse)

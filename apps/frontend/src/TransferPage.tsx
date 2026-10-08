@@ -162,6 +162,7 @@ export default function TransferPage({ skuId, onUnauthorized }: TransferPageProp
         </div>
         <span className="step-badge">TRANSFER</span>
       </div>
+      <p><a className="primary-link" href="/transfers">Back to Transfer selector</a></p>
 
       {loading && <p role="status" className="status-panel">Loading Transfer context…</p>}
       {!loading && !context && <p role="alert" className="error-panel">{error}</p>}

@@ -185,6 +185,46 @@ def snapshot(factory: sessionmaker[Session], fixture: PickFixture) -> dict[str, 
         }
 
 
+def test_pick_queue_lists_only_requests_without_an_outcome(pick_api) -> None:
+    client, factory, fixture = pick_api
+    with factory.begin() as session:
+        session.add_all(
+            [
+                PickRequest(
+                    warehouse_id=fixture.warehouse_id,
+                    sku_id=fixture.sku_id,
+                    requested_quantity=2,
+                    outcome="FULLY_COMPLETED",
+                    confirmed_by_user_id=fixture.actor.user_id,
+                    confirmed_at=datetime.now(UTC),
+                ),
+                PickRequest(
+                    warehouse_id=fixture.warehouse_id,
+                    sku_id=fixture.sku_id,
+                    requested_quantity=3,
+                    outcome="PARTIAL_INSUFFICIENT",
+                    confirmed_by_user_id=fixture.actor.user_id,
+                    confirmed_at=datetime.now(UTC),
+                ),
+            ]
+        )
+
+    response = client.get("/api/v1/picks")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "items": [
+            {
+                "pick_id": str(fixture.pick_id),
+                "sku_id": str(fixture.sku_id),
+                "sku": "PICK-SKU",
+                "requested_quantity": 10,
+                "available_quantity": 18,
+            }
+        ]
+    }
+
+
 def test_pick_context_reports_zero_for_missing_balance(pick_api) -> None:
     client, factory, fixture = pick_api
     with factory.begin() as session:

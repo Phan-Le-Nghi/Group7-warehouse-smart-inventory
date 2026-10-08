@@ -23,26 +23,26 @@ Screenshots không phải primary release artifact. Exact CI run của commit re
 không được ghi nhận và không được suy ra từ CI của commit cũ. Đây là staging/demo
 release, không phải production-grade claim.
 
-## Role-based frontend navigation worktree
+## Role-based product discovery worktree
 
-Human approved a frontend-only navigation layer on 2026-10-02. The current
-worktree makes `/` the authenticated role-based Dashboard, moves Putaway to the
-explicit `/putaway` route, preserves all existing exact-context deep links and
-adds a neutral Page not found state. Staff Dashboard actions are limited to
-configured Receive/Putaway context and New Audit; Manager actions are limited
-to Transfer History, Audit Discrepancies and the pending Adjust Decisions queue;
-Purchasing/Admin receive no invented action.
+Human approved the product discovery queue phase on 2026-10-08. The current
+worktree keeps `/` as the authenticated role-based Dashboard and gives Warehouse
+Staff six real entry points: Receive, Putaway, Pick, Transfer, New Audit and
+Adjust Requests. Receive and Putaway now use read-only queues; Pick uses an
+`outcome IS NULL` queue; Transfer uses a positive-stock selector with current
+tracked-location quantities. Queue selection creates the existing exact-context
+URL, so users do not supply UUIDs. Purchasing/Admin remain unchanged.
 
-This navigation artifact does not change canonical story behavior, API
-contracts, database schema, backend role policy, cookie/session behavior or
-stock semantics. Direct wrong-role business routes still mount their page only
-to issue the existing safe context/read GET and display the backend `403`; no
-mutation is sent on mount. Fresh local evidence: frontend ESLint PASS,
-TypeScript PASS, Vitest `92 passed`, production build PASS, Playwright discovery
-lists `37` tests, and `git diff --check` PASS. Real PostgreSQL/Chromium execution
-is not claimed because local `TEST_DATABASE_URL` is unset. The worktree still
-requires human diff review and has not been committed, pushed, merged or
-deployed.
+The four discovery APIs and pages add no model, migration, transaction effect,
+Receive/Pick create lifecycle, retry/reopen behavior, public reset or automatic
+Receive-to-Putaway handoff. `FULLY_COMPLETED` and `PARTIAL_INSUFFICIENT` Picks
+stay outside the actionable queue. Exact-context transaction routes remain
+authoritative and action pages now link back to their queue/selector. Verification
+evidence for this uncommitted worktree: backend Ruff lint/format PASS and pytest
+`269 passed, 32 PostgreSQL-only skipped`; frontend ESLint/TypeScript PASS, Vitest
+`101 passed`, production build PASS, Vercel config `4 passed`, Playwright
+discovery `37 tests`, and `git diff --check` PASS. `TEST_DATABASE_URL` is unset
+and Docker is unavailable, so PostgreSQL/Chromium execution is not claimed.
 
 ## Product foundation
 

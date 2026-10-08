@@ -180,6 +180,7 @@ export default function AdjustmentPage({
         </div>
         <span className="step-badge">ADJUST</span>
       </div>
+      <p><a className="primary-link" href="/adjustments">Back to Adjust Requests</a></p>
 
       {loading && (
         <p className="status-panel" role="status">

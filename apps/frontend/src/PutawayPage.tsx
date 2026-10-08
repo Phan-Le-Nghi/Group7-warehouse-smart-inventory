@@ -9,7 +9,7 @@ import {
 
 type PutawayPageProps = {
   onUnauthorized: () => void
-  receiveLineId?: string
+  receiveLineId: string
 }
 
 const locationLabels: Record<string, string> = {
@@ -107,6 +107,7 @@ export default function PutawayPage({
         </div>
         <span className="step-badge">PUTAWAY</span>
       </div>
+      <p><a className="primary-link" href="/putaway">Back to Putaway queue</a></p>
 
       {!context && !error && (
         <p className="status-panel" role="status">

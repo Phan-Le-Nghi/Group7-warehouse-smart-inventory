@@ -74,32 +74,25 @@ Set that variable to a real PostgreSQL test database for PostgreSQL evidence.
 ## Frontend
 
 `VITE_API_BASE_URL` selects the FastAPI origin. Authenticated users enter the
-role-based Dashboard at `/`. `VITE_RECEIVE_LINE_ID` supplies the explicit
-Putaway context at `/putaway`; `VITE_RECEIVE_ID` supplies the prepared Receive
-context at `/receive`. The Dashboard exposes those Staff links only when their
-prepared context is configured. The two screens remain separate and neither
-creates an automatic Receive-to-Putaway handoff.
+role-based Dashboard at `/`. Warehouse Staff use generic discovery pages at
+`/receive`, `/putaway`, `/picks`, and `/transfers`; each page loads a read-only
+backend queue/selector and creates the exact-context link after item selection.
+Receive and Putaway remain separate and neither creates an automatic
+Receive-to-Putaway handoff.
 
 The frontend keeps its small manual route matcher. Generic Staff entry points
-are `/receive`, `/putaway`, `/audits/new`, and `/adjustments`; Manager entry points are
+are `/receive`, `/putaway`, `/picks`, `/transfers`, `/audits/new`, and `/adjustments`; Manager entry points are
 `/transfers/history`, `/audit-discrepancies`, and `/adjustment-decisions`.
 The Staff Adjust queue discovers manager-confirmed mismatch rechecks and links
 to `/adjustments/{audit_recheck_id}` without exposing or hard-coding UUIDs.
-Pick and Transfer execution remain exact-context deep links because the current
-MVP has no generic selector for their required IDs.
+Pick and Transfer details retain exact-context URLs, but users reach them from
+the actionable Pick queue and current-stock Transfer selector without entering IDs.
 Purchasing and Admin receive a neutral Dashboard state rather than invented
 actions. Unknown frontend routes render a Page not found state.
 
-For the canonical demo dataset, set
-`VITE_RECEIVE_LINE_ID=daf594b9-9c1e-51ec-adf0-0055cb3a8ff3` and
-`VITE_RECEIVE_ID=e34f5e8e-4b3a-55a1-9485-d411a1ede3a8` at Vercel build time.
-The Receive ID is the separate prepared, unrecorded staging smoke context. The
-Putaway line still belongs to the original recorded demo Receive, so Receive
-smoke recording cannot change the existing Putaway evidence.
-
-Prepared Pick requests are opened at `/pick/{pick_id}`. The Pick ID comes from
-the URL; the application does not create Pick requests. Partial Picks require
-a second explicit confirmation in the UI before `POST /api/v1/picks` is sent.
+The application does not create Receive or Pick requests. Prepared contexts must
+already exist in backend data. Partial Picks require a second explicit
+confirmation in the UI before `POST /api/v1/picks` is sent.
 
 ```powershell
 Set-Location frontend

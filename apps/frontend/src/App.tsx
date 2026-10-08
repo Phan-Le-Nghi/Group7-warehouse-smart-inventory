@@ -6,17 +6,19 @@ import AuditDiscrepancyPage from './AuditDiscrepancyPage'
 import AuditPage from './AuditPage'
 import DashboardPage from './DashboardPage'
 import PickPage from './PickPage'
+import PickQueuePage from './PickQueuePage'
 import PutawayPage from './PutawayPage'
+import PutawayQueuePage from './PutawayQueuePage'
 import ReceivePage from './ReceivePage'
+import ReceiveQueuePage from './ReceiveQueuePage'
 import TransferHistoryPage from './TransferHistoryPage'
 import TransferPage from './TransferPage'
+import TransferSelectorPage from './TransferSelectorPage'
 
 type AppProps = {
   actor: Actor
   onLogout: () => void | Promise<void>
   onUnauthorized: () => void
-  receiveId?: string
-  receiveLineId?: string
 }
 
 const roleLabels: Record<Actor['role'], string> = {
@@ -45,10 +47,16 @@ function App({
   actor,
   onLogout,
   onUnauthorized,
-  receiveId = import.meta.env.VITE_RECEIVE_ID,
-  receiveLineId = import.meta.env.VITE_RECEIVE_LINE_ID,
 }: AppProps) {
   const currentPath = window.location.pathname.replace(/\/+$/, '') || '/'
+  const receivePathMatch = currentPath.match(/^\/receive\/([^/]+)$/)
+  const selectedReceiveId = receivePathMatch
+    ? decodeURIComponent(receivePathMatch[1])
+    : null
+  const putawayPathMatch = currentPath.match(/^\/putaway\/([^/]+)$/)
+  const selectedReceiveLineId = putawayPathMatch
+    ? decodeURIComponent(putawayPathMatch[1])
+    : null
   const pickPathMatch = currentPath.match(/^\/pick\/([^/]+)$/)
   const pickId = pickPathMatch ? decodeURIComponent(pickPathMatch[1]) : null
   const transferPathMatch = currentPath.match(/^\/transfer\/([^/]+)$/)
@@ -62,24 +70,15 @@ function App({
 
   let page
   if (currentPath === '/') {
-    page = (
-      <DashboardPage
-        role={actor.role}
-        receiveContextAvailable={Boolean(receiveId)}
-        putawayContextAvailable={Boolean(receiveLineId)}
-      />
-    )
+    page = <DashboardPage role={actor.role} />
   } else if (currentPath === '/putaway') {
-    page = (
-      <PutawayPage
-        receiveLineId={receiveLineId}
-        onUnauthorized={onUnauthorized}
-      />
-    )
+    page = <PutawayQueuePage onUnauthorized={onUnauthorized} />
   } else if (currentPath === '/receive') {
-    page = (
-      <ReceivePage receiveId={receiveId} onUnauthorized={onUnauthorized} />
-    )
+    page = <ReceiveQueuePage onUnauthorized={onUnauthorized} />
+  } else if (currentPath === '/picks') {
+    page = <PickQueuePage onUnauthorized={onUnauthorized} />
+  } else if (currentPath === '/transfers') {
+    page = <TransferSelectorPage onUnauthorized={onUnauthorized} />
   } else if (currentPath === '/transfers/history') {
     page = <TransferHistoryPage onUnauthorized={onUnauthorized} />
   } else if (currentPath === '/audits/new') {
@@ -90,6 +89,17 @@ function App({
     page = <AdjustmentDecisionPage onUnauthorized={onUnauthorized} />
   } else if (currentPath === '/adjustments') {
     page = <EligibleAdjustmentsPage onUnauthorized={onUnauthorized} />
+  } else if (selectedReceiveId) {
+    page = (
+      <ReceivePage receiveId={selectedReceiveId} onUnauthorized={onUnauthorized} />
+    )
+  } else if (selectedReceiveLineId) {
+    page = (
+      <PutawayPage
+        receiveLineId={selectedReceiveLineId}
+        onUnauthorized={onUnauthorized}
+      />
+    )
   } else if (pickId) {
     page = <PickPage pickId={pickId} onUnauthorized={onUnauthorized} />
   } else if (transferSkuId) {

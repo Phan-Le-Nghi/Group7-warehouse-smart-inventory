@@ -41,10 +41,14 @@ The browser cookie is `warehouse_session`, `HttpOnly`, host-only, uses `Path=/`,
 | `GET /api/v1/locations` | Return the two tracked locations for selection | `CAND-REQ-003`, `DEC-006/010` | Catalog administration not defined |
 | `GET /api/v1/stock?sku_id={id}` | Return location balances and derived Warehouse total | `CAND-REQ-003`, `CAND-BR-003` | Advanced filtering/pagination TBD |
 | `POST /api/v1/receives` | Record actual quantity and discrepancy/reference context | `US-REC-001` | Completion/handoff remains `OQ-013` |
+| `GET /api/v1/receives` | Return prepared, unrecorded Receive contexts for Staff selection | `US-REC-001` discovery support | Does not create Receive or define completion |
 | `POST /api/v1/putaways` | Confirm initial allocation into a tracked destination | `US-PUT-001` | Detailed contract below |
+| `GET /api/v1/putaways/eligible-lines` | Return recorded Receive lines whose current canonical `eligible_quantity` is positive | `US-PUT-001` discovery support | Does not decide partial Putaway behavior |
 | `GET /api/v1/putaways/context/{receive_line_id}` | Load the SKU, eligible quantity and tracked destination IDs needed by the standalone Putaway screen | `US-PUT-001` UI support only | Does not define an automatic Receive → Putaway handoff |
 | `POST /api/v1/picks` | Confirm one-or-many source allocations and report full or `PARTIAL / INSUFFICIENT` | `US-PICK-001` | Retry/cancel lifecycle remains open |
+| `GET /api/v1/picks` | Return Pick requests whose current persisted outcome is `null` | `US-PICK-001` discovery support | `FULLY_COMPLETED` and `PARTIAL_INSUFFICIENT` are excluded; no reopen/retry/cancel semantics |
 | `POST /api/v1/transfers` | Atomically reduce source, increase destination and record confirmation | `US-TRF-001` | Partial/failure/reversal remain open |
+| `GET /api/v1/transfers/eligible-skus` | Return SKUs with positive stock and a valid tracked source/destination combination, including current per-location quantities and derived total | `US-TRF-001` discovery support | Does not create a Transfer request lifecycle |
 | `GET /api/v1/transfers` | Return confirmed Transfer history fields | `US-TRF-002` | Advanced filter/sort/export TBD |
 | `POST /api/v1/audits` | Record selected-scope count/comparison and match/mismatch | `US-AUD-001` | Mismatch completion/schedule remain open |
 | `POST /api/v1/audit-discrepancies/{id}/rechecks` | Record required re-check context without automatic Adjust | `US-AUD-002` | Exact lifecycle/handoff remains `OQ-013` |
@@ -53,6 +57,18 @@ The browser cookie is `warehouse_session`, `HttpOnly`, host-only, uses `Path=/`,
 
 Routes through `US-ADJ-002` are implemented and merged. The exact route
 inventory is maintained in [`../../docs/06-technical/API.md`](../../docs/06-technical/API.md).
+
+## Human-approved product discovery boundary — 2026-10-08
+
+The four discovery GET routes above are read-only navigation support. They do
+not add models, migrations, request creation, transaction effects or lifecycle
+states. Receive returns only prepared contexts with `recorded_at IS NULL`.
+Putaway reuses the existing eligibility calculation and excludes exhausted
+lines. Pick returns only `outcome IS NULL`; both current non-null outcomes are
+kept outside the queue without defining reopen behavior. Transfer returns only
+SKUs with positive stock when at least two tracked locations provide a distinct
+source/destination combination. Exact-context routes remain authoritative after
+the user selects an item.
 
 ## US-PUT-001 — POST /api/v1/putaways
 

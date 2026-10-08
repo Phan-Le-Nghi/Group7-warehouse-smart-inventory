@@ -6,14 +6,27 @@ from sqlalchemy.orm import Session
 
 from warehouse_api.auth import Actor, require_warehouse_staff
 from warehouse_api.db import get_db_session
-from warehouse_api.putaway import confirm_putaway, get_putaway_context
+from warehouse_api.putaway import (
+    confirm_putaway,
+    get_putaway_context,
+    list_eligible_putaway_lines,
+)
 from warehouse_api.schemas import (
     PutawayContextResponse,
+    PutawayQueueResponse,
     PutawayRequest,
     PutawayResponse,
 )
 
 router = APIRouter(prefix="/api/v1", tags=["putaway"])
+
+
+@router.get("/putaways/eligible-lines", response_model=PutawayQueueResponse)
+def read_eligible_putaway_lines(
+    session: Annotated[Session, Depends(get_db_session)],
+    _actor: Annotated[Actor, Depends(require_warehouse_staff)],
+) -> PutawayQueueResponse:
+    return list_eligible_putaway_lines(session)
 
 
 @router.get(

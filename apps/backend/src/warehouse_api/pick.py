@@ -18,6 +18,8 @@ from warehouse_api.schemas import (
     PickAllocationResult,
     PickContextResponse,
     PickLocationAvailability,
+    PickQueueItem,
+    PickQueueResponse,
     PickResponse,
 )
 from warehouse_api.schemas import PickRequest as PickCommand
@@ -105,6 +107,29 @@ def get_pick_context(session: Session, pick_id: UUID) -> PickContextResponse:
             for location in locations
         ],
         warehouse_total=_warehouse_total(session, pick.sku_id, pick.warehouse_id),
+    )
+
+
+def list_actionable_picks(session: Session) -> PickQueueResponse:
+    rows = session.execute(
+        select(PickRequest, Sku)
+        .join(Sku, Sku.id == PickRequest.sku_id)
+        .where(PickRequest.outcome.is_(None))
+        .order_by(PickRequest.id)
+    ).all()
+    return PickQueueResponse(
+        items=[
+            PickQueueItem(
+                pick_id=pick.id,
+                sku_id=sku.id,
+                sku=sku.code,
+                requested_quantity=pick.requested_quantity,
+                available_quantity=_warehouse_total(
+                    session, pick.sku_id, pick.warehouse_id
+                ),
+            )
+            for pick, sku in rows
+        ]
     )
 
 

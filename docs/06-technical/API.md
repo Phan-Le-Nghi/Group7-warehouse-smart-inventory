@@ -23,12 +23,16 @@ Session cookie là host-only `warehouse_session`, `HttpOnly`, `Path=/`, absolute
 | `GET /api/v1/locations` | Tracked-location selection | Supporting `CAND-REQ-003` |
 | `GET /api/v1/stock?sku_id={id}` | Location balances + derived Warehouse total | `CAND-REQ-003` |
 | `GET /api/v1/receives/context/{receive_id}` | Prepared expected context and existing recording/review state | `US-REC-001`; Warehouse Staff only |
+| `GET /api/v1/receives` | Prepared, unrecorded Receive queue | `US-REC-001`; read-only discovery, no create/completion semantics |
 | `POST /api/v1/receives` | Atomically record the full prepared line set, actual quantity and discrepancy/reference context | `US-REC-001`; `RECEIVE_RECORDED`, not completion |
 | `POST /api/v1/receives/{receive_id}/reference-review` | Warehouse Staff acknowledgement of a recorded reference mismatch | `US-REC-001`; no approve/reject or reference correction |
 | `POST /api/v1/putaways` | Initial destination allocation | `US-PUT-001`; detailed below |
+| `GET /api/v1/putaways/eligible-lines` | Receive lines with current `eligible_quantity > 0` | `US-PUT-001`; read-only, no new partial semantics |
 | `GET /api/v1/putaways/context/{receive_line_id}` | SKU, eligible quantity và tracked destination IDs cho Putaway screen | `US-PUT-001`; không tạo automatic Receive handoff |
 | `POST /api/v1/picks` | Multi-location/full/`PARTIAL / INSUFFICIENT` Pick | `US-PICK-001` |
+| `GET /api/v1/picks` | Pick requests with persisted `outcome IS NULL` | `US-PICK-001`; excludes both current non-null outcomes, no reopen semantics |
 | `POST /api/v1/transfers` | Atomic internal Transfer confirmation | `US-TRF-001` |
+| `GET /api/v1/transfers/eligible-skus` | Positive-stock SKU selector with tracked-location quantities and derived total | `US-TRF-001`; no Transfer request lifecycle |
 | `GET /api/v1/transfers` | Confirmed Transfer history | `US-TRF-002` |
 | `GET /api/v1/audits/context` | Staff Audit SKU/location context with preview quantities | `US-AUD-001`; POST remains authoritative |
 | `POST /api/v1/audits` | Selected-scope count and comparison | `US-AUD-001` |

@@ -21,10 +21,13 @@ function snapshot() {
 }
 
 async function signIn(page: Page) {
-  await page.goto('/receive')
+  await page.goto('/')
   await page.getByLabel('Login identifier').fill('demo.warehouse_staff')
   await page.getByLabel('Password').fill(process.env.E2E_USER_PASSWORD ?? '')
   await page.getByRole('button', { name: 'Sign in' }).click()
+  await page.getByRole('link', { name: /Open Receive/ }).click()
+  const row = page.getByRole('row').filter({ hasText: 'REC-SKU-MATCH' })
+  await row.getByRole('link', { name: 'Record Receive' }).click()
   await expect(page.getByRole('heading', { name: 'Record Receive' })).toBeVisible()
 }
 

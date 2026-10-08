@@ -151,22 +151,14 @@ Create the project only after human approval, with:
 - Build command: `npm run build`
 - Output directory: `dist`
 - Environment variable: `RENDER_API_ORIGIN=https://<render-service-host>`
-- Environment variable:
-  `VITE_RECEIVE_LINE_ID=daf594b9-9c1e-51ec-adf0-0055cb3a8ff3`
-- Environment variable:
-  `VITE_RECEIVE_ID=e34f5e8e-4b3a-55a1-9485-d411a1ede3a8` (temporary prepared,
-  unrecorded Receive smoke context)
 - `VITE_API_BASE_URL`: unset
 
-Use this staging deep link for the dedicated Pick smoke fixture:
-`/pick/d88066ff-46b8-5722-ba29-b11cfa01816d`.
-
 Authenticated frontend navigation starts at the role-based Dashboard on `/`.
-The prepared Putaway smoke context is opened explicitly at `/putaway`; Receive
-remains `/receive`. Manager master pages are `/transfers/history`,
-`/audit-discrepancies`, and `/adjustment-decisions`. Exact-context Pick,
-Transfer execution, and Staff Adjust routes keep their existing path IDs and
-are not exposed as generic Dashboard actions.
+Warehouse Staff discovers work through `/receive`, `/putaway`, `/picks`,
+`/transfers`, `/audits/new`, and `/adjustments`. The four discovery pages load
+read-only queues/selectors and generate exact-context links without build-time
+IDs. Manager master pages are `/transfers/history`, `/audit-discrepancies`, and
+`/adjustment-decisions`.
 
 `frontend/vercel.mjs` validates `RENDER_API_ORIGIN` and generates routes in this
 order:
@@ -204,9 +196,18 @@ URL/results for this commit are **NOT RECORDED**.
 - [ ] Verify `GET /api/v1/auth/me`, a representative `401`, and role-based `403`.
 - [ ] Verify `/` loads the role-based Dashboard for all four demo roles without
       loading or mutating business context.
-- [ ] Verify Warehouse Staff sees only configured Receive/Putaway and New Audit
-      actions; Manager sees only Transfer History, Audit Discrepancies, and
-      Adjust Decisions; Purchasing/Admin show the neutral current-MVP state.
+- [ ] Verify Warehouse Staff sees Receive, Putaway, Pick, Transfer, New Audit,
+      and Adjust Requests; Manager sees only Transfer History, Audit
+      Discrepancies, and Adjust Decisions; Purchasing/Admin show the neutral
+      current-MVP state.
+- [ ] From Staff Dashboard, open Receive queue, record one prepared item, return
+      to the queue, and verify the recorded item is no longer listed.
+- [ ] From Staff Dashboard, open Putaway queue, exhaust one eligible line, return
+      to the queue, and verify the exhausted line is no longer listed.
+- [ ] From Staff Dashboard, open Pick queue and verify `FULLY_COMPLETED` and
+      `PARTIAL_INSUFFICIENT` requests are not offered as actionable work.
+- [ ] From Staff Dashboard, open Transfer selector, compare displayed Backroom,
+      Sales Shelf and total quantities with detail, then confirm a Transfer.
 - [ ] Refresh `/`, `/putaway`, and representative Manager/exact-context deep
       links; verify an unknown frontend path renders Page not found.
 - [ ] Verify Manager direct `/putaway` and `/audits/new` navigation receives the

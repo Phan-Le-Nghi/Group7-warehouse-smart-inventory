@@ -153,6 +153,41 @@ def balances(
         )
 
 
+def test_transfer_selector_lists_positive_stock_with_all_tracked_locations(
+    transfer_api,
+) -> None:
+    client, factory, fixture = transfer_api
+
+    before = client.get("/api/v1/transfers/eligible-skus")
+
+    assert before.status_code == 200
+    items = {item["sku_id"]: item for item in before.json()["items"]}
+    selected = items[str(fixture.sku_id)]
+    assert selected["warehouse_total"] == 18
+    assert {
+        location["code"]: location["available_quantity"]
+        for location in selected["locations"]
+    } == {"BACKROOM": 12, "SALES_SHELF": 6}
+    with factory() as session:
+        assert session.scalar(select(func.count(Transfer.id))) == 0
+
+
+def test_transfer_selector_excludes_skus_without_positive_stock(transfer_api) -> None:
+    client, factory, fixture = transfer_api
+    with factory.begin() as session:
+        for balance in session.scalars(
+            select(StockBalance).where(StockBalance.sku_id == fixture.sku_id)
+        ):
+            balance.quantity = 0
+
+    response = client.get("/api/v1/transfers/eligible-skus")
+
+    assert response.status_code == 200
+    assert str(fixture.sku_id) not in {
+        item["sku_id"] for item in response.json()["items"]
+    }
+
+
 def test_valid_transfer_and_safe_replay(transfer_api) -> None:
     client, factory, fixture = transfer_api
     request = payload(fixture)

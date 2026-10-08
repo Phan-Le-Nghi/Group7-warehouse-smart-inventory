@@ -176,6 +176,7 @@ export default function PickPage({ pickId, onUnauthorized }: PickPageProps) {
         </div>
         <span className="step-badge">PICK</span>
       </div>
+      <p><a className="primary-link" href="/picks">Back to Pick queue</a></p>
 
       {loading && (
         <p className="status-panel" role="status">

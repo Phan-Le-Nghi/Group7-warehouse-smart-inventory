@@ -23,11 +23,14 @@ function snapshot(skuId: string) {
   }
 }
 
-async function signIn(page: Page, skuId: string) {
-  await page.goto(`/transfer/${skuId}`)
+async function signIn(page: Page, skuCode: string) {
+  await page.goto('/')
   await page.getByLabel('Login identifier').fill('demo.warehouse_staff')
   await page.getByLabel('Password').fill(process.env.E2E_USER_PASSWORD ?? '')
   await page.getByRole('button', { name: 'Sign in' }).click()
+  await page.getByRole('link', { name: /Open Transfer/ }).click()
+  const row = page.getByRole('row').filter({ hasText: skuCode })
+  await row.getByRole('link', { name: 'Open Transfer' }).click()
   await expect(page.getByRole('heading', { name: 'Confirm Transfer' })).toBeVisible()
 }
 
@@ -38,7 +41,7 @@ async function submitQuantity(page: Page, quantity: string) {
 
 test('TEST-TRF-E2E-001 confirms a Transfer with an unchanged total', async ({ page }) => {
   backendCommand('--transfer-reset', successSkuId)
-  await signIn(page, successSkuId)
+  await signIn(page, 'TRANSFER-SKU-SUCCESS')
   await submitQuantity(page, '4')
   await expect(page.getByText('Transfer confirmed')).toBeVisible()
   expect(snapshot(successSkuId)).toEqual({
@@ -50,7 +53,7 @@ test('TEST-TRF-E2E-001 confirms a Transfer with an unchanged total', async ({ pa
 
 test('TEST-TRF-E2E-002 safely replays after a lost response', async ({ page }) => {
   backendCommand('--transfer-reset', replaySkuId)
-  await signIn(page, replaySkuId)
+  await signIn(page, 'TRANSFER-SKU-REPLAY')
   let intercepted = false
   await page.route('**/api/v1/transfers', async (route) => {
     if (intercepted) {
@@ -75,7 +78,7 @@ test('TEST-TRF-E2E-002 safely replays after a lost response', async ({ page }) =
 
 test('TEST-TRF-E2E-003 rejects stale stock without effects', async ({ page }) => {
   backendCommand('--transfer-reset', staleSkuId)
-  await signIn(page, staleSkuId)
+  await signIn(page, 'TRANSFER-SKU-STALE')
   await expect(page.getByText('Available: 12')).toBeVisible()
   await page.getByLabel('Quantity').fill('4')
   backendCommand('--transfer-deplete', staleSkuId)

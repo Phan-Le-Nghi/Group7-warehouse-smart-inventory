@@ -224,6 +224,19 @@ export type PutawayContext = {
   locations: LocationOption[]
 }
 
+export type PutawayQueue = {
+  items: Array<{
+    receive_line_id: string
+    receive_id: string
+    expected_reference: string
+    sku_id: string
+    sku: string
+    actual_quantity: number
+    confirmed_quantity: number
+    eligible_quantity: number
+  }>
+}
+
 export type PutawayResult = {
   putaway_id: string
   receive_line_id: string
@@ -255,6 +268,16 @@ export type PickContext = {
   warehouse_total: number
 }
 
+export type PickQueue = {
+  items: Array<{
+    pick_id: string
+    sku_id: string
+    sku: string
+    requested_quantity: number
+    available_quantity: number
+  }>
+}
+
 export type PickAllocationCommand = {
   source_location_id: string
   quantity: number
@@ -284,6 +307,15 @@ export type TransferContext = {
   sku: string
   locations: PickLocation[]
   warehouse_total: number
+}
+
+export type TransferSelector = {
+  items: Array<{
+    sku_id: string
+    sku: string
+    locations: PickLocation[]
+    warehouse_total: number
+  }>
 }
 
 export type TransferCommand = {
@@ -346,6 +378,19 @@ export type ReceiveContext = {
   recorded_at: string | null
   putaway_eligible: boolean
   lines: ReceiveLine[]
+}
+
+export type PreparedReceiveQueue = {
+  items: Array<{
+    receive_id: string
+    warehouse_id: string
+    expected_reference: string
+    lines: Array<{
+      sku_id: string
+      sku: string
+      expected_quantity: number
+    }>
+  }>
 }
 
 export type ReceiveRecordRequest = {
@@ -449,6 +494,10 @@ export async function loadPutawayContext(
   return apiRequest<PutawayContext>(
     `/api/v1/putaways/context/${receiveLineId}`,
   )
+}
+
+export function loadEligiblePutawayLines(): Promise<PutawayQueue> {
+  return apiRequest<PutawayQueue>('/api/v1/putaways/eligible-lines')
 }
 
 export function loadAuditContext(): Promise<AuditContext> {
@@ -586,6 +635,10 @@ export async function loadPickContext(pickId: string): Promise<PickContext> {
   return apiRequest<PickContext>(`/api/v1/picks/context/${pickId}`)
 }
 
+export function loadActionablePicks(): Promise<PickQueue> {
+  return apiRequest<PickQueue>('/api/v1/picks')
+}
+
 export async function submitPick(
   pickId: string,
   allocations: PickAllocationCommand[],
@@ -605,6 +658,10 @@ export async function loadTransferContext(
   skuId: string,
 ): Promise<TransferContext> {
   return apiRequest<TransferContext>(`/api/v1/transfers/context/${skuId}`)
+}
+
+export function loadTransferableSkus(): Promise<TransferSelector> {
+  return apiRequest<TransferSelector>('/api/v1/transfers/eligible-skus')
 }
 
 export async function submitTransfer(
@@ -631,6 +688,10 @@ export async function loadReceiveContext(
   return apiRequest<ReceiveContext>(
     `/api/v1/receives/context/${receiveId}`,
   )
+}
+
+export function loadPreparedReceives(): Promise<PreparedReceiveQueue> {
+  return apiRequest<PreparedReceiveQueue>('/api/v1/receives')
 }
 
 export async function recordReceive(

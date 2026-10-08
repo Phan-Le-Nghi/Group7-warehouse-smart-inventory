@@ -8,10 +8,12 @@ from warehouse_api.auth import Actor, require_warehouse_staff
 from warehouse_api.db import get_db_session
 from warehouse_api.receive import (
     get_receive_context,
+    list_prepared_receives,
     record_receive,
     review_reference_mismatch,
 )
 from warehouse_api.schemas import (
+    PreparedReceiveQueueResponse,
     ReceiveContextResponse,
     ReceiveRecordRequest,
     ReferenceReviewRequest,
@@ -19,6 +21,14 @@ from warehouse_api.schemas import (
 )
 
 router = APIRouter(prefix="/api/v1/receives", tags=["receive"])
+
+
+@router.get("", response_model=PreparedReceiveQueueResponse)
+def read_prepared_receives(
+    session: Annotated[Session, Depends(get_db_session)],
+    _actor: Annotated[Actor, Depends(require_warehouse_staff)],
+) -> PreparedReceiveQueueResponse:
+    return list_prepared_receives(session)
 
 
 @router.get("/context/{receive_id}", response_model=ReceiveContextResponse)
