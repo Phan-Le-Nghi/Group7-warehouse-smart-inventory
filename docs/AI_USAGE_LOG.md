@@ -430,3 +430,25 @@ Không đưa secret, dữ liệu cá nhân, Context Pack tạm thời hoặc bư
   [`TRACEABILITY.md`](TRACEABILITY.md).
 - **Human review:** Implementation diff awaits human review. No commit, push,
   merge or deployment was performed.
+
+### AI-USE-034 — Staff eligible Adjust queue and role handoff
+
+- **Date:** 2026-10-08.
+- **Task:** Implement the human-approved `DEC-044` Warehouse Staff handoff from a
+  Manager-confirmed mismatch recheck to the existing exact Adjust request flow.
+- **AI support:** Added the Staff-only read-only eligible-recheck API, canonical
+  Warehouse anti-join query and minimum response schema; added `/adjustments`,
+  the Staff Dashboard card and eligible queue UI; retained
+  `/adjustments/{audit_recheck_id}` as the authoritative exact context/create
+  flow; and replaced the main E2E API/deep-link bridge with UI discovery.
+- **Scope guard:** No model/migration, Manager create CTA, auto-create, role switch,
+  hard-coded UUID, authorization relaxation, stock mutation, status change or
+  attachment implementation was added. Queue staleness cannot bypass the existing
+  context/create and unique-request guards.
+- **Verification:** Backend Ruff lint and format PASS; targeted adjustment pytest
+  `39 passed`; full pytest `264 passed, 32 PostgreSQL-only skipped`. Frontend
+  ESLint and TypeScript PASS; Vitest `97 passed`; Vite build PASS; Vercel config
+  tests `4 passed`; Playwright discovery `37 tests`. Real PostgreSQL/Chromium E2E
+  was not run because `TEST_DATABASE_URL` is unset and Docker is unavailable.
+- **Human review:** Diff awaits review. No commit, push, merge, deployment, seed or
+  shared/staging database mutation was performed.

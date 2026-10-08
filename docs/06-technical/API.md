@@ -35,6 +35,7 @@ Session cookie là host-only `warehouse_session`, `HttpOnly`, `Path=/`, absolute
 | `GET /api/v1/audit-discrepancies` | Manager mismatch work list | `US-AUD-002`; read-only |
 | `GET /api/v1/audit-discrepancies/{audit_line_id}` | Manager exact discrepancy/recheck detail | `US-AUD-002`; read-only |
 | `POST /api/v1/audit-discrepancies/{id}/rechecks` | Mandatory re-check context; no auto Adjust | `US-AUD-002` |
+| `GET /api/v1/adjustments/eligible-rechecks` | Staff read-only eligible mismatch-recheck queue | `US-ADJ-001`; excludes rechecks with an existing request |
 | `GET /api/v1/adjustments/context/{audit_recheck_id}` | Staff exact Adjust context and persisted request status | `US-ADJ-001`; no current-stock preview |
 | `POST /api/v1/adjustments` | Re-checked request with reason; no pre-decision stock change | `US-ADJ-001` |
 | `GET /api/v1/adjustments?status=PENDING_MANAGER_DECISION` | Manager pending Adjust work queue only | `US-ADJ-002`; no history/search/export/advanced query |

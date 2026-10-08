@@ -247,6 +247,75 @@ def _business_snapshot(factory: sessionmaker[Session]) -> tuple[object, ...]:
         return stock, audits, lines, rechecks, neighbors
 
 
+def test_eligible_queue_is_ordered_derived_read_only_and_excludes_ineligible(
+    adjustment_api,
+) -> None:
+    client, factory, fixture = adjustment_api
+    older = datetime(2026, 9, 27, 8, 0, tzinfo=UTC)
+    newer = datetime(2026, 9, 27, 9, 0, tzinfo=UTC)
+    with factory.begin() as session:
+        session.get(AuditRecheck, fixture.negative_recheck_id).performed_at = older
+        session.get(AuditRecheck, fixture.positive_recheck_id).performed_at = newer
+
+    before = _business_snapshot(factory)
+    with factory() as session:
+        request_count = session.scalar(select(func.count(AdjustRequest.id)))
+
+    response = client.get("/api/v1/adjustments/eligible-rechecks")
+
+    assert response.status_code == 200
+    items = response.json()["items"]
+    assert [item["audit_recheck_id"] for item in items] == [
+        str(fixture.positive_recheck_id),
+        str(fixture.negative_recheck_id),
+    ]
+    assert items[0] == {
+        "audit_recheck_id": str(fixture.positive_recheck_id),
+        "sku": {"id": str(fixture.sku_id), "code": "ADJUST-SKU"},
+        "location": {"id": str(fixture.location_id), "code": "BACKROOM"},
+        "recheck_system_quantity": 10,
+        "recheck_physical_quantity": 13,
+        "requested_change": 3,
+        "rechecked_at": items[0]["rechecked_at"],
+    }
+    assert items[1]["requested_change"] == -2
+    assert str(fixture.match_recheck_id) not in {
+        item["audit_recheck_id"] for item in items
+    }
+    assert _business_snapshot(factory) == before
+    with factory() as session:
+        assert session.scalar(select(func.count(AdjustRequest.id))) == request_count
+
+    created = _post(client, fixture.negative_recheck_id, key="queue-exclusion")
+    assert created.status_code == 201
+    remaining = client.get("/api/v1/adjustments/eligible-rechecks").json()["items"]
+    assert [item["audit_recheck_id"] for item in remaining] == [
+        str(fixture.positive_recheck_id)
+    ]
+
+
+@pytest.mark.parametrize("role", [Role.MANAGER, Role.PURCHASING, Role.ADMIN])
+def test_eligible_queue_forbids_non_staff(adjustment_api, role: Role) -> None:
+    client, factory, _fixture = adjustment_api
+    app.dependency_overrides[get_actor] = lambda: Actor(uuid4(), "wrong.role", role)
+    before = _business_snapshot(factory)
+    with factory() as session:
+        request_count = session.scalar(select(func.count(AdjustRequest.id)))
+
+    response = client.get("/api/v1/adjustments/eligible-rechecks")
+
+    assert response.status_code == 403
+    assert _business_snapshot(factory) == before
+    with factory() as session:
+        assert session.scalar(select(func.count(AdjustRequest.id))) == request_count
+
+
+def test_eligible_queue_rejects_unauthenticated(adjustment_api) -> None:
+    client, _factory, _fixture = adjustment_api
+    app.dependency_overrides.pop(get_actor, None)
+    assert client.get("/api/v1/adjustments/eligible-rechecks").status_code == 401
+
+
 def test_context_derives_negative_and_positive_changes(adjustment_api) -> None:
     client, _factory, fixture = adjustment_api
     negative = client.get(f"/api/v1/adjustments/context/{fixture.negative_recheck_id}")

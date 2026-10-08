@@ -19,8 +19,12 @@ test('Warehouse Staff Dashboard exposes only generic Staff actions', async ({
   await expect(page.getByRole('link', { name: /Open Receive/ })).toBeVisible()
   await expect(page.getByRole('link', { name: /Open Putaway/ })).toBeVisible()
   await expect(page.getByRole('link', { name: /Open New Audit/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Open Adjust Requests/ })).toBeVisible()
   await expect(page.getByText('Transfer History')).toHaveCount(0)
   await expect(page.getByText('Adjust Decisions')).toHaveCount(0)
+  await page.getByRole('link', { name: /Open Adjust Requests/ }).click()
+  await expect(page).toHaveURL(/\/adjustments$/)
+  await expect(page.getByRole('heading', { name: 'Adjust Requests' })).toBeVisible()
 })
 
 test('Manager Dashboard exposes only Manager queues and history', async ({ page }) => {
@@ -37,6 +41,7 @@ test('Manager Dashboard exposes only Manager queues and history', async ({ page 
   ).toBeVisible()
   await expect(page.getByText('Putaway')).toHaveCount(0)
   await expect(page.getByText('New Audit')).toHaveCount(0)
+  await expect(page.getByRole('link', { name: /Open Adjust Requests/ })).toHaveCount(0)
 })
 
 for (const loginIdentifier of ['demo.purchasing', 'demo.admin']) {
@@ -50,5 +55,6 @@ for (const loginIdentifier of ['demo.purchasing', 'demo.admin']) {
     ).toBeVisible()
     await expect(page.getByText('Receive')).toHaveCount(0)
     await expect(page.getByText('Transfer History')).toHaveCount(0)
+    await expect(page.getByRole('link', { name: /Open Adjust Requests/ })).toHaveCount(0)
   })
 }

@@ -62,35 +62,31 @@ async function prepareMismatchRecheck(page: Page) {
   await page.getByLabel('Recheck physical quantity').fill('2')
   await page.getByRole('button', { name: 'Record Manager recheck' }).click()
   await expect(page.getByRole('heading', { name: 'MISMATCH' })).toBeVisible()
-
-  const listResponse = await page.request.get(
-    'http://127.0.0.1:8000/api/v1/audit-discrepancies',
-  )
-  const lineId = (await listResponse.json()).items[0].audit_line_id as string
-  const detailResponse = await page.request.get(
-    `http://127.0.0.1:8000/api/v1/audit-discrepancies/${lineId}`,
-  )
-  return (await detailResponse.json()).recheck.recheck_id as string
 }
 
-async function openAsStaff(page: Page, recheckId: string) {
+async function openEligibleAsStaff(page: Page) {
   await page.getByRole('button', { name: 'Sign out' }).click()
-  await signIn(
-    page,
-    `/adjustments/${encodeURIComponent(recheckId)}`,
-    'demo.warehouse_staff',
-  )
+  await signIn(page, '/', 'demo.warehouse_staff')
+  await page.getByRole('link', { name: /Open Adjust Requests/ }).click()
+  await expect(page.getByRole('heading', { name: 'Adjust Requests' })).toBeVisible()
+  await page.getByRole('link', { name: 'Create Adjust Request' }).click()
   await expect(
     page.getByRole('heading', { name: 'Create Adjust request' }),
   ).toBeVisible()
 }
 
+function recheckIdFromUrl(page: Page) {
+  const match = new URL(page.url()).pathname.match(/^\/adjustments\/([^/]+)$/)
+  if (!match) throw new Error('Expected exact Adjust request URL')
+  return decodeURIComponent(match[1])
+}
+
 test('TEST-ADJ1-E2E-001 Staff creates and reloads an immutable Adjust request', async ({
   page,
 }) => {
-  const recheckId = await prepareMismatchRecheck(page)
+  await prepareMismatchRecheck(page)
   const before = snapshot()
-  await openAsStaff(page, recheckId)
+  await openEligibleAsStaff(page)
   await expect(page.getByTestId('requested-change')).toHaveText('+2')
   await page.getByLabel('Reason').fill('Count confirmed after Manager recheck')
   await page.getByRole('button', { name: 'Create Adjust request' }).click()
@@ -111,13 +107,19 @@ test('TEST-ADJ1-E2E-001 Staff creates and reloads an immutable Adjust request', 
   expect(after.audit_line_count).toBe(before.audit_line_count)
   expect(after.audit_recheck_count).toBe(before.audit_recheck_count)
   expect(after.adjust_request_count).toBe(1)
+
+  await openAsManager(page)
+  await expect(
+    page.getByRole('button', { name: /Review AUDIT-SKU-MISSING-BALANCE/ }),
+  ).toBeVisible()
 })
 
 test('TEST-ADJ1-E2E-002 lost response replays and a different key cannot duplicate', async ({
   page,
 }) => {
-  const recheckId = await prepareMismatchRecheck(page)
-  await openAsStaff(page, recheckId)
+  await prepareMismatchRecheck(page)
+  await openEligibleAsStaff(page)
+  const recheckId = recheckIdFromUrl(page)
   let intercepted = false
   await page.route('**/api/v1/adjustments', async (route) => {
     if (route.request().method() !== 'POST' || intercepted) {
@@ -158,7 +160,15 @@ test('TEST-ADJ1-E2E-002 lost response replays and a different key cannot duplica
 test('TEST-ADJ1-E2E-003 Manager receives real backend 403 responses', async ({
   page,
 }) => {
-  const recheckId = await prepareMismatchRecheck(page)
+  await prepareMismatchRecheck(page)
+  const listResponse = await page.request.get(
+    'http://127.0.0.1:8000/api/v1/audit-discrepancies',
+  )
+  const lineId = (await listResponse.json()).items[0].audit_line_id as string
+  const detailResponse = await page.request.get(
+    `http://127.0.0.1:8000/api/v1/audit-discrepancies/${lineId}`,
+  )
+  const recheckId = (await detailResponse.json()).recheck.recheck_id as string
   await page.goto(`/adjustments/${encodeURIComponent(recheckId)}`)
   await expect(page.getByRole('alert')).toContainText(
     'Warehouse Staff role required',
@@ -179,8 +189,9 @@ test('TEST-ADJ1-E2E-003 Manager receives real backend 403 responses', async ({
 })
 
 async function createPendingAdjustment(page: Page) {
-  const recheckId = await prepareMismatchRecheck(page)
-  await openAsStaff(page, recheckId)
+  await prepareMismatchRecheck(page)
+  await openEligibleAsStaff(page)
+  const recheckId = recheckIdFromUrl(page)
   await page.getByLabel('Reason').fill('Manager decision E2E evidence')
   await page.getByRole('button', { name: 'Create Adjust request' }).click()
   await expect(
