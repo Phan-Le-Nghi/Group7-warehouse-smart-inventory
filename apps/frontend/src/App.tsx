@@ -1,4 +1,5 @@
 import type { Actor } from './auth'
+import EligibleAdjustmentsPage from './EligibleAdjustmentsPage'
 import AdjustmentPage from './AdjustmentPage'
 import AdjustmentDecisionPage from './AdjustmentDecisionPage'
 import AuditDiscrepancyPage from './AuditDiscrepancyPage'
@@ -87,6 +88,8 @@ function App({
     page = <AuditDiscrepancyPage onUnauthorized={onUnauthorized} />
   } else if (currentPath === '/adjustment-decisions') {
     page = <AdjustmentDecisionPage onUnauthorized={onUnauthorized} />
+  } else if (currentPath === '/adjustments') {
+    page = <EligibleAdjustmentsPage onUnauthorized={onUnauthorized} />
   } else if (pickId) {
     page = <PickPage pickId={pickId} onUnauthorized={onUnauthorized} />
   } else if (transferSkuId) {

@@ -61,6 +61,12 @@ function staffActions(
       href: '/audits/new',
       available: true,
     },
+    {
+      title: 'Adjust Requests',
+      description: 'Create requests from manager-confirmed inventory discrepancies.',
+      href: '/adjustments',
+      available: true,
+    },
   ]
 }
 

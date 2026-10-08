@@ -174,6 +174,10 @@ describe('role Dashboard routing', () => {
       'href',
       '/audits/new',
     )
+    expect(screen.getByRole('link', { name: /Open Adjust Requests/ })).toHaveAttribute(
+      'href',
+      '/adjustments',
+    )
     expect(screen.queryByText('Transfer History')).not.toBeInTheDocument()
     expect(fetchMock).not.toHaveBeenCalled()
   })
@@ -220,6 +224,7 @@ describe('role Dashboard routing', () => {
     )
     expect(screen.queryByText('New Audit')).not.toBeInTheDocument()
     expect(screen.queryByText('Putaway')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Open Adjust Requests/ })).not.toBeInTheDocument()
   })
 
   it.each(['PURCHASING', 'ADMIN'] as const)(
@@ -242,6 +247,9 @@ describe('role Dashboard routing', () => {
       ).toBeInTheDocument()
       expect(screen.queryByText('Receive')).not.toBeInTheDocument()
       expect(screen.queryByText('Transfer History')).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('link', { name: /Open Adjust Requests/ }),
+      ).not.toBeInTheDocument()
       cleanup()
     },
   )
@@ -498,6 +506,20 @@ describe('US-AUD-002 addressing', () => {
 })
 
 describe('US-ADJ-001 exact-context addressing', () => {
+  it('loads the generic eligible queue at /adjustments without matching the dynamic route', async () => {
+    window.history.pushState({}, '', '/adjustments')
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockReturnValue(
+      jsonResponse({ items: [] }),
+    )
+    renderApp()
+    expect(
+      await screen.findByRole('heading', { name: 'Adjust Requests' }),
+    ).toBeVisible()
+    expect(fetchMock.mock.calls[0][0]).toContain(
+      '/api/v1/adjustments/eligible-rechecks',
+    )
+  })
+
   it('loads the exact recheck at /adjustments/{audit_recheck_id}', async () => {
     const recheckId = '00000000-0000-0000-0000-000000000701'
     window.history.pushState({}, '', `/adjustments/${recheckId}`)

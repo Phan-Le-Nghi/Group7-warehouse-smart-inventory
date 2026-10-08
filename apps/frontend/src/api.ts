@@ -124,6 +124,20 @@ export type AdjustmentContext = {
   existing_adjustment: ExistingAdjustment | null
 }
 
+export type EligibleAdjustmentRecheck = {
+  audit_recheck_id: string
+  sku: { id: string; code: string }
+  location: { id: string; code: string }
+  recheck_system_quantity: number
+  recheck_physical_quantity: number
+  requested_change: number
+  rechecked_at: string
+}
+
+export type EligibleAdjustmentRecheckList = {
+  items: EligibleAdjustmentRecheck[]
+}
+
 export type AdjustmentResult = {
   adjustment_id: string
   audit_recheck_id: string
@@ -492,6 +506,12 @@ export function loadAdjustmentContext(
 ): Promise<AdjustmentContext> {
   return apiRequest<AdjustmentContext>(
     `/api/v1/adjustments/context/${auditRecheckId}`,
+  )
+}
+
+export function loadEligibleAdjustmentRechecks(): Promise<EligibleAdjustmentRecheckList> {
+  return apiRequest<EligibleAdjustmentRecheckList>(
+    '/api/v1/adjustments/eligible-rechecks',
   )
 }
 

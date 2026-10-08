@@ -179,6 +179,20 @@ class AdjustmentContextResponse(BaseModel):
     existing_adjustment: ExistingAdjustmentSummary | None
 
 
+class EligibleAdjustmentRecheckItem(BaseModel):
+    audit_recheck_id: UUID
+    sku: AdjustmentSku
+    location: AdjustmentLocation
+    recheck_system_quantity: int
+    recheck_physical_quantity: int
+    requested_change: int
+    rechecked_at: datetime
+
+
+class EligibleAdjustmentRecheckListResponse(BaseModel):
+    items: list[EligibleAdjustmentRecheckItem]
+
+
 class AdjustmentCreateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

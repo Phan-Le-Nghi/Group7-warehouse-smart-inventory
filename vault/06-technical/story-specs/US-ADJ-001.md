@@ -18,7 +18,7 @@ storage/provider/policy boundary.
 | Owner | Đặng Thị Thanh Ngân |
 | Requirement IDs | `REQ-001/002/003`, `CAND-REQ-008/010` |
 | Business rules | `CAND-BR-002/011/012` |
-| Decisions | `DEC-015/017/018/031/041/042` |
+| Decisions | `DEC-015/017/018/031/041/042/044` |
 | Verified evidence | `EVD-012/013/017` for current-state recheck/escalation context only |
 | Design references | `SCR-09`, `PF-03` |
 | Open boundaries | `OQ-012`, broader `OQ-013`, `OQ-022`; attachment storage/provider/policy; Manager decision/apply remains `US-ADJ-002` |
@@ -65,7 +65,7 @@ Excluded:
   creation;
 - request recreation/reopening after rejection;
 - attachment upload, storage, metadata/reference or provider integration;
-- Adjust history or generic Staff request list/detail;
+- Adjust history or generic Staff request detail;
 - Audit close/resolve/correction/reversal;
 - scanner/device, mobile/offline, notification, alert or AI behavior;
 - a generic workflow or generic idempotency framework.
@@ -238,8 +238,20 @@ The only durable business mutation allowed by this story is one valid
 
 ## API contract
 
-Both endpoints are Warehouse-Staff-only and server-scoped to the canonical MVP
+All three endpoints are Warehouse-Staff-only and server-scoped to the canonical MVP
 Warehouse.
+
+`DEC-044` adds one Staff-only read endpoint for the actor handoff. The exact
+context and create endpoints remain the authoritative eligibility boundary.
+
+### `GET /api/v1/adjustments/eligible-rechecks`
+
+Returns only canonical-Warehouse rechecks whose result is `MISMATCH` and which
+have no corresponding `AdjustRequest`. Results sort `performed_at DESC`, then
+recheck ID `DESC`. Each item exposes only `audit_recheck_id`, SKU/location,
+recheck system/physical quantities, backend-derived `requested_change` and
+`rechecked_at`. This endpoint is read-only and does not create a request, mutate
+stock, or replace exact-context/create validation.
 
 ### `GET /api/v1/adjustments/context/{audit_recheck_id}`
 
@@ -344,12 +356,15 @@ no-effect behavior above are fixed. No stock/stale error exists in this story.
 
 ## Frontend contract
 
-The Warehouse Staff flow opens one exact eligible context, reviews immutable
+The Warehouse Staff opens `/adjustments`, selects an eligible manager-confirmed
+recheck, and follows its exact `/adjustments/{audit_recheck_id}` link. The exact
+page reviews immutable
 Audit/recheck evidence, enters a reason and submits the request. The current slice
-does not add an own-request list, history, generic detail page or Manager UI.
+does not add an own-request history, generic request detail page or Manager UI.
 
 Required states:
 
+- eligible queue loading, empty, populated, retryable error, `401` and `403`;
 - loading eligible context;
 - eligible context with SKU/location, original Audit and recheck quantities;
 - visible derived signed requested change that Staff cannot edit;
@@ -412,7 +427,8 @@ approve/reject/apply controls or claim stock was changed.
 
 ### Playwright
 
-- Warehouse Staff opens an existing mismatching recheck and creates a request;
+- Warehouse Staff discovers a Manager-created mismatching recheck through the
+  Dashboard and eligible queue, then creates a request without knowing its UUID;
 - request persists and context reload shows its existing summary;
 - stock, original Audit and recheck remain unchanged before/after;
 - safe retry creates only one request and preserves the first facts/time;
@@ -498,4 +514,16 @@ approve/reject/apply controls or claim stock was changed.
 - `OQ-022` remains open for scanner/device, mobile/offline and external integration.
 - Attachment is optional, but storage/provider/policy and actual file I/O remain
   `OPEN / TBD` and are not implemented in this slice.
+
+## DEC-044 handoff implementation evidence
+
+The implementation candidate adds the Staff-only eligible-recheck endpoint,
+generic `/adjustments` queue, Staff Dashboard entry and UI-driven browser handoff.
+It adds no model or migration. Fresh local verification on 2026-10-08: backend
+Ruff lint/format PASS and pytest `264 passed, 32 PostgreSQL-only skipped`;
+frontend ESLint/TypeScript PASS, Vitest `97 passed`, production build PASS,
+Vercel config tests `4 passed`, and Playwright discovery lists `37` tests.
+Real PostgreSQL/Chromium execution is not verified locally because
+`TEST_DATABASE_URL` and Docker are unavailable. The diff awaits human review and
+is not committed or merged.
 

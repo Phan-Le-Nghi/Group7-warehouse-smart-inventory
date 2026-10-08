@@ -3,6 +3,7 @@ import {
   ApiError,
   apiRequest,
   loadAdjustmentContext,
+  loadEligibleAdjustmentRechecks,
   loadAuditDiscrepancies,
   loadAuditDiscrepancy,
   loadTransferHistory,
@@ -16,6 +17,21 @@ import {
 
 afterEach(() => {
   vi.restoreAllMocks()
+})
+
+it('loads the Staff eligible Adjustment queue from its read-only endpoint', async () => {
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    new Response(JSON.stringify({ items: [] }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  )
+
+  await expect(loadEligibleAdjustmentRechecks()).resolves.toEqual({ items: [] })
+  expect(fetchMock.mock.calls[0][0]).toMatch(
+    /\/api\/v1\/adjustments\/eligible-rechecks$/,
+  )
+  expect(fetchMock.mock.calls[0][1]).toMatchObject({ credentials: 'include' })
 })
 
 it('uses the approved exact Adjustment context and create contract', async () => {

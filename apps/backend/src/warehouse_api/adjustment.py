@@ -39,6 +39,8 @@ from warehouse_api.schemas import (
     AdjustmentRecheckEvidence,
     AdjustmentResponse,
     AdjustmentSku,
+    EligibleAdjustmentRecheckItem,
+    EligibleAdjustmentRecheckListResponse,
     ExistingAdjustmentSummary,
 )
 
@@ -182,6 +184,36 @@ def get_adjustment_context(
             "The Audit recheck is not eligible for an Adjust request.",
         )
     return _context_from_row(tuple(row))
+
+
+def list_eligible_adjustment_rechecks(
+    session: Session,
+) -> EligibleAdjustmentRecheckListResponse:
+    warehouse_id = _canonical_warehouse_id(session)
+    rows = session.execute(
+        _source_statement(warehouse_id)
+        .where(
+            AuditRecheck.result == "MISMATCH",
+            AdjustRequest.id.is_(None),
+        )
+        .order_by(AuditRecheck.performed_at.desc(), AuditRecheck.id.desc())
+    ).all()
+    return EligibleAdjustmentRecheckListResponse(
+        items=[
+            EligibleAdjustmentRecheckItem(
+                audit_recheck_id=recheck.id,
+                sku=AdjustmentSku(id=sku.id, code=sku.code),
+                location=AdjustmentLocation(id=location.id, code=location.code),
+                recheck_system_quantity=recheck.recheck_system_quantity,
+                recheck_physical_quantity=recheck.recheck_physical_quantity,
+                requested_change=(
+                    recheck.recheck_physical_quantity - recheck.recheck_system_quantity
+                ),
+                rechecked_at=_aware(recheck.performed_at),
+            )
+            for recheck, _line, _audit, sku, location, _adjustment, _requester in rows
+        ]
+    )
 
 
 def _response_for_adjustment(

@@ -9,6 +9,7 @@ from warehouse_api.adjustment import (
     decide_adjustment,
     get_adjustment_context,
     get_adjustment_detail,
+    list_eligible_adjustment_rechecks,
     list_pending_adjustments,
 )
 from warehouse_api.auth import Actor, require_manager, require_warehouse_staff
@@ -21,9 +22,18 @@ from warehouse_api.schemas import (
     AdjustmentDetailResponse,
     AdjustmentQueueResponse,
     AdjustmentResponse,
+    EligibleAdjustmentRecheckListResponse,
 )
 
 router = APIRouter(prefix="/api/v1/adjustments", tags=["adjustment"])
+
+
+@router.get("/eligible-rechecks", response_model=EligibleAdjustmentRecheckListResponse)
+def read_eligible_adjustment_rechecks(
+    session: Annotated[Session, Depends(get_db_session)],
+    _actor: Annotated[Actor, Depends(require_warehouse_staff)],
+) -> EligibleAdjustmentRecheckListResponse:
+    return list_eligible_adjustment_rechecks(session)
 
 
 @router.get("/context/{audit_recheck_id}", response_model=AdjustmentContextResponse)

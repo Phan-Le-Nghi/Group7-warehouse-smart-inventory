@@ -81,10 +81,12 @@ prepared context is configured. The two screens remain separate and neither
 creates an automatic Receive-to-Putaway handoff.
 
 The frontend keeps its small manual route matcher. Generic Staff entry points
-are `/receive`, `/putaway`, and `/audits/new`; Manager entry points are
+are `/receive`, `/putaway`, `/audits/new`, and `/adjustments`; Manager entry points are
 `/transfers/history`, `/audit-discrepancies`, and `/adjustment-decisions`.
-Pick, Transfer execution, and Staff Adjust requests remain exact-context deep
-links because the current MVP has no generic selector for their required IDs.
+The Staff Adjust queue discovers manager-confirmed mismatch rechecks and links
+to `/adjustments/{audit_recheck_id}` without exposing or hard-coding UUIDs.
+Pick and Transfer execution remain exact-context deep links because the current
+MVP has no generic selector for their required IDs.
 Purchasing and Admin receive a neutral Dashboard state rather than invented
 actions. Unknown frontend routes render a Page not found state.
 
