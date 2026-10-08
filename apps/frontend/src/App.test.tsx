@@ -274,8 +274,8 @@ describe('backend-authoritative Staff route authorization', () => {
   it.each([
     ['/putaway', '/api/v1/putaways/eligible-lines', 'Warehouse Staff role required'],
     ['/receive', '/api/v1/receives', 'Warehouse Staff role required'],
-    ['/pick/pick-id', '/api/v1/picks/context/pick-id', 'The authenticated actor does not have the required role.'],
-    ['/transfer/sku-id', '/api/v1/transfers/context/sku-id', 'The authenticated actor does not have the required role.'],
+    ['/picks', '/api/v1/picks', 'Warehouse Staff role required'],
+    ['/transfers', '/api/v1/transfers/eligible-skus', 'Warehouse Staff role required'],
   ])('requests the safe read endpoint for a Manager at %s', async (path, endpoint, expectedMessage) => {
     window.history.pushState({}, '', path)
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockReturnValue(

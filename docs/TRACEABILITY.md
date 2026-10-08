@@ -267,6 +267,17 @@ Các “Usability Decision” dưới đây là decision cục bộ của artifa
 
 Historical draft references are valid only when explicitly labeled as promoted, split, historical or superseded.
 
+## CI failure audit - 2026-10-08
+
+- Putaway discovery authorization remains Warehouse Staff only. The E2E test now
+  verifies the real `403`, `FORBIDDEN`, required role metadata, and the stable UI
+  heading instead of comparing the UI heading with the backend's generic message.
+- Audit recheck and Adjust decision E2E setup now waits for successful login and
+  Audit context responses before interacting with the selected-pair controls.
+- Local evidence: frontend lint, typecheck, and 101 unit tests pass; all 14 targeted
+  Playwright tests collect. Runtime PostgreSQL Playwright verification remains
+  pending because the local environment has no `TEST_DATABASE_URL` or Docker.
+
 ## Downstream status
 
 | Artifact | Current truthful status |

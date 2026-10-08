@@ -31,16 +31,41 @@ function snapshot() {
   }
 }
 
-async function signIn(page: Page, path: string, login: string) {
+async function signIn(
+  page: Page,
+  path: string,
+  login: string,
+  readyApiPath?: string,
+) {
   await page.goto(path)
   await page.getByLabel('Login identifier').fill(login)
   await page.getByLabel('Password').fill(process.env.E2E_USER_PASSWORD ?? '')
+  const loginResponse = page.waitForResponse(
+    (response) =>
+      response.url().endsWith('/api/v1/auth/login') &&
+      response.request().method() === 'POST',
+  )
+  const readyResponse = readyApiPath
+    ? page.waitForResponse(
+        (response) =>
+          response.url().endsWith(readyApiPath) &&
+          response.request().method() === 'GET',
+      )
+    : null
   await page.getByRole('button', { name: 'Sign in' }).click()
+  expect((await loginResponse).status()).toBe(200)
+  if (readyResponse) expect((await readyResponse).status()).toBe(200)
 }
 
 async function prepareMismatchRecheck(page: Page) {
   backendCommand('--audit-reset')
-  await signIn(page, '/audits/new', 'demo.warehouse_staff')
+  await signIn(
+    page,
+    '/audits/new',
+    'demo.warehouse_staff',
+    '/api/v1/audits/context',
+  )
+  await expect(page.getByRole('heading', { name: 'New Audit' })).toBeVisible()
   await page
     .getByLabel('Count AUDIT-SKU-MISSING-BALANCE at SALES_SHELF')
     .check()

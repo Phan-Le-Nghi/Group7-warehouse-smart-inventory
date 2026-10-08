@@ -44,5 +44,7 @@ test('Manager direct Putaway queue receives backend 403 from discovery GET', asy
   }
   expect(errorBody.error.code).toBe('FORBIDDEN')
   expect(errorBody.error.details.required_roles).toEqual(['WAREHOUSE_STAFF'])
-  await expect(page.getByRole('alert')).toHaveText(errorBody.error.message)
+  await expect(
+    page.getByRole('heading', { name: 'Warehouse Staff role required' }),
+  ).toBeVisible()
 })
