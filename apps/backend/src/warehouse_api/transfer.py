@@ -30,6 +30,8 @@ from warehouse_api.schemas import (
     TransferLocationAvailability,
     TransferRequest,
     TransferResponse,
+    TransferSelectorItem,
+    TransferSelectorResponse,
     TransferStockResult,
 )
 from warehouse_api.stock import ordered_location_ids
@@ -87,6 +89,54 @@ def get_transfer_history(session: Session) -> TransferHistoryResponse:
             for transfer, sku, source_location, destination_location, user in rows
         ]
     )
+
+
+def list_transferable_skus(session: Session) -> TransferSelectorResponse:
+    warehouse_id = _canonical_warehouse_id(session)
+    locations = session.scalars(
+        select(InternalLocation)
+        .where(
+            InternalLocation.warehouse_id == warehouse_id,
+            InternalLocation.code.in_(TRACKED_LOCATION_CODES),
+        )
+        .order_by(InternalLocation.code, InternalLocation.id)
+    ).all()
+    if len(locations) < 2:
+        return TransferSelectorResponse(items=[])
+
+    location_ids = [location.id for location in locations]
+    rows = session.execute(
+        select(Sku, StockBalance.location_id, StockBalance.quantity)
+        .join(StockBalance, StockBalance.sku_id == Sku.id)
+        .where(StockBalance.location_id.in_(location_ids))
+        .order_by(Sku.code, Sku.id)
+    ).all()
+    by_sku: dict[UUID, tuple[Sku, dict[UUID, int]]] = {}
+    for sku, location_id, quantity in rows:
+        entry = by_sku.setdefault(sku.id, (sku, {}))
+        entry[1][location_id] = int(quantity)
+
+    items: list[TransferSelectorItem] = []
+    for sku, quantities in by_sku.values():
+        total = sum(quantities.get(location.id, 0) for location in locations)
+        if total <= 0:
+            continue
+        items.append(
+            TransferSelectorItem(
+                sku_id=sku.id,
+                sku=sku.code,
+                locations=[
+                    TransferLocationAvailability(
+                        id=location.id,
+                        code=location.code,
+                        available_quantity=quantities.get(location.id, 0),
+                    )
+                    for location in locations
+                ],
+                warehouse_total=total,
+            )
+        )
+    return TransferSelectorResponse(items=items)
 
 
 def _fingerprint(command: TransferRequest) -> str:

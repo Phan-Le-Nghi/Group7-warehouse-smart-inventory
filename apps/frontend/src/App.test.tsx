@@ -33,14 +33,12 @@ function renderApp() {
       actor={actor}
       onLogout={() => undefined}
       onUnauthorized={() => undefined}
-      receiveId="00000000-0000-0000-0000-000000000103"
-      receiveLineId={receiveLineId}
     />,
   )
 }
 
 function renderPutawayApp() {
-  window.history.pushState({}, '', '/putaway')
+  window.history.pushState({}, '', `/putaway/${receiveLineId}`)
   return renderApp()
 }
 
@@ -170,6 +168,14 @@ describe('role Dashboard routing', () => {
       'href',
       '/putaway',
     )
+    expect(screen.getByRole('link', { name: /Open Pick/ })).toHaveAttribute(
+      'href',
+      '/picks',
+    )
+    expect(screen.getByRole('link', { name: /Open Transfer/ })).toHaveAttribute(
+      'href',
+      '/transfers',
+    )
     expect(screen.getByRole('link', { name: /Open New Audit/ })).toHaveAttribute(
       'href',
       '/audits/new',
@@ -182,20 +188,19 @@ describe('role Dashboard routing', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it('shows unavailable Staff cards instead of links without prepared context', () => {
+  it('keeps generic Staff queue links independent of build-time context', () => {
     render(
       <App
         actor={actor}
         onLogout={() => undefined}
         onUnauthorized={() => undefined}
-        receiveId=""
-        receiveLineId=""
       />,
     )
 
-    expect(screen.getAllByText('Requires prepared context.')).toHaveLength(2)
-    expect(screen.queryByRole('link', { name: /Open Receive/ })).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /Open Putaway/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Open Receive/ })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Open Putaway/ })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Open Pick/ })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Open Transfer/ })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Open New Audit/ })).toBeInTheDocument()
   })
 
@@ -205,8 +210,6 @@ describe('role Dashboard routing', () => {
         actor={{ ...actor, role: 'MANAGER' }}
         onLogout={() => undefined}
         onUnauthorized={() => undefined}
-        receiveId="receive-id"
-        receiveLineId={receiveLineId}
       />,
     )
 
@@ -235,8 +238,6 @@ describe('role Dashboard routing', () => {
           actor={{ ...actor, role }}
           onLogout={() => undefined}
           onUnauthorized={() => undefined}
-          receiveId="receive-id"
-          receiveLineId={receiveLineId}
         />,
       )
 
@@ -271,11 +272,11 @@ describe('role Dashboard routing', () => {
 
 describe('backend-authoritative Staff route authorization', () => {
   it.each([
-    ['/putaway', '/api/v1/putaways/context/'],
-    ['/receive', '/api/v1/receives/context/'],
-    ['/pick/pick-id', '/api/v1/picks/context/pick-id'],
-    ['/transfer/sku-id', '/api/v1/transfers/context/sku-id'],
-  ])('requests the safe read endpoint for a Manager at %s', async (path, endpoint) => {
+    ['/putaway', '/api/v1/putaways/eligible-lines', 'Warehouse Staff role required'],
+    ['/receive', '/api/v1/receives', 'Warehouse Staff role required'],
+    ['/picks', '/api/v1/picks', 'Warehouse Staff role required'],
+    ['/transfers', '/api/v1/transfers/eligible-skus', 'Warehouse Staff role required'],
+  ])('requests the safe read endpoint for a Manager at %s', async (path, endpoint, expectedMessage) => {
     window.history.pushState({}, '', path)
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockReturnValue(
       jsonResponse(
@@ -294,13 +295,11 @@ describe('backend-authoritative Staff route authorization', () => {
         actor={{ ...actor, role: 'MANAGER' }}
         onLogout={() => undefined}
         onUnauthorized={() => undefined}
-        receiveId="receive-id"
-        receiveLineId={receiveLineId}
       />,
     )
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'The authenticated actor does not have the required role.',
+      expectedMessage,
     )
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(fetchMock.mock.calls[0][0]).toContain(endpoint)
@@ -308,8 +307,8 @@ describe('backend-authoritative Staff route authorization', () => {
 })
 
 describe('US-REC-001 addressing', () => {
-  it('renders Receive at /receive without loading Putaway context', async () => {
-    window.history.pushState({}, '', '/receive')
+  it('renders Receive detail from a queue-generated URL', async () => {
+    window.history.pushState({}, '', '/receive/receive-id')
     vi.spyOn(globalThis, 'fetch').mockReturnValue(
       jsonResponse({
         receive_id: 'receive-id',
@@ -404,7 +403,6 @@ describe('US-TRF-002 addressing', () => {
         actor={{ ...actor, role: 'MANAGER' }}
         onLogout={() => undefined}
         onUnauthorized={() => undefined}
-        receiveLineId={receiveLineId}
       />,
     )
 
@@ -458,7 +456,6 @@ describe('US-AUD-001 addressing', () => {
         actor={{ ...actor, role: 'MANAGER' }}
         onLogout={() => undefined}
         onUnauthorized={() => undefined}
-        receiveLineId={receiveLineId}
       />,
     )
     expect(
@@ -480,7 +477,6 @@ describe('US-AUD-002 addressing', () => {
         actor={{ ...actor, role: 'MANAGER' }}
         onLogout={() => undefined}
         onUnauthorized={() => undefined}
-        receiveLineId={receiveLineId}
       />,
     )
     expect(
@@ -568,7 +564,6 @@ describe('US-ADJ-002 Manager addressing', () => {
         actor={{ ...actor, role: 'MANAGER' }}
         onLogout={() => undefined}
         onUnauthorized={() => undefined}
-        receiveLineId={receiveLineId}
       />,
     )
     expect(
@@ -594,7 +589,6 @@ describe('US-ADJ-002 Manager addressing', () => {
         actor={{ ...actor, role: 'MANAGER' }}
         onLogout={() => undefined}
         onUnauthorized={() => undefined}
-        receiveLineId={receiveLineId}
       />,
     )
 

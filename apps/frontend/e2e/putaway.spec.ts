@@ -1,10 +1,13 @@
 import { expect, test } from '@playwright/test'
 
 test('TEST-PUT-E2E-001 confirms 16 units into Backroom', async ({ page }) => {
-  await page.goto('/putaway')
+  await page.goto('/')
   await page.getByLabel('Login identifier').fill('demo.warehouse_staff')
   await page.getByLabel('Password').fill(process.env.E2E_USER_PASSWORD ?? '')
   await page.getByRole('button', { name: 'Sign in' }).click()
+  await page.getByRole('link', { name: /Open Putaway/ }).click()
+  const row = page.getByRole('cell', { name: 'SKU-001', exact: true }).locator('..')
+  await row.getByRole('link', { name: 'Open Putaway' }).click()
 
   await expect(page.getByText('SKU-001')).toBeVisible()
   await expect(page.getByText('16')).toBeVisible()
@@ -17,7 +20,7 @@ test('TEST-PUT-E2E-001 confirms 16 units into Backroom', async ({ page }) => {
   await expect(page.getByText('Putaway confirmed')).toBeVisible()
 })
 
-test('Manager direct Putaway route receives backend 403 from context GET', async ({
+test('Manager direct Putaway queue receives backend 403 from discovery GET', async ({
   page,
 }) => {
   await page.goto('/putaway')
@@ -25,7 +28,7 @@ test('Manager direct Putaway route receives backend 403 from context GET', async
   await page.getByLabel('Password').fill(process.env.E2E_USER_PASSWORD ?? '')
   const forbiddenResponse = page.waitForResponse(
     (response) =>
-      response.url().includes('/api/v1/putaways/context/') &&
+      response.url().endsWith('/api/v1/putaways/eligible-lines') &&
       response.request().method() === 'GET',
   )
   await page.getByRole('button', { name: 'Sign in' }).click()
@@ -41,5 +44,7 @@ test('Manager direct Putaway route receives backend 403 from context GET', async
   }
   expect(errorBody.error.code).toBe('FORBIDDEN')
   expect(errorBody.error.details.required_roles).toEqual(['WAREHOUSE_STAFF'])
-  await expect(page.getByRole('alert')).toHaveText(errorBody.error.message)
+  await expect(
+    page.getByRole('heading', { name: 'Warehouse Staff role required' }),
+  ).toBeVisible()
 })

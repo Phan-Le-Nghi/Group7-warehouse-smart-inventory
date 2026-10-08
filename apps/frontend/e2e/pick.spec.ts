@@ -23,17 +23,20 @@ function snapshot(pickId: string) {
   }
 }
 
-async function signIn(page: Page, pickId: string) {
-  await page.goto(`/pick/${pickId}`)
+async function signIn(page: Page, skuCode: string) {
+  await page.goto('/')
   await page.getByLabel('Login identifier').fill('demo.warehouse_staff')
   await page.getByLabel('Password').fill(process.env.E2E_USER_PASSWORD ?? '')
   await page.getByRole('button', { name: 'Sign in' }).click()
+  await page.getByRole('link', { name: /Open Pick/ }).click()
+  const row = page.getByRole('row').filter({ hasText: skuCode })
+  await row.getByRole('link', { name: 'Open Pick' }).click()
   await expect(page.getByRole('heading', { name: 'Confirm Pick' })).toBeVisible()
 }
 
 test('TEST-PICK-E2E-001 confirms a full multi-location Pick', async ({ page }) => {
   backendCommand('--pick-reset', fullPickId)
-  await signIn(page, fullPickId)
+  await signIn(page, 'PICK-SKU-FULL')
   await expect(page.getByText('PICK-SKU-FULL')).toBeVisible()
   await page.getByRole('checkbox', { name: /Backroom/i }).check()
   await page.getByLabel('Quantity from Backroom').fill('6')
@@ -52,7 +55,7 @@ test('TEST-PICK-E2E-001 confirms a full multi-location Pick', async ({ page }) =
 
 test('TEST-PICK-E2E-002 explicitly confirms a partial Pick', async ({ page }) => {
   backendCommand('--pick-reset', partialPickId)
-  await signIn(page, partialPickId)
+  await signIn(page, 'PICK-SKU-PARTIAL')
   await page.getByRole('checkbox', { name: /Backroom/i }).check()
   await page.getByLabel('Quantity from Backroom').fill('6')
   await page.getByRole('button', { name: 'Review and confirm Pick' }).click()
@@ -76,7 +79,7 @@ test('TEST-PICK-E2E-002 explicitly confirms a partial Pick', async ({ page }) =>
 
 test('TEST-PICK-E2E-003 rejects stale stock without a Pick mutation', async ({ page }) => {
   backendCommand('--pick-reset', stalePickId)
-  await signIn(page, stalePickId)
+  await signIn(page, 'PICK-SKU-STALE')
   await expect(page.getByText('8 available')).toBeVisible()
   await page.getByRole('checkbox', { name: /Backroom/i }).check()
   await page.getByLabel('Quantity from Backroom').fill('8')

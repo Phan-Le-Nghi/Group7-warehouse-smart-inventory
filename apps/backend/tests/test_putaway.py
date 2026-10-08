@@ -1,5 +1,6 @@
 from collections.abc import Iterator
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from os import getenv
 from uuid import UUID, uuid4
 
@@ -122,6 +123,41 @@ def payload(fixture: PutawayFixture, **changes: object) -> dict[str, object]:
     }
     request.update(changes)
     return request
+
+
+def test_putaway_queue_uses_current_eligibility_and_hides_exhausted_line(api) -> None:
+    client, factory, fixture = api
+    with factory.begin() as session:
+        line = session.get(ReceiveLine, fixture.receive_line_id)
+        assert line is not None
+        receive = session.get(Receive, line.receive_id)
+        assert receive is not None
+        receive.expected_reference = "PUTAWAY-QUEUE-001"
+        receive.reference_match_status = "REFERENCE_MATCH"
+        receive.recorded_at = datetime.now(UTC)
+
+    before = client.get("/api/v1/putaways/eligible-lines")
+    assert before.status_code == 200
+    assert before.json()["items"] == [
+        {
+            "receive_line_id": str(fixture.receive_line_id),
+            "receive_id": before.json()["items"][0]["receive_id"],
+            "expected_reference": "PUTAWAY-QUEUE-001",
+            "sku_id": str(fixture.sku_id),
+            "sku": "SKU-001",
+            "actual_quantity": 16,
+            "confirmed_quantity": 0,
+            "eligible_quantity": 16,
+        }
+    ]
+
+    confirmed = client.post(
+        "/api/v1/putaways",
+        json=payload(fixture),
+        headers={"Idempotency-Key": "PUTAWAY-QUEUE-EXHAUST"},
+    )
+    assert confirmed.status_code == 201
+    assert client.get("/api/v1/putaways/eligible-lines").json() == {"items": []}
 
 
 def test_put_001_happy_path_posts_16_to_backroom(api) -> None:

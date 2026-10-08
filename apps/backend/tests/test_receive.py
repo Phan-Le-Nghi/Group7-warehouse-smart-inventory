@@ -167,6 +167,39 @@ def snapshot_effects(
         )
 
 
+def test_receive_queue_lists_only_prepared_unrecorded_contexts(receive_api) -> None:
+    client, _factory, fixture = receive_api
+
+    before = client.get("/api/v1/receives")
+
+    assert before.status_code == 200
+    assert before.json() == {
+        "items": [
+            {
+                "receive_id": str(fixture.receive_id),
+                "warehouse_id": before.json()["items"][0]["warehouse_id"],
+                "expected_reference": "DELIVERY-001",
+                "lines": [
+                    {
+                        "sku_id": str(fixture.sku_ids[0]),
+                        "sku": "REC-SKU-001",
+                        "expected_quantity": 16,
+                    },
+                    {
+                        "sku_id": str(fixture.sku_ids[1]),
+                        "sku": "REC-SKU-002",
+                        "expected_quantity": 5,
+                    },
+                ],
+            }
+        ]
+    }
+
+    recorded = client.post("/api/v1/receives", json=record_payload(fixture))
+    assert recorded.status_code == 201
+    assert client.get("/api/v1/receives").json() == {"items": []}
+
+
 def test_rec_001_004_008_013_014_records_matching_context_without_side_effects(
     receive_api,
 ) -> None:

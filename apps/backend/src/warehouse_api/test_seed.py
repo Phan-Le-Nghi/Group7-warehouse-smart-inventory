@@ -267,9 +267,16 @@ def seed_test_fixture() -> None:
             session.add(Warehouse(id=WAREHOUSE_ID, code="MAIN"))
         if session.get(Sku, SKU_ID) is None:
             session.add(Sku(id=SKU_ID, code="SKU-001"))
-        if session.get(Receive, RECEIVE_ID) is None:
-            session.add(Receive(id=RECEIVE_ID, warehouse_id=WAREHOUSE_ID))
-        if session.get(ReceiveLine, RECEIVE_LINE_ID) is None:
+        putaway_receive = session.get(Receive, RECEIVE_ID)
+        if putaway_receive is None:
+            putaway_receive = Receive(id=RECEIVE_ID, warehouse_id=WAREHOUSE_ID)
+            session.add(putaway_receive)
+        putaway_receive.expected_reference = "PUTAWAY-E2E-001"
+        putaway_receive.document_reference = "PUTAWAY-E2E-001"
+        putaway_receive.reference_match_status = "REFERENCE_MATCH"
+        putaway_receive.recorded_at = datetime(2026, 9, 22, tzinfo=UTC)
+        putaway_line = session.get(ReceiveLine, RECEIVE_LINE_ID)
+        if putaway_line is None:
             session.add(
                 ReceiveLine(
                     id=RECEIVE_LINE_ID,
@@ -278,6 +285,8 @@ def seed_test_fixture() -> None:
                     actual_quantity=16,
                 )
             )
+        else:
+            putaway_line.actual_quantity = 16
 
         for location_id, code in (
             (BACKROOM_ID, "BACKROOM"),

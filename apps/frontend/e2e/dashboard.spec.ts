@@ -18,6 +18,8 @@ test('Warehouse Staff Dashboard exposes only generic Staff actions', async ({
 
   await expect(page.getByRole('link', { name: /Open Receive/ })).toBeVisible()
   await expect(page.getByRole('link', { name: /Open Putaway/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Open Pick/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Open Transfer/ })).toBeVisible()
   await expect(page.getByRole('link', { name: /Open New Audit/ })).toBeVisible()
   await expect(page.getByRole('link', { name: /Open Adjust Requests/ })).toBeVisible()
   await expect(page.getByText('Transfer History')).toHaveCount(0)

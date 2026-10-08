@@ -321,6 +321,18 @@ class PickContextResponse(BaseModel):
     warehouse_total: int
 
 
+class PickQueueItem(BaseModel):
+    pick_id: UUID
+    sku_id: UUID
+    sku: str
+    requested_quantity: int
+    available_quantity: int
+
+
+class PickQueueResponse(BaseModel):
+    items: list[PickQueueItem]
+
+
 class PickAllocationResult(BaseModel):
     source_location_id: UUID
     source_location: str
@@ -362,6 +374,17 @@ class TransferContextResponse(BaseModel):
     sku: str
     locations: list[TransferLocationAvailability]
     warehouse_total: int
+
+
+class TransferSelectorItem(BaseModel):
+    sku_id: UUID
+    sku: str
+    locations: list[TransferLocationAvailability]
+    warehouse_total: int
+
+
+class TransferSelectorResponse(BaseModel):
+    items: list[TransferSelectorItem]
 
 
 class TransferStockResult(BaseModel):
@@ -445,6 +468,21 @@ class PutawayContextResponse(BaseModel):
     locations: list[LocationOption]
 
 
+class PutawayQueueItem(BaseModel):
+    receive_line_id: UUID
+    receive_id: UUID
+    expected_reference: str
+    sku_id: UUID
+    sku: str
+    actual_quantity: int
+    confirmed_quantity: int
+    eligible_quantity: int
+
+
+class PutawayQueueResponse(BaseModel):
+    items: list[PutawayQueueItem]
+
+
 class ReceiveReferenceState(BaseModel):
     expected: str
     document: str | None
@@ -469,6 +507,23 @@ class ReceiveContextResponse(BaseModel):
     recorded_at: datetime | None
     putaway_eligible: bool
     lines: list[ReceiveLineState]
+
+
+class PreparedReceiveQueueLine(BaseModel):
+    sku_id: UUID
+    sku: str
+    expected_quantity: int
+
+
+class PreparedReceiveQueueItem(BaseModel):
+    receive_id: UUID
+    warehouse_id: UUID
+    expected_reference: str
+    lines: list[PreparedReceiveQueueLine]
+
+
+class PreparedReceiveQueueResponse(BaseModel):
+    items: list[PreparedReceiveQueueItem]
 
 
 class ReceiveRecordLineRequest(BaseModel):

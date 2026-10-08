@@ -2,8 +2,6 @@ import type { Role } from './auth'
 
 type DashboardPageProps = {
   role: Role
-  receiveContextAvailable: boolean
-  putawayContextAvailable: boolean
 }
 
 type DashboardAction = {
@@ -34,26 +32,31 @@ const managerActions: DashboardAction[] = [
   },
 ]
 
-function staffActions(
-  receiveContextAvailable: boolean,
-  putawayContextAvailable: boolean,
-): DashboardAction[] {
+function staffActions(): DashboardAction[] {
   return [
     {
       title: 'Receive',
-      description: receiveContextAvailable
-        ? 'Record the prepared Receive context.'
-        : 'Requires prepared context.',
+      description: 'Select and record a prepared Receive.',
       href: '/receive',
-      available: receiveContextAvailable,
+      available: true,
     },
     {
       title: 'Putaway',
-      description: putawayContextAvailable
-        ? 'Place stock from the prepared Receive line.'
-        : 'Requires prepared context.',
+      description: 'Place eligible received stock into a tracked location.',
       href: '/putaway',
-      available: putawayContextAvailable,
+      available: true,
+    },
+    {
+      title: 'Pick',
+      description: 'Select and perform an actionable Pick request.',
+      href: '/picks',
+      available: true,
+    },
+    {
+      title: 'Transfer',
+      description: 'Select stocked SKU and relocate it between tracked locations.',
+      href: '/transfers',
+      available: true,
     },
     {
       title: 'New Audit',
@@ -72,12 +75,10 @@ function staffActions(
 
 export default function DashboardPage({
   role,
-  receiveContextAvailable,
-  putawayContextAvailable,
 }: DashboardPageProps) {
   const actions =
     role === 'WAREHOUSE_STAFF'
-      ? staffActions(receiveContextAvailable, putawayContextAvailable)
+      ? staffActions()
       : role === 'MANAGER'
         ? managerActions
         : []

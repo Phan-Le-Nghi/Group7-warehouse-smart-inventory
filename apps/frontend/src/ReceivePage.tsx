@@ -9,7 +9,7 @@ import {
 
 type ReceivePageProps = {
   onUnauthorized: () => void
-  receiveId?: string
+  receiveId: string
 }
 
 function signedQuantity(value: number) {
@@ -18,7 +18,7 @@ function signedQuantity(value: number) {
 
 export default function ReceivePage({
   onUnauthorized,
-  receiveId = import.meta.env.VITE_RECEIVE_ID,
+  receiveId,
 }: ReceivePageProps) {
   const [context, setContext] = useState<ReceiveContext | null>(null)
   const [documentReference, setDocumentReference] = useState('')
@@ -172,6 +172,7 @@ export default function ReceivePage({
         </div>
         <span className="step-badge">RECEIVE</span>
       </div>
+      <p><a className="primary-link" href="/receive">Back to Receive queue</a></p>
 
       {!context && !error && (
         <p className="status-panel" role="status">

@@ -17,10 +17,12 @@ from warehouse_api.models import (
     Sku,
     StockBalance,
 )
-from warehouse_api.receive import ensure_putaway_eligible
+from warehouse_api.receive import ensure_putaway_eligible, is_receive_putaway_eligible
 from warehouse_api.schemas import (
     LocationOption,
     PutawayContextResponse,
+    PutawayQueueItem,
+    PutawayQueueResponse,
     PutawayRequest,
     PutawayResponse,
     StockResult,
@@ -126,6 +128,40 @@ def get_putaway_context(
             LocationOption(id=location.id, code=location.code) for location in locations
         ],
     )
+
+
+def list_eligible_putaway_lines(session: Session) -> PutawayQueueResponse:
+    rows = session.execute(
+        select(ReceiveLine, Receive, Sku)
+        .join(Receive, Receive.id == ReceiveLine.receive_id)
+        .join(Sku, Sku.id == ReceiveLine.sku_id)
+        .order_by(Receive.id, ReceiveLine.id)
+    ).all()
+    items: list[PutawayQueueItem] = []
+    for receive_line, receive, sku in rows:
+        if receive_line.actual_quantity is None or not is_receive_putaway_eligible(
+            receive
+        ):
+            continue
+        confirmed = int(
+            session.scalar(_allocation_total_statement(receive_line.id)) or 0
+        )
+        eligible = receive_line.actual_quantity - confirmed
+        if eligible <= 0:
+            continue
+        items.append(
+            PutawayQueueItem(
+                receive_line_id=receive_line.id,
+                receive_id=receive.id,
+                expected_reference=(receive.expected_reference or "").strip(),
+                sku_id=sku.id,
+                sku=sku.code,
+                actual_quantity=receive_line.actual_quantity,
+                confirmed_quantity=confirmed,
+                eligible_quantity=eligible,
+            )
+        )
+    return PutawayQueueResponse(items=items)
 
 
 def confirm_putaway(

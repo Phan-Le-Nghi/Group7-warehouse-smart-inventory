@@ -452,3 +452,29 @@ Không đưa secret, dữ liệu cá nhân, Context Pack tạm thời hoặc bư
   was not run because `TEST_DATABASE_URL` is unset and Docker is unavailable.
 - **Human review:** Diff awaits review. No commit, push, merge, deployment, seed or
   shared/staging database mutation was performed.
+
+### AI-USE-035 — Product discovery queues
+
+- **Date:** 2026-10-08.
+- **Task:** Implement the human-approved Warehouse Staff discovery phase for
+  Receive, Putaway, Pick and Transfer without changing transaction behavior.
+- **AI support:** Added four Staff-only read-only discovery APIs; added Receive,
+  Putaway and Pick queues plus a Transfer stock selector; made all six approved
+  Staff Dashboard actions reachable; added exact-context back navigation; and
+  changed the main browser happy paths to traverse Dashboard and UI discovery
+  instead of constructing deep links.
+- **Human decisions:** Receive lists only prepared unrecorded contexts; Putaway
+  lists only current positive eligible quantity; Pick lists only `outcome IS
+  NULL` and excludes both current non-null outcomes; Transfer lists positive
+  stock only when a distinct tracked source/destination combination exists.
+- **Scope guard:** No model/migration, Receive/Pick create lifecycle, Pick
+  retry/reopen, Transfer request lifecycle, public reset, Purchasing/Admin UI,
+  role relaxation or business transaction change was added. Test fixture setup
+  was updated only to make the existing Putaway fixture canonically discoverable.
+- **Verification:** Backend Ruff lint/format PASS; pytest `269 passed, 32
+  PostgreSQL-only skipped`. Frontend ESLint and TypeScript PASS; Vitest `101
+  passed`; Vite build PASS; Vercel config `4 passed`; Playwright discovery `37
+  tests`; `git diff --check` PASS. PostgreSQL/Chromium execution was not run
+  because `TEST_DATABASE_URL` is unset and Docker is unavailable.
+- **Human review:** Diff awaits review. No commit, push, merge, deployment,
+  staging seed/reset or shared-database mutation was performed.
