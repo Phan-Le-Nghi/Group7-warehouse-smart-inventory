@@ -48,6 +48,15 @@ Receive ghi actual quantity nhưng không tăng tracked-location stock. Putaway 
 
 Guard này ngăn double-count nhưng không cấm partial Putaway. Fixture 16 units được post toàn bộ chỉ là happy path của slice; `OQ-014` vẫn OPEN.
 
+## DEC-045 supporting creation model
+
+The upstream usability extension requires no schema or migration. A new prepared
+Receive uses the existing nullable pre-recording state in `receives`/`receive_lines`;
+a new Pick Request uses the existing null outcome/confirmation state in
+`pick_requests`. `skus` supplies the stock-free selector. Creation stores no
+creator/time/idempotency facts and does not insert/update `stock_balances`,
+`putaway_allocations` or `pick_allocations`.
+
 ## US-REC-001 recording model
 
 `receives` stores nullable legacy-safe expected/document references, reference

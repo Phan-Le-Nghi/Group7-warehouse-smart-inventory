@@ -62,6 +62,7 @@ and Docker is unavailable, so PostgreSQL/Chromium execution is not claimed.
 | `DEC-019` | `CAND-REQ-011`, `CAND-BR-015` | Negative-stock guards in `US-PICK-001`, `US-TRF-001`, `US-ADJ-002` | HUMAN PRODUCT DECISION; resolves `OQ-015` |
 | `DEC-036` | `US-REC-001` implementation contract | `RECEIVE_RECORDED`; minimum expected context; Warehouse Staff mismatch acknowledgement; Putaway eligibility gate; duplicate conflict; legacy-safe migration; no stock/auto-Putaway effect | HUMAN APPROVED TECHNICAL IMPLEMENTATION SPEC; does not close `OQ-013/014` |
 | `DEC-037` | `US-PICK-001` implementation contract | One immutable `FULLY_COMPLETED` or `PARTIAL_INSUFFICIENT` result; explicit unique source allocations; atomic locked source decrements; typed duplicate conflict; approved data/API/UI boundaries | HUMAN APPROVED TECHNICAL IMPLEMENTATION SPEC; preserves `OQ-012/022` and future retry/Manager-review boundaries |
+| `DEC-045` | Supporting preconditions for `US-REC-001` and `US-PICK-001` | Purchasing prepared-Receive creation; Manager Pick-request creation; shared stock-free SKU catalog; normal Staff queues and execution remain authoritative | HUMAN APPROVED SUPPORTING WORKFLOWS / USABILITY EXTENSIONS; no new canonical story, no migration or stock effect; canonical total remains 9 |
 | `DEC-038` | `US-TRF-001` implementation contract | Immutable durable Transfer; different same-Warehouse locations; atomic source/destination effects; transactional missing-destination creation; sorted UUID locks; explicit idempotent retry; approved data/API/error boundaries | HUMAN APPROVED TECHNICAL IMPLEMENTATION SPEC; preserves `OQ-012`, remaining `OQ-013`, global `OQ-014` and `OQ-022`; history remains `US-TRF-002` |
 | `DEC-039` | `US-TRF-002` implementation contract | Manager-only confirmed history for the server-resolved single MVP Warehouse; exact read response; `transferred_at DESC, id DESC`; no pagination/filter; table UI; strict no-effect guarantee | HUMAN APPROVED TECHNICAL IMPLEMENTATION SPEC; reuses `US-TRF-001` records/indexes with no migration; preserves broader Transfer lifecycle at `OQ-013` and device/integration at `OQ-022` |
 | `DEC-040` | `US-AUD-001` implementation contract | One session/many unique pair lines; selected pairs and current SKU × tracked-location whole-Warehouse scope; submit-time stock snapshot; missing balance zero; strict integer; persisted signed discrepancy; match/mismatch statuses; Staff-only idempotent API; strict no-stock-effect guarantee | HUMAN APPROVED TECHNICAL IMPLEMENTATION SPEC; preserves global `OQ-012`, broader Audit lifecycle/recheck/correction at `OQ-013` and device/integration at `OQ-022`; Manager review remains `US-AUD-002` |
@@ -185,6 +186,15 @@ RECORDED LOCALLY** and no PASS result is inferred.
 | `US-AUD-002` | `REQ-002/004`, `CAND-REQ-005/010` | `CAND-BR-002/010` | `DEC-014/015/017/018/031/040/041` | Verified evidence `EVD-012/017` + HUMAN PRODUCT/TECHNICAL DECISIONS | Manager-only per-line recheck contract approved; `OQ-012` global quantity, `OQ-013` close/resolve/correction/reversal and `OQ-022` device/integration remain open |
 | `US-ADJ-001` | `REQ-001/002/003`, `CAND-REQ-008/010` | `CAND-BR-002/011/012` | `DEC-015/017/018/031/041/042/044` | Verified evidence `EVD-012/013/017` + HUMAN PRODUCT/TECHNICAL DECISIONS | Staff queue/handoff and exact creation approved; Manager decision/apply belongs to `US-ADJ-002`; `OQ-012`, broader Audit lifecycle at `OQ-013`, `OQ-022`, and attachment storage/provider/policy remain open; queue/context/create do not mutate stock |
 | `US-ADJ-002` | `REQ-001/002/003`, `CAND-REQ-003/008/010/011`, `NFR-001/002/004` | `CAND-BR-002/011/013/015` | `DEC-010/015/017/018/019/021/022/031/041/042/043` | Verified evidence `EVD-012/013/017` + HUMAN PRODUCT/TECHNICAL DECISIONS | Current Manager decision/apply lifecycle approved; `OQ-012`, broader Audit correction/reversal at `OQ-013`, `OQ-022` and attachment boundary remain open |
+
+## DEC-045 supporting usability extension
+
+`DEC-045` is traced as a supporting precondition/capability for the existing
+`US-REC-001` and `US-PICK-001` flows. It does not add or edit canonical ACs and
+does not change the 9/9 story metric. Current worktree implementation includes the
+stock-free SKU catalog, Purchasing multi-line preparation, Manager Pick-request
+creation, Dashboard/routes/forms, backend role matrices and UI-created browser
+handoffs into the existing Staff queues. No Alembic revision is added.
 
 ## Story-to-AC mapping
 

@@ -13,6 +13,12 @@ type DashboardAction = {
 
 const managerActions: DashboardAction[] = [
   {
+    title: 'Create Pick Request',
+    description: 'Create an actionable Pick request for Warehouse Staff.',
+    href: '/picks/requests/new',
+    available: true,
+  },
+  {
     title: 'Transfer History',
     description: 'Review confirmed internal stock transfers.',
     href: '/transfers/history',
@@ -28,6 +34,15 @@ const managerActions: DashboardAction[] = [
     title: 'Adjust Decisions',
     description: 'Review pending Adjust requests.',
     href: '/adjustment-decisions',
+    available: true,
+  },
+]
+
+const purchasingActions: DashboardAction[] = [
+  {
+    title: 'Prepare Receive',
+    description: 'Prepare expected reference and SKU quantities for receiving.',
+    href: '/receives/prepare',
     available: true,
   },
 ]
@@ -81,7 +96,9 @@ export default function DashboardPage({
       ? staffActions()
       : role === 'MANAGER'
         ? managerActions
-        : []
+        : role === 'PURCHASING'
+          ? purchasingActions
+          : []
 
   return (
     <section className="dashboard" aria-labelledby="dashboard-title">

@@ -13,6 +13,7 @@ from warehouse_api.models import (
     PickRequest,
     Sku,
     StockBalance,
+    Warehouse,
 )
 from warehouse_api.schemas import (
     PickAllocationResult,
@@ -20,6 +21,8 @@ from warehouse_api.schemas import (
     PickLocationAvailability,
     PickQueueItem,
     PickQueueResponse,
+    PickRequestCreateRequest,
+    PickRequestCreateResponse,
     PickResponse,
 )
 from warehouse_api.schemas import PickRequest as PickCommand
@@ -30,6 +33,43 @@ PARTIAL_INSUFFICIENT = "PARTIAL_INSUFFICIENT"
 TRACKED_LOCATION_CODES = ("BACKROOM", "SALES_SHELF")
 
 logger = logging.getLogger(__name__)
+
+
+def _canonical_warehouse_id(session: Session) -> UUID:
+    warehouse_ids = list(session.scalars(select(Warehouse.id).limit(2)))
+    if len(warehouse_ids) != 1:
+        raise ApiError(
+            500,
+            "CANONICAL_WAREHOUSE_UNAVAILABLE",
+            "The canonical Warehouse is unavailable.",
+        )
+    return warehouse_ids[0]
+
+
+def create_pick_request(
+    session: Session, command: PickRequestCreateRequest
+) -> PickRequestCreateResponse:
+    sku = session.get(Sku, command.sku_id)
+    if sku is None:
+        raise ApiError(404, "SKU_NOT_FOUND", "SKU was not found.")
+    pick = PickRequest(
+        warehouse_id=_canonical_warehouse_id(session),
+        sku_id=sku.id,
+        requested_quantity=command.requested_quantity,
+        outcome=None,
+        confirmed_by_user_id=None,
+        confirmed_at=None,
+    )
+    session.add(pick)
+    session.flush()
+    return PickRequestCreateResponse(
+        pick_id=pick.id,
+        warehouse_id=pick.warehouse_id,
+        sku_id=sku.id,
+        sku=sku.code,
+        requested_quantity=pick.requested_quantity,
+        outcome=None,
+    )
 
 
 def _warehouse_total(session: Session, sku_id: UUID, warehouse_id: UUID) -> int:

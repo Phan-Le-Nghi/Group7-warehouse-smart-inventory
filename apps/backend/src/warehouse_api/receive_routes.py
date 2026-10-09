@@ -4,15 +4,18 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
-from warehouse_api.auth import Actor, require_warehouse_staff
+from warehouse_api.auth import Actor, require_purchasing, require_warehouse_staff
 from warehouse_api.db import get_db_session
 from warehouse_api.receive import (
     get_receive_context,
     list_prepared_receives,
+    prepare_receive,
     record_receive,
     review_reference_mismatch,
 )
 from warehouse_api.schemas import (
+    PreparedReceiveCreateRequest,
+    PreparedReceiveCreateResponse,
     PreparedReceiveQueueResponse,
     ReceiveContextResponse,
     ReceiveRecordRequest,
@@ -21,6 +24,19 @@ from warehouse_api.schemas import (
 )
 
 router = APIRouter(prefix="/api/v1/receives", tags=["receive"])
+
+
+@router.post(
+    "/prepared",
+    response_model=PreparedReceiveCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_prepared_receive(
+    command: PreparedReceiveCreateRequest,
+    session: Annotated[Session, Depends(get_db_session)],
+    _actor: Annotated[Actor, Depends(require_purchasing)],
+) -> PreparedReceiveCreateResponse:
+    return prepare_receive(session, command)
 
 
 @router.get("", response_model=PreparedReceiveQueueResponse)

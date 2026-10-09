@@ -34,6 +34,38 @@ async function signIn(page: Page, skuCode: string) {
   await expect(page.getByRole('heading', { name: 'Confirm Pick' })).toBeVisible()
 }
 
+async function logIn(page: Page, loginIdentifier: string) {
+  await page.goto('/')
+  await page.getByLabel('Login identifier').fill(loginIdentifier)
+  await page.getByLabel('Password').fill(process.env.E2E_USER_PASSWORD ?? '')
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  await expect(page.getByRole('heading', { name: 'Warehouse Dashboard' })).toBeVisible()
+}
+
+test('DEC-045 creates a Pick Request through Manager UI and removes it after execution', async ({ page }) => {
+  backendCommand('--upstream-reset')
+  await logIn(page, 'demo.manager')
+  await page.getByRole('link', { name: /Open Create Pick Request/ }).click()
+  await expect(page.getByRole('heading', { name: 'Create Pick Request' })).toBeVisible()
+  await page.getByLabel('SKU').selectOption({ label: 'UPSTREAM-PICK-SKU' })
+  await page.getByLabel('Requested quantity').fill('10')
+  await page.getByRole('button', { name: 'Create' }).click()
+  await expect(page.getByText('Pick Request created and ready for Warehouse Staff.')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Sign out' }).click()
+  await logIn(page, 'demo.warehouse_staff')
+  await page.getByRole('link', { name: /Open Pick/ }).click()
+  const queueRow = page.getByRole('row').filter({ hasText: 'UPSTREAM-PICK-SKU' })
+  await queueRow.getByRole('link', { name: 'Open Pick' }).click()
+  await page.getByRole('checkbox', { name: /Backroom/i }).check()
+  await page.getByLabel('Quantity from Backroom').fill('10')
+  await page.getByRole('button', { name: 'Review and confirm Pick' }).click()
+  await expect(page.getByText('Pick fully completed')).toBeVisible()
+
+  await page.getByRole('link', { name: 'Back to Pick queue' }).click()
+  await expect(page.getByRole('row').filter({ hasText: 'UPSTREAM-PICK-SKU' })).toHaveCount(0)
+})
+
 test('TEST-PICK-E2E-001 confirms a full multi-location Pick', async ({ page }) => {
   backendCommand('--pick-reset', fullPickId)
   await signIn(page, 'PICK-SKU-FULL')

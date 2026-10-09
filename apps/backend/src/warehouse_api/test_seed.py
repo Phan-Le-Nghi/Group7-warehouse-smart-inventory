@@ -53,6 +53,8 @@ TRANSFER_HISTORY_NEW_ID = UUID("00000000-0000-0000-0000-000000000402")
 TRANSFER_HISTORY_OLD_ID = UUID("00000000-0000-0000-0000-000000000401")
 AUDIT_SKU_ID = UUID("00000000-0000-0000-0000-000000000502")
 AUDIT_SCOPE_CHANGE_SKU_ID = UUID("00000000-0000-0000-0000-000000000599")
+UPSTREAM_RECEIVE_SKU_ID = UUID("00000000-0000-0000-0000-000000000902")
+UPSTREAM_PICK_SKU_ID = UUID("00000000-0000-0000-0000-000000000912")
 
 PICK_FIXTURES = {
     PICK_FULL_ID: (PICK_FULL_SKU_ID, "PICK-SKU-FULL", 6, 4),
@@ -252,6 +254,60 @@ def _reset_receive_fixtures(session: Session) -> None:
             balance.quantity = 0
 
 
+def _reset_upstream_prerequisites(session: Session) -> None:
+    receive_rows = session.execute(
+        select(ReceiveLine.id, ReceiveLine.receive_id).where(
+            ReceiveLine.sku_id == UPSTREAM_RECEIVE_SKU_ID
+        )
+    ).all()
+    receive_line_ids = [row.id for row in receive_rows]
+    receive_ids = [row.receive_id for row in receive_rows]
+    session.execute(
+        delete(PutawayAllocation).where(
+            PutawayAllocation.receive_line_id.in_(receive_line_ids)
+        )
+    )
+    session.execute(
+        delete(ReceiveLine).where(ReceiveLine.sku_id == UPSTREAM_RECEIVE_SKU_ID)
+    )
+    session.execute(delete(Receive).where(Receive.id.in_(receive_ids)))
+
+    pick_ids = list(
+        session.scalars(
+            select(PickRequest.id).where(PickRequest.sku_id == UPSTREAM_PICK_SKU_ID)
+        )
+    )
+    session.execute(delete(PickAllocation).where(PickAllocation.pick_id.in_(pick_ids)))
+    session.execute(
+        delete(PickRequest).where(PickRequest.sku_id == UPSTREAM_PICK_SKU_ID)
+    )
+
+    for sku_id, code in (
+        (UPSTREAM_RECEIVE_SKU_ID, "UPSTREAM-RECEIVE-SKU"),
+        (UPSTREAM_PICK_SKU_ID, "UPSTREAM-PICK-SKU"),
+    ):
+        if session.get(Sku, sku_id) is None:
+            session.add(Sku(id=sku_id, code=code))
+
+    for location_id, quantity in ((BACKROOM_ID, 10), (SALES_SHELF_ID, 0)):
+        balance = session.scalar(
+            select(StockBalance).where(
+                StockBalance.sku_id == UPSTREAM_PICK_SKU_ID,
+                StockBalance.location_id == location_id,
+            )
+        )
+        if balance is None:
+            session.add(
+                StockBalance(
+                    sku_id=UPSTREAM_PICK_SKU_ID,
+                    location_id=location_id,
+                    quantity=quantity,
+                )
+            )
+        else:
+            balance.quantity = quantity
+
+
 def seed_test_fixture() -> None:
     test_database_url = _get_test_database_url()
 
@@ -324,6 +380,14 @@ def reset_receive_fixtures() -> None:
     engine = create_engine(test_database_url)
     with Session(engine) as session, session.begin():
         _reset_receive_fixtures(session)
+    engine.dispose()
+
+
+def reset_upstream_prerequisites() -> None:
+    test_database_url = _get_test_database_url()
+    engine = create_engine(test_database_url)
+    with Session(engine) as session, session.begin():
+        _reset_upstream_prerequisites(session)
     engine.dispose()
 
 
@@ -691,8 +755,12 @@ if __name__ == "__main__":
     parser.add_argument("--audit-snapshot", action="store_true")
     parser.add_argument("--audit-scope-add", action="store_true")
     parser.add_argument("--audit-scope-remove", action="store_true")
+    parser.add_argument("--upstream-reset", action="store_true")
     arguments = parser.parse_args()
-    if arguments.audit_snapshot:
+    if arguments.upstream_reset:
+        reset_upstream_prerequisites()
+        print("Upstream workflow prerequisites reset")
+    elif arguments.audit_snapshot:
         print(json.dumps(audit_effect_snapshot()))
     elif arguments.audit_scope_add:
         set_audit_scope_change(True)

@@ -157,12 +157,31 @@ textarea:focus-visible {
   font-weight: 700;
 }
 
-.receive-field input {
+.receive-field input,
+.receive-field select {
   width: 100%;
   padding: 0.8rem;
   border: 1px solid #b9cbbf;
   border-radius: 0.65rem;
   background: #fff;
+}
+
+.creation-lines {
+  display: grid;
+  gap: 1rem;
+  margin: 1.25rem 0;
+}
+
+.creation-line {
+  padding: 1rem;
+  border: 1px solid #d4dfd7;
+  border-radius: 0.8rem;
+}
+
+.creation-line legend {
+  padding: 0 0.35rem;
+  color: #344c3e;
+  font-weight: 800;
 }
 
 .receive-field input[aria-invalid="true"] {

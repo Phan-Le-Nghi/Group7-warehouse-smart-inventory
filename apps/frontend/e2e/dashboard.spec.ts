@@ -41,22 +41,24 @@ test('Manager Dashboard exposes only Manager queues and history', async ({ page 
   await expect(
     page.getByRole('link', { name: /Open Adjust Decisions/ }),
   ).toBeVisible()
+  await expect(
+    page.getByRole('link', { name: /Open Create Pick Request/ }),
+  ).toBeVisible()
   await expect(page.getByText('Putaway')).toHaveCount(0)
   await expect(page.getByText('New Audit')).toHaveCount(0)
   await expect(page.getByRole('link', { name: /Open Adjust Requests/ })).toHaveCount(0)
 })
 
-for (const loginIdentifier of ['demo.purchasing', 'demo.admin']) {
-  test(`${loginIdentifier} Dashboard has no invented actions`, async ({ page }) => {
-    await signIn(page, loginIdentifier)
+test('Purchasing Dashboard exposes only Prepare Receive', async ({ page }) => {
+  await signIn(page, 'demo.purchasing')
+  await expect(page.getByRole('link', { name: /Open Prepare Receive/ })).toBeVisible()
+  await expect(page.getByText('Transfer History')).toHaveCount(0)
+  await expect(page.getByText('Create Pick Request')).toHaveCount(0)
+})
 
-    await expect(
-      page.getByText(
-        'No dashboard actions are available for this role in the current MVP.',
-      ),
-    ).toBeVisible()
-    await expect(page.getByText('Receive')).toHaveCount(0)
-    await expect(page.getByText('Transfer History')).toHaveCount(0)
-    await expect(page.getByRole('link', { name: /Open Adjust Requests/ })).toHaveCount(0)
-  })
-}
+test('Admin Dashboard remains neutral', async ({ page }) => {
+  await signIn(page, 'demo.admin')
+  await expect(page.getByText('No dashboard actions are available for this role in the current MVP.')).toBeVisible()
+  await expect(page.getByText('Prepare Receive')).toHaveCount(0)
+  await expect(page.getByText('Create Pick Request')).toHaveCount(0)
+})

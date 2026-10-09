@@ -18,6 +18,15 @@
 
 Trạng thái Wireframe: **PASS — 31 states human verified**. Trạng thái Prototype: **PASS — 31 counterparts and 3 critical flows human verified**.
 
+## Application supporting screens — `DEC-045`
+
+Hai application screens `/receives/prepare` và `/picks/requests/new` được thêm để
+người dùng tạo upstream work item bằng UI. Chúng là supporting usability extensions,
+không phải canonical story/Figma base screen mới; vì vậy inventory human-verified
+vẫn là 10 base screens, 31 states và 3 critical flows. Purchasing form hỗ trợ
+multi-line Receive; Manager form tạo single-SKU Pick Request. Cả hai dùng stock-free
+SKU catalog và backend authorization.
+
 Ba critical flows tồn tại trong cả Wireframe và Prototype. Có đúng **6 facilitator-only transitions/groups**, là các layer/group bắt đầu bằng `FACILITATOR ONLY`, đã được human visually verified. Exact hotspot total và full interaction-level wiring chưa được independently verified nên không được suy diễn từ số state/counterpart.
 
 ## 10 base screens

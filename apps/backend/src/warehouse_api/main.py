@@ -9,6 +9,7 @@ from warehouse_api.adjustment_routes import router as adjustment_router
 from warehouse_api.audit_discrepancy_routes import router as audit_discrepancy_router
 from warehouse_api.audit_routes import router as audit_router
 from warehouse_api.auth_routes import router as auth_router
+from warehouse_api.catalog_routes import router as catalog_router
 from warehouse_api.config import get_settings
 from warehouse_api.db import get_engine
 from warehouse_api.errors import ApiError
@@ -72,6 +73,7 @@ app.add_middleware(
     allow_headers=["Content-Type", "Idempotency-Key"],
 )
 app.include_router(auth_router)
+app.include_router(catalog_router)
 app.include_router(router)
 app.include_router(receive_router)
 app.include_router(pick_router)
@@ -105,7 +107,13 @@ def handle_validation_error(
     quantity_error = any(
         item["loc"][-1] == "physical_quantity"
         or (
-            item["loc"][-1] in {"quantity", "actual_quantity"}
+            item["loc"][-1]
+            in {
+                "quantity",
+                "actual_quantity",
+                "expected_quantity",
+                "requested_quantity",
+            }
             and (item["type"] != "missing" or request.url.path == "/api/v1/transfers")
         )
         for item in error.errors()

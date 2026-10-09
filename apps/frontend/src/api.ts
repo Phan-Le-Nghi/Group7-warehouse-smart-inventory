@@ -278,6 +278,19 @@ export type PickQueue = {
   }>
 }
 
+export type SkuCatalog = {
+  items: Array<{ sku_id: string; sku: string }>
+}
+
+export type PickRequestCreateResult = {
+  pick_id: string
+  warehouse_id: string
+  sku_id: string
+  sku: string
+  requested_quantity: number
+  outcome: null
+}
+
 export type PickAllocationCommand = {
   source_location_id: string
   quantity: number
@@ -390,6 +403,24 @@ export type PreparedReceiveQueue = {
       sku: string
       expected_quantity: number
     }>
+  }>
+}
+
+export type PreparedReceiveCreateCommand = {
+  expected_reference: string
+  lines: Array<{ sku_id: string; expected_quantity: number }>
+}
+
+export type PreparedReceiveCreateResult = {
+  receive_id: string
+  warehouse_id: string
+  expected_reference: string
+  recorded_at: null
+  lines: Array<{
+    receive_line_id: string
+    sku_id: string
+    sku: string
+    expected_quantity: number
   }>
 }
 
@@ -639,6 +670,28 @@ export function loadActionablePicks(): Promise<PickQueue> {
   return apiRequest<PickQueue>('/api/v1/picks')
 }
 
+export function loadSkuCatalog(): Promise<SkuCatalog> {
+  return apiRequest<SkuCatalog>('/api/v1/skus')
+}
+
+export function createPickRequest(
+  skuId: string,
+  requestedQuantity: number,
+): Promise<PickRequestCreateResult> {
+  return apiRequest<PickRequestCreateResult>(
+    '/api/v1/picks/requests',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sku_id: skuId,
+        requested_quantity: requestedQuantity,
+      }),
+    },
+    201,
+  )
+}
+
 export async function submitPick(
   pickId: string,
   allocations: PickAllocationCommand[],
@@ -692,6 +745,20 @@ export async function loadReceiveContext(
 
 export function loadPreparedReceives(): Promise<PreparedReceiveQueue> {
   return apiRequest<PreparedReceiveQueue>('/api/v1/receives')
+}
+
+export function createPreparedReceive(
+  command: PreparedReceiveCreateCommand,
+): Promise<PreparedReceiveCreateResult> {
+  return apiRequest<PreparedReceiveCreateResult>(
+    '/api/v1/receives/prepared',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(command),
+    },
+    201,
+  )
 }
 
 export async function recordReceive(

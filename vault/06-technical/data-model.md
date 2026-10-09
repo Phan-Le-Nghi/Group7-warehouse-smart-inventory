@@ -51,6 +51,15 @@ The normalized identifier invariant is enforced by `login_identifier = lower(tri
 
 No `warehouse_totals`, generic `movements` or Putaway-created `transfers` are part of this model.
 
+## DEC-045 supporting work-item creation
+
+No migration is required. Purchasing prepared-Receive creation reuses `receives`
+and `receive_lines`, leaving document/recording/review/actual/discrepancy facts null.
+Manager Pick-request creation reuses `pick_requests`, leaving outcome and confirmation
+facts null. The SKU catalog reads `skus` only. No creator/time/idempotency fields,
+reference uniqueness, allocation, reservation, stock row or Warehouse-total row is
+added by these supporting workflows.
+
 ## Receive → Putaway consistency
 
 Receive persists actual received quantity and discrepancy/reference context but does not increase tracked-location stock. Putaway performs the initial posting.

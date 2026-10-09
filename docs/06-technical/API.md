@@ -2,7 +2,7 @@
 
 ## Trạng thái
 
-`IMPLEMENTED ROUTE INVENTORY THROUGH US-ADJ-002`
+`IMPLEMENTED ROUTE INVENTORY THROUGH DEC-045`
 
 Canonical technical contract: [`../../vault/06-technical/api-contract.md`](../../vault/06-technical/api-contract.md). Exact route và JSON shape là technical contract, không phải product requirement.
 
@@ -20,8 +20,8 @@ Session cookie là host-only `warehouse_session`, `HttpOnly`, `Path=/`, absolute
 
 | Route | Purpose | Story/boundary |
 |---|---|---|
-| `GET /api/v1/locations` | Tracked-location selection | Supporting `CAND-REQ-003` |
-| `GET /api/v1/stock?sku_id={id}` | Location balances + derived Warehouse total | `CAND-REQ-003` |
+| `GET /api/v1/skus` | Purchasing/Manager stock-free SKU catalog | `DEC-045` supporting capability |
+| `POST /api/v1/receives/prepared` | Purchasing creates an unrecorded prepared Receive context; no stock effect | `DEC-045`; supporting precondition, not a new story |
 | `GET /api/v1/receives/context/{receive_id}` | Prepared expected context and existing recording/review state | `US-REC-001`; Warehouse Staff only |
 | `GET /api/v1/receives` | Prepared, unrecorded Receive queue | `US-REC-001`; read-only discovery, no create/completion semantics |
 | `POST /api/v1/receives` | Atomically record the full prepared line set, actual quantity and discrepancy/reference context | `US-REC-001`; `RECEIVE_RECORDED`, not completion |
@@ -31,6 +31,7 @@ Session cookie là host-only `warehouse_session`, `HttpOnly`, `Path=/`, absolute
 | `GET /api/v1/putaways/context/{receive_line_id}` | SKU, eligible quantity và tracked destination IDs cho Putaway screen | `US-PUT-001`; không tạo automatic Receive handoff |
 | `POST /api/v1/picks` | Multi-location/full/`PARTIAL / INSUFFICIENT` Pick | `US-PICK-001` |
 | `GET /api/v1/picks` | Pick requests with persisted `outcome IS NULL` | `US-PICK-001`; excludes both current non-null outcomes, no reopen semantics |
+| `POST /api/v1/picks/requests` | Manager creates an actionable Pick Request; no allocation/reservation/stock effect | `DEC-045`; supporting precondition, not a new story |
 | `POST /api/v1/transfers` | Atomic internal Transfer confirmation | `US-TRF-001` |
 | `GET /api/v1/transfers/eligible-skus` | Positive-stock SKU selector with tracked-location quantities and derived total | `US-TRF-001`; no Transfer request lifecycle |
 | `GET /api/v1/transfers` | Confirmed Transfer history | `US-TRF-002` |
@@ -50,6 +51,10 @@ Routes through `US-ADJ-002` above are implemented and merged at release candidat
 `664d207`. Human-performed staging smoke exercised the nine story flows through
 the deployed Vercel → Render → Supabase topology. Exact successful GitHub CI URLs
 and job results for `664d207` are **NOT RECORDED** and are not inferred.
+
+`GET /api/v1/locations` and `GET /api/v1/stock?sku_id={id}` were previously
+listed as implemented but have no application route. They have been removed from
+the implemented inventory; no behavior is inferred from the earlier documentation drift.
 
 ## US-REC-001 Receive contract
 
