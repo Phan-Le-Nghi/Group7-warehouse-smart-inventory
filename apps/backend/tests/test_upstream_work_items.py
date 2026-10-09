@@ -18,13 +18,16 @@ from warehouse_api.models import (
     ReceiveLine,
     Sku,
     StockBalance,
+    User,
     Warehouse,
 )
 
 
-def set_actor(role: Role) -> None:
+def set_actor(role: Role, upstream_data: dict[str, UUID]) -> None:
     app.dependency_overrides[get_actor] = lambda: Actor(
-        user_id=uuid4(), login_identifier=f"test.{role.value.lower()}", role=role
+        user_id=upstream_data[f"{role.value.lower()}_user_id"],
+        login_identifier=f"test.{role.value.lower()}",
+        role=role,
     )
 
 
@@ -33,12 +36,20 @@ def upstream_data(
     session_factory: sessionmaker[Session],
 ) -> dict[str, UUID]:
     with session_factory.begin() as session:
+        users = {
+            role: User(
+                login_identifier=f"test.{role.value.lower()}",
+                password_hash="test-only-not-a-real-hash",
+                role=role.value,
+            )
+            for role in Role
+        }
         warehouse = Warehouse(code="UPSTREAM-WAREHOUSE")
         first = Sku(code="SKU-ZULU")
         second = Sku(code="SKU-ALPHA")
         backroom = InternalLocation(warehouse_id=warehouse.id, code="BACKROOM")
         shelf = InternalLocation(warehouse_id=warehouse.id, code="SALES_SHELF")
-        session.add_all([warehouse, first, second])
+        session.add_all([*users.values(), warehouse, first, second])
         session.flush()
         backroom.warehouse_id = warehouse.id
         shelf.warehouse_id = warehouse.id
@@ -52,6 +63,9 @@ def upstream_data(
             "first_sku_id": first.id,
             "second_sku_id": second.id,
             "backroom_id": backroom.id,
+            **{
+                f"{role.value.lower()}_user_id": user.id for role, user in users.items()
+            },
         }
 
 
@@ -68,7 +82,7 @@ def test_sku_catalog_is_ordered_read_only_and_role_limited(
         before = (count(session, Sku), count(session, StockBalance))
 
     for role in (Role.PURCHASING, Role.MANAGER):
-        set_actor(role)
+        set_actor(role, upstream_data)
         response = api_client.get("/api/v1/skus")
         assert response.status_code == 200
         assert [item["sku"] for item in response.json()["items"]] == [
@@ -77,7 +91,7 @@ def test_sku_catalog_is_ordered_read_only_and_role_limited(
         ]
 
     for role in (Role.WAREHOUSE_STAFF, Role.ADMIN):
-        set_actor(role)
+        set_actor(role, upstream_data)
         response = api_client.get("/api/v1/skus")
         assert response.status_code == 403
 
@@ -92,7 +106,7 @@ def test_purchasing_creates_multiline_receive_without_stock_effect(
     session_factory: sessionmaker[Session],
     upstream_data: dict[str, UUID],
 ) -> None:
-    set_actor(Role.PURCHASING)
+    set_actor(Role.PURCHASING, upstream_data)
     response = api_client.post(
         "/api/v1/receives/prepared",
         json={
@@ -148,7 +162,7 @@ def test_prepare_receive_rejects_invalid_context(
     payload: dict[str, object],
     code: str,
 ) -> None:
-    set_actor(Role.PURCHASING)
+    set_actor(Role.PURCHASING, upstream_data)
     response = api_client.post("/api/v1/receives/prepared", json=payload)
     assert response.status_code == 422
     assert response.json()["error"]["code"] == code
@@ -163,7 +177,7 @@ def test_prepare_receive_requires_strict_positive_quantity(
     upstream_data: dict[str, UUID],
     quantity: object,
 ) -> None:
-    set_actor(Role.PURCHASING)
+    set_actor(Role.PURCHASING, upstream_data)
     response = api_client.post(
         "/api/v1/receives/prepared",
         json={
@@ -187,7 +201,7 @@ def test_prepare_receive_rejects_duplicate_and_unknown_skus_atomically(
     session_factory: sessionmaker[Session],
     upstream_data: dict[str, UUID],
 ) -> None:
-    set_actor(Role.PURCHASING)
+    set_actor(Role.PURCHASING, upstream_data)
     line = {"sku_id": str(upstream_data["first_sku_id"]), "expected_quantity": 1}
     duplicate = api_client.post(
         "/api/v1/receives/prepared",
@@ -223,7 +237,7 @@ def test_prepare_receive_rolls_back_when_a_line_write_fails(
         return original_receive_line(id=duplicate_id, **values)
 
     monkeypatch.setattr(receive_service, "ReceiveLine", conflicting_receive_line)
-    set_actor(Role.PURCHASING)
+    set_actor(Role.PURCHASING, upstream_data)
     with pytest.raises(IntegrityError):
         api_client.post(
             "/api/v1/receives/prepared",
@@ -261,7 +275,7 @@ def test_prepare_receive_role_matrix(
     role: Role,
     status_code: int,
 ) -> None:
-    set_actor(role)
+    set_actor(role, upstream_data)
     response = api_client.post(
         "/api/v1/receives/prepared",
         json={
@@ -299,7 +313,7 @@ def test_prepare_receive_requires_authentication(
 def test_created_receive_enters_queue_then_hands_off_to_putaway(
     api_client: TestClient, upstream_data: dict[str, UUID]
 ) -> None:
-    set_actor(Role.PURCHASING)
+    set_actor(Role.PURCHASING, upstream_data)
     created = api_client.post(
         "/api/v1/receives/prepared",
         json={
@@ -314,7 +328,7 @@ def test_created_receive_enters_queue_then_hands_off_to_putaway(
     ).json()
     line = created["lines"][0]
 
-    set_actor(Role.WAREHOUSE_STAFF)
+    set_actor(Role.WAREHOUSE_STAFF, upstream_data)
     queue = api_client.get("/api/v1/receives").json()["items"]
     assert [item["expected_reference"] for item in queue] == ["DELIVERY-FLOW"]
     recorded = api_client.post(
@@ -344,7 +358,7 @@ def test_pick_request_requires_strict_positive_quantity(
     upstream_data: dict[str, UUID],
     quantity: object,
 ) -> None:
-    set_actor(Role.MANAGER)
+    set_actor(Role.MANAGER, upstream_data)
     response = api_client.post(
         "/api/v1/picks/requests",
         json={
@@ -373,7 +387,7 @@ def test_pick_request_role_matrix(
     role: Role,
     status_code: int,
 ) -> None:
-    set_actor(role)
+    set_actor(role, upstream_data)
     response = api_client.post(
         "/api/v1/picks/requests",
         json={
@@ -389,7 +403,7 @@ def test_manager_creates_actionable_pick_without_stock_or_allocation_effect(
     session_factory: sessionmaker[Session],
     upstream_data: dict[str, UUID],
 ) -> None:
-    set_actor(Role.MANAGER)
+    set_actor(Role.MANAGER, upstream_data)
     response = api_client.post(
         "/api/v1/picks/requests",
         json={
@@ -408,7 +422,7 @@ def test_manager_creates_actionable_pick_without_stock_or_allocation_effect(
         assert count(session, PickAllocation) == 0
         assert session.scalar(select(func.sum(StockBalance.quantity))) == 12
 
-    set_actor(Role.WAREHOUSE_STAFF)
+    set_actor(Role.WAREHOUSE_STAFF, upstream_data)
     queue = api_client.get("/api/v1/picks").json()["items"]
     assert queue[0]["pick_id"] == created["pick_id"]
     executed = api_client.post(
@@ -431,8 +445,9 @@ def test_manager_creates_actionable_pick_without_stock_or_allocation_effect(
 def test_pick_request_rejects_unknown_sku_and_requires_authentication(
     api_client: TestClient,
     session_factory: sessionmaker[Session],
+    upstream_data: dict[str, UUID],
 ) -> None:
-    set_actor(Role.MANAGER)
+    set_actor(Role.MANAGER, upstream_data)
     unknown = api_client.post(
         "/api/v1/picks/requests",
         json={"sku_id": str(uuid4()), "requested_quantity": 1},

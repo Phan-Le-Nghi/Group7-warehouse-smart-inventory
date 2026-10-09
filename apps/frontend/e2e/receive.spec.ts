@@ -60,7 +60,7 @@ test('DEC-045 creates Receive work through Purchasing UI and hands it to Putaway
   await page.getByRole('button', { name: 'Record Receive' }).click()
   await expect(page.getByText('Receive recorded')).toBeVisible()
 
-  await page.getByRole('link', { name: 'Dashboard' }).click()
+  await page.getByRole('link', { name: 'Dashboard', exact: true }).click()
   await page.getByRole('link', { name: /Open Putaway/ }).click()
   const putawayRow = page.getByRole('row').filter({ hasText: 'E2E-UPSTREAM-RECEIVE' })
   await expect(putawayRow).toContainText('UPSTREAM-RECEIVE-SKU')
