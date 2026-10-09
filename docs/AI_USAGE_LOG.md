@@ -478,3 +478,30 @@ Không đưa secret, dữ liệu cá nhân, Context Pack tạm thời hoặc bư
   because `TEST_DATABASE_URL` is unset and Docker is unavailable.
 - **Human review:** Diff awaits review. No commit, push, merge, deployment,
   staging seed/reset or shared-database mutation was performed.
+
+### AI-USE-036 — DEC-045 upstream work-item creation
+
+- **Date:** 2026-10-09.
+- **Task:** Implement the human-approved Purchasing prepared-Receive and Manager
+  Pick-request supporting workflows without adding canonical stories or migrations.
+- **AI support:** Added a Purchasing/Manager stock-free SKU catalog; atomic
+  multi-line prepared Receive creation; actionable Pick Request creation; exact
+  backend role enforcement; two role-specific Dashboard forms; test-only prerequisite
+  setup; and browser happy paths that create business work through UI before Staff
+  discovery/execution.
+- **Scope guard:** No `US-REC-002`/`US-PICK-002`, migration, creator/time fields,
+  durable creation idempotency, reference uniqueness, stock reservation/mutation,
+  PO/order/shipping, retry/cancel/reopen, correction/reversal, Admin CRUD, FIFO/FEFO,
+  scanner, public reset, microservice, CQRS or workflow engine was added.
+- **Verification:** Backend Ruff lint/format PASS; targeted Receive/Pick/upstream
+  pytest `85 passed`; full pytest `299 passed, 32 PostgreSQL-only skipped`. Frontend
+  ESLint/typecheck PASS, Vitest `110 passed`, production build PASS and Vercel config
+  `4 passed`. Playwright discovery lists `39` tests including two DEC-045 real-user
+  paths. Runtime PostgreSQL/Chromium execution is NOT VERIFIED because
+  `TEST_DATABASE_URL` is unset and Docker is unavailable.
+- **Traceability:** Recorded at `DEC-045`; canonical story total remains 9 and the
+  historical `US-REC-001`/`US-PICK-001` Acceptance Criteria are unchanged. Earlier
+  false implemented-route claims for `/api/v1/locations` and `/api/v1/stock` were
+  reconciled against application code.
+- **Human review:** Current diff awaits review. No commit, push, merge or deployment
+  was performed.

@@ -80,6 +80,11 @@ backend queue/selector and creates the exact-context link after item selection.
 Receive and Putaway remain separate and neither creates an automatic
 Receive-to-Putaway handoff.
 
+`DEC-045` adds two supporting entry workflows without adding canonical stories:
+Purchasing uses `/receives/prepare` to create expected Receive context, and Manager
+uses `/picks/requests/new` to create an actionable Pick Request. Both forms load the
+stock-free `/api/v1/skus` catalog. Creation does not mutate or reserve stock.
+
 The frontend keeps its small manual route matcher. Generic Staff entry points
 are `/receive`, `/putaway`, `/picks`, `/transfers`, `/audits/new`, and `/adjustments`; Manager entry points are
 `/transfers/history`, `/audit-discrepancies`, and `/adjustment-decisions`.
@@ -87,11 +92,8 @@ The Staff Adjust queue discovers manager-confirmed mismatch rechecks and links
 to `/adjustments/{audit_recheck_id}` without exposing or hard-coding UUIDs.
 Pick and Transfer details retain exact-context URLs, but users reach them from
 the actionable Pick queue and current-stock Transfer selector without entering IDs.
-Purchasing and Admin receive a neutral Dashboard state rather than invented
-actions. Unknown frontend routes render a Page not found state.
-
-The application does not create Receive or Pick requests. Prepared contexts must
-already exist in backend data. Partial Picks require a second explicit
+Admin retains a neutral Dashboard state. Unknown frontend routes render a Page not
+found state. Partial Picks require a second explicit
 confirmation in the UI before `POST /api/v1/picks` is sent.
 
 ```powershell

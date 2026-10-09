@@ -20,6 +20,19 @@ Chuỗi này xác định các khu vực quy trình/capability bắt buộc, kh�
 
 Các mục trên là HUMAN PRODUCT DECISIONS / MVP ASSUMPTIONS, không phải verified research findings.
 
+## Supporting upstream work-item creation — `DEC-045`
+
+- Purchasing có thể tạo minimum prepared Receive context gồm expected reference và
+  một hoặc nhiều unique SKU/positive expected-quantity lines.
+- Manager có thể tạo minimum single-SKU Pick Request với positive requested quantity.
+- Cả hai actor được đọc minimum SKU catalog phục vụ form; catalog không expose stock.
+- Creation resolve canonical single Warehouse ở backend, không nhận authoritative
+  `warehouse_id`, không mutate/reserve stock và không tự execute downstream workflow.
+- Đây là supporting capability/usability extension cho hai precondition hiện hữu,
+  không phải canonical User Story mới. Tổng canonical story tiếp tục là 9.
+- Không thêm creator/time, durable creation idempotency, Purchase Order/order/shipping,
+  Pick retry/cancel/reopen hoặc Receive correction/reversal.
+
 ## Lifecycle đã quyết định một phần
 
 ### Receive — `US-REC-001` — Nguyễn Thị Nghĩa

@@ -5,12 +5,14 @@ import AdjustmentDecisionPage from './AdjustmentDecisionPage'
 import AuditDiscrepancyPage from './AuditDiscrepancyPage'
 import AuditPage from './AuditPage'
 import DashboardPage from './DashboardPage'
+import CreatePickRequestPage from './CreatePickRequestPage'
 import PickPage from './PickPage'
 import PickQueuePage from './PickQueuePage'
 import PutawayPage from './PutawayPage'
 import PutawayQueuePage from './PutawayQueuePage'
 import ReceivePage from './ReceivePage'
 import ReceiveQueuePage from './ReceiveQueuePage'
+import PrepareReceivePage from './PrepareReceivePage'
 import TransferHistoryPage from './TransferHistoryPage'
 import TransferPage from './TransferPage'
 import TransferSelectorPage from './TransferSelectorPage'
@@ -71,6 +73,10 @@ function App({
   let page
   if (currentPath === '/') {
     page = <DashboardPage role={actor.role} />
+  } else if (currentPath === '/receives/prepare') {
+    page = <PrepareReceivePage onUnauthorized={onUnauthorized} />
+  } else if (currentPath === '/picks/requests/new') {
+    page = <CreatePickRequestPage onUnauthorized={onUnauthorized} />
   } else if (currentPath === '/putaway') {
     page = <PutawayQueuePage onUnauthorized={onUnauthorized} />
   } else if (currentPath === '/receive') {

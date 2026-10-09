@@ -304,6 +304,22 @@ class PickRequest(BaseModel):
     allocations: list[PickAllocationRequest]
 
 
+class PickRequestCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    sku_id: UUID
+    requested_quantity: Annotated[StrictInt, Field(gt=0)]
+
+
+class PickRequestCreateResponse(BaseModel):
+    pick_id: UUID
+    warehouse_id: UUID
+    sku_id: UUID
+    sku: str
+    requested_quantity: int
+    outcome: None
+
+
 class PickLocationAvailability(BaseModel):
     id: UUID
     code: str
@@ -524,6 +540,44 @@ class PreparedReceiveQueueItem(BaseModel):
 
 class PreparedReceiveQueueResponse(BaseModel):
     items: list[PreparedReceiveQueueItem]
+
+
+class PreparedReceiveCreateLineRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    sku_id: UUID
+    expected_quantity: Annotated[StrictInt, Field(gt=0)]
+
+
+class PreparedReceiveCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    expected_reference: str
+    lines: list[PreparedReceiveCreateLineRequest]
+
+
+class PreparedReceiveCreateLineResponse(BaseModel):
+    receive_line_id: UUID
+    sku_id: UUID
+    sku: str
+    expected_quantity: int
+
+
+class PreparedReceiveCreateResponse(BaseModel):
+    receive_id: UUID
+    warehouse_id: UUID
+    expected_reference: str
+    recorded_at: None
+    lines: list[PreparedReceiveCreateLineResponse]
+
+
+class SkuCatalogItem(BaseModel):
+    sku_id: UUID
+    sku: str
+
+
+class SkuCatalogResponse(BaseModel):
+    items: list[SkuCatalogItem]
 
 
 class ReceiveRecordLineRequest(BaseModel):

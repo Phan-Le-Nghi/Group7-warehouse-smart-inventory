@@ -38,8 +38,8 @@ The browser cookie is `warehouse_session`, `HttpOnly`, host-only, uses `Path=/`,
 
 | Method and route | Request/response purpose | Canonical behavior traced | Contract gaps |
 |---|---|---|---|
-| `GET /api/v1/locations` | Return the two tracked locations for selection | `CAND-REQ-003`, `DEC-006/010` | Catalog administration not defined |
-| `GET /api/v1/stock?sku_id={id}` | Return location balances and derived Warehouse total | `CAND-REQ-003`, `CAND-BR-003` | Advanced filtering/pagination TBD |
+| `GET /api/v1/skus` | Stock-free minimum SKU selector for Purchasing/Manager | `DEC-045` supporting capability | No SKU CRUD or stock data |
+| `POST /api/v1/receives/prepared` | Purchasing creates minimum unrecorded expected context | `DEC-045` supporting precondition for Receive | No PO, creator/time/idempotency or stock effect |
 | `POST /api/v1/receives` | Record actual quantity and discrepancy/reference context | `US-REC-001` | Completion/handoff remains `OQ-013` |
 | `GET /api/v1/receives` | Return prepared, unrecorded Receive contexts for Staff selection | `US-REC-001` discovery support | Does not create Receive or define completion |
 | `POST /api/v1/putaways` | Confirm initial allocation into a tracked destination | `US-PUT-001` | Detailed contract below |
@@ -47,6 +47,7 @@ The browser cookie is `warehouse_session`, `HttpOnly`, host-only, uses `Path=/`,
 | `GET /api/v1/putaways/context/{receive_line_id}` | Load the SKU, eligible quantity and tracked destination IDs needed by the standalone Putaway screen | `US-PUT-001` UI support only | Does not define an automatic Receive → Putaway handoff |
 | `POST /api/v1/picks` | Confirm one-or-many source allocations and report full or `PARTIAL / INSUFFICIENT` | `US-PICK-001` | Retry/cancel lifecycle remains open |
 | `GET /api/v1/picks` | Return Pick requests whose current persisted outcome is `null` | `US-PICK-001` discovery support | `FULLY_COMPLETED` and `PARTIAL_INSUFFICIENT` are excluded; no reopen/retry/cancel semantics |
+| `POST /api/v1/picks/requests` | Manager creates a minimum actionable Pick Request | `DEC-045` supporting precondition for Pick | No reservation, allocation or stock sufficiency guard |
 | `POST /api/v1/transfers` | Atomically reduce source, increase destination and record confirmation | `US-TRF-001` | Partial/failure/reversal remain open |
 | `GET /api/v1/transfers/eligible-skus` | Return SKUs with positive stock and a valid tracked source/destination combination, including current per-location quantities and derived total | `US-TRF-001` discovery support | Does not create a Transfer request lifecycle |
 | `GET /api/v1/transfers` | Return confirmed Transfer history fields | `US-TRF-002` | Advanced filter/sort/export TBD |
@@ -57,6 +58,23 @@ The browser cookie is `warehouse_session`, `HttpOnly`, host-only, uses `Path=/`,
 
 Routes through `US-ADJ-002` are implemented and merged. The exact route
 inventory is maintained in [`../../docs/06-technical/API.md`](../../docs/06-technical/API.md).
+
+`GET /api/v1/locations` and `GET /api/v1/stock?sku_id={id}` are not exposed by
+the current application and are therefore not part of the implemented route inventory.
+
+## DEC-045 upstream supporting contracts
+
+- `GET /api/v1/skus`: `PURCHASING` or `MANAGER`; returns `sku_id`/`sku`, ordered
+  code then ID; read-only and stock-free.
+- `POST /api/v1/receives/prepared`: `PURCHASING` only; server-resolved Warehouse,
+  trimmed reference, non-empty unique SKU lines and strict positive integers;
+  returns `201` with null `recorded_at`; no stock/Putaway/record action.
+- `POST /api/v1/picks/requests`: `MANAGER` only; server-resolved Warehouse,
+  existing SKU and strict positive integer quantity; returns `201` with null
+  outcome; no allocation/reservation/stock effect.
+- Missing session remains `401`; authenticated wrong roles receive `403`.
+- Existing `POST /api/v1/receives` and `POST /api/v1/picks` retain their approved
+  Warehouse Staff transaction meanings and are not overloaded.
 
 ## Human-approved product discovery boundary — 2026-10-08
 

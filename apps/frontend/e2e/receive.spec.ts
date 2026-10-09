@@ -31,6 +31,41 @@ async function signIn(page: Page) {
   await expect(page.getByRole('heading', { name: 'Record Receive' })).toBeVisible()
 }
 
+async function logIn(page: Page, loginIdentifier: string) {
+  await page.goto('/')
+  await page.getByLabel('Login identifier').fill(loginIdentifier)
+  await page.getByLabel('Password').fill(process.env.E2E_USER_PASSWORD ?? '')
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  await expect(page.getByRole('heading', { name: 'Warehouse Dashboard' })).toBeVisible()
+}
+
+test('DEC-045 creates Receive work through Purchasing UI and hands it to Putaway', async ({ page }) => {
+  backendCommand('--upstream-reset')
+  await logIn(page, 'demo.purchasing')
+  await page.getByRole('link', { name: /Open Prepare Receive/ }).click()
+  await expect(page.getByRole('heading', { name: 'Prepare Receive' })).toBeVisible()
+  await page.getByLabel('Expected reference').fill('E2E-UPSTREAM-RECEIVE')
+  await page.getByLabel('SKU').selectOption({ label: 'UPSTREAM-RECEIVE-SKU' })
+  await page.getByLabel('Expected quantity').fill('7')
+  await page.getByRole('button', { name: 'Create' }).click()
+  await expect(page.getByText('Prepared Receive created and ready for Warehouse Staff.')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Sign out' }).click()
+  await logIn(page, 'demo.warehouse_staff')
+  await page.getByRole('link', { name: /Open Receive/ }).click()
+  const receiveRow = page.getByRole('row').filter({ hasText: 'E2E-UPSTREAM-RECEIVE' })
+  await receiveRow.getByRole('link', { name: 'Record Receive' }).click()
+  await page.getByLabel('Document reference').fill('E2E-UPSTREAM-RECEIVE')
+  await page.getByLabel('Actual quantity').fill('7')
+  await page.getByRole('button', { name: 'Record Receive' }).click()
+  await expect(page.getByText('Receive recorded')).toBeVisible()
+
+  await page.getByRole('link', { name: 'Dashboard' }).click()
+  await page.getByRole('link', { name: /Open Putaway/ }).click()
+  const putawayRow = page.getByRole('row').filter({ hasText: 'E2E-UPSTREAM-RECEIVE' })
+  await expect(putawayRow).toContainText('UPSTREAM-RECEIVE-SKU')
+})
+
 test.describe.serial('US-REC-001 Receive flow', () => {
   test.beforeEach(() => {
     backendCommand('--receive-only')

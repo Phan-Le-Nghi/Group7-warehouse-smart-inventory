@@ -7,8 +7,11 @@ from sqlalchemy.orm import Session
 
 from warehouse_api.auth import Actor
 from warehouse_api.errors import ApiError
-from warehouse_api.models import Receive, ReceiveLine, Sku
+from warehouse_api.models import Receive, ReceiveLine, Sku, Warehouse
 from warehouse_api.schemas import (
+    PreparedReceiveCreateLineResponse,
+    PreparedReceiveCreateRequest,
+    PreparedReceiveCreateResponse,
     PreparedReceiveQueueItem,
     PreparedReceiveQueueLine,
     PreparedReceiveQueueResponse,
@@ -23,6 +26,92 @@ REFERENCE_MATCH = "REFERENCE_MATCH"
 REFERENCE_MISMATCH = "REFERENCE_MISMATCH"
 
 logger = logging.getLogger(__name__)
+
+
+def _canonical_warehouse_id(session: Session) -> UUID:
+    warehouse_ids = list(session.scalars(select(Warehouse.id).limit(2)))
+    if len(warehouse_ids) != 1:
+        raise ApiError(
+            500,
+            "CANONICAL_WAREHOUSE_UNAVAILABLE",
+            "The canonical Warehouse is unavailable.",
+        )
+    return warehouse_ids[0]
+
+
+def prepare_receive(
+    session: Session, command: PreparedReceiveCreateRequest
+) -> PreparedReceiveCreateResponse:
+    expected_reference = command.expected_reference.strip()
+    if not expected_reference or len(expected_reference) > 255:
+        raise ApiError(
+            422,
+            "INVALID_REFERENCE",
+            "Expected reference must contain from 1 to 255 characters after trimming.",
+        )
+    if not command.lines:
+        raise ApiError(
+            422, "INVALID_LINES", "At least one prepared Receive line is required."
+        )
+
+    sku_ids = [line.sku_id for line in command.lines]
+    if len(sku_ids) != len(set(sku_ids)):
+        raise ApiError(
+            422, "DUPLICATE_SKU", "Each SKU may appear only once in a Receive."
+        )
+    skus = {
+        sku.id: sku
+        for sku in session.scalars(select(Sku).where(Sku.id.in_(sku_ids))).all()
+    }
+    missing_ids = sorted(str(sku_id) for sku_id in set(sku_ids) - skus.keys())
+    if missing_ids:
+        raise ApiError(
+            404,
+            "SKU_NOT_FOUND",
+            "One or more SKUs were not found.",
+            {"sku_ids": missing_ids},
+        )
+
+    receive = Receive(
+        warehouse_id=_canonical_warehouse_id(session),
+        expected_reference=expected_reference,
+        document_reference=None,
+        reference_match_status=None,
+        recorded_by_user_id=None,
+        recorded_at=None,
+        reference_reviewed_by_user_id=None,
+        reference_reviewed_at=None,
+    )
+    session.add(receive)
+    session.flush()
+
+    response_lines: list[PreparedReceiveCreateLineResponse] = []
+    for item in command.lines:
+        line = ReceiveLine(
+            receive_id=receive.id,
+            sku_id=item.sku_id,
+            expected_quantity=item.expected_quantity,
+            actual_quantity=None,
+            quantity_discrepancy=None,
+        )
+        session.add(line)
+        session.flush()
+        response_lines.append(
+            PreparedReceiveCreateLineResponse(
+                receive_line_id=line.id,
+                sku_id=line.sku_id,
+                sku=skus[line.sku_id].code,
+                expected_quantity=item.expected_quantity,
+            )
+        )
+
+    return PreparedReceiveCreateResponse(
+        receive_id=receive.id,
+        warehouse_id=receive.warehouse_id,
+        expected_reference=expected_reference,
+        recorded_at=None,
+        lines=response_lines,
+    )
 
 
 def _log_rejection(receive_id: UUID, actor: Actor, code: str) -> None:

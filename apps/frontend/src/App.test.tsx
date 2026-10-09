@@ -225,17 +225,36 @@ describe('role Dashboard routing', () => {
       'href',
       '/adjustment-decisions',
     )
+    expect(screen.getByRole('link', { name: /Open Create Pick Request/ })).toHaveAttribute(
+      'href',
+      '/picks/requests/new',
+    )
     expect(screen.queryByText('New Audit')).not.toBeInTheDocument()
     expect(screen.queryByText('Putaway')).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /Open Adjust Requests/ })).not.toBeInTheDocument()
   })
 
-  it.each(['PURCHASING', 'ADMIN'] as const)(
-    'renders a neutral state without fake actions for %s',
-    (role) => {
+  it('renders only Prepare Receive for Purchasing', () => {
+    render(
+      <App
+        actor={{ ...actor, role: 'PURCHASING' }}
+        onLogout={() => undefined}
+        onUnauthorized={() => undefined}
+      />,
+    )
+
+    expect(screen.getByRole('link', { name: /Open Prepare Receive/ })).toHaveAttribute(
+      'href',
+      '/receives/prepare',
+    )
+    expect(screen.queryByText('Transfer History')).not.toBeInTheDocument()
+    expect(screen.queryByText('Create Pick Request')).not.toBeInTheDocument()
+  })
+
+  it('renders a neutral state without fake actions for Admin', () => {
       render(
         <App
-          actor={{ ...actor, role }}
+          actor={{ ...actor, role: 'ADMIN' }}
           onLogout={() => undefined}
           onUnauthorized={() => undefined}
         />,
@@ -252,8 +271,7 @@ describe('role Dashboard routing', () => {
         screen.queryByRole('link', { name: /Open Adjust Requests/ }),
       ).not.toBeInTheDocument()
       cleanup()
-    },
-  )
+  })
 
   it('renders Page not found instead of Putaway for an unknown route', () => {
     window.history.pushState({}, '', '/unknown-route')
@@ -303,6 +321,31 @@ describe('backend-authoritative Staff route authorization', () => {
     )
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(fetchMock.mock.calls[0][0]).toContain(endpoint)
+  })
+})
+
+describe('backend-authoritative DEC-045 route authorization', () => {
+  it.each([
+    ['/receives/prepare', 'MANAGER', 'Purchasing role required'],
+    ['/picks/requests/new', 'PURCHASING', 'Manager role required'],
+  ] as const)('shows backend forbidden state at %s', async (path, role, heading) => {
+    window.history.pushState({}, '', path)
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockReturnValue(
+      jsonResponse(
+        { error: { code: 'FORBIDDEN', message: 'Access denied.' } },
+        403,
+      ),
+    )
+    render(
+      <App
+        actor={{ ...actor, role }}
+        onLogout={() => undefined}
+        onUnauthorized={() => undefined}
+      />,
+    )
+
+    expect(await screen.findByRole('heading', { name: heading })).toBeVisible()
+    expect(fetchMock.mock.calls[0][0]).toContain('/api/v1/skus')
   })
 })
 
